@@ -507,7 +507,7 @@ function App() {
         style={{
           width: isMobile ? "100%" : "380px",
           padding: "20px",
-          overflowY: "auto",
+          overflowY: isMobile ? "visible" : "auto",
           background: "white",
         }}
       >
