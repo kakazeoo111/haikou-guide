@@ -9,6 +9,7 @@ function App() {
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState([]);
   const [targetPlaces, setTargetPlaces] = useState([]);
+  const [selectedPlaces, setSelectedPlaces] = useState([]);
 
 
 
@@ -355,6 +356,21 @@ function App() {
     return (R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))).toFixed(2);
   }
 
+  const togglePlaceOnMap = (place) => {
+  setSelectedPlaces((prev) => {
+    const exists = prev.find((p) => p.id === place.id);
+
+    if (exists) {
+      // 已存在 → 再点一次就移除
+      return prev.filter((p) => p.id !== place.id);
+    } else {
+      // 不存在 → 加进去
+      return [...prev, place];
+    }
+  });
+};
+
+
   // ================================
   // ✅导航链接
   function navLink(destLat, destLng) {
@@ -436,20 +452,7 @@ function App() {
         })
       );
 
-      // ✅推荐地点 Marker
-      places.forEach((place) => {
-        const point = new BMapGL.Point(place.lng, place.lat);
-
-        const marker = new BMapGL.Marker(point);
-        mapInstance.addOverlay(marker);
-
-        marker.addEventListener("click", () => {
-          const info = new BMapGL.InfoWindow(
-            `<b>${place.name}</b><br/>${place.desc}`
-          );
-          mapInstance.openInfoWindow(info, point);
-        });
-      });
+      
 
       setMap(mapInstance);
     });
@@ -651,23 +654,28 @@ function App() {
             </button>
 
             {/* 🚗导航按钮 */}
-            <a
-              href={navLink(p.lat, p.lng)}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "block",
-                textAlign: "center",
-                padding: "10px",
-                borderRadius: "10px",
-                background: "green",
-                color: "white",
-                fontWeight: "bold",
-                textDecoration: "none",
-              }}
-            >
-              🚗导航
-            </a>
+            {/* 🚩 到这里 / 删除标记 */}
+<button
+  onClick={() => togglePlaceOnMap(p)}
+  style={{
+    width: "100%",
+    padding: "10px",
+    borderRadius: "10px",
+    border: "none",
+    background: selectedPlaces.some(sp => sp.id === p.id)
+      ? "#999"
+      : "green",
+    color: "white",
+    fontSize: "15px",
+    cursor: "pointer",
+    marginBottom: "8px",
+  }}
+>
+  {selectedPlaces.some(sp => sp.id === p.id)
+    ? "❌ 取消标记"
+    : "📍 到这里"}
+</button>
+
           </div>
         ))}
       </div>
@@ -682,5 +690,3 @@ function App() {
 }
 
 export default App;
-
-

@@ -1,95 +1,60 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 
-export default function BaiduMap({ targetPlaces }) {
+function BaiduMap({ targetPlaces }) {
   const mapRef = useRef(null);
+  const markersRef = useRef([]); // 用来保存当前的 Marker
 
-  const userPointRef = useRef(null);
-  const userMarkerRef = useRef(null);
-
-  const targetMarkersRef = useRef([]); // ✅多个 marker
-
-  // ✅地图初始化（只执行一次）
+  // ================================
+  // ✅ 初始化地图（只执行一次）
   useEffect(() => {
-    if (mapRef.current) return;
+    const BMapGL = window.BMapGL;
 
-    const map = new window.BMapGL.Map("map-container");
-    mapRef.current = map;
-
+    const map = new BMapGL.Map("map");
+    map.centerAndZoom(new BMapGL.Point(110.326392, 20.055302), 13);
     map.enableScrollWheelZoom(true);
 
-    // 默认海口中心
-    const point = new window.BMapGL.Point(110.33119, 20.031971);
-    map.centerAndZoom(point, 13);
-
-    // ✅定位
-    const geo = new window.BMapGL.Geolocation();
-
-    geo.getCurrentPosition((result) => {
-      if (geo.getStatus() === 0) {
-        const userPoint = result.point;
-        userPointRef.current = userPoint;
-
-        // 用户 Marker
-        const marker = new window.BMapGL.Marker(userPoint);
-        map.addOverlay(marker);
-
-        marker.setLabel(
-          new window.BMapGL.Label("📍你在这里", {
-            offset: new window.BMapGL.Size(20, -10),
-          })
-        );
-
-        userMarkerRef.current = marker;
-        map.centerAndZoom(userPoint, 15);
-      }
-    });
+    mapRef.current = map;
   }, []);
 
-  // ✅监听多个目标点变化
+  // ================================
+  // ✅ 监听 targetPlaces → 动态标记
   useEffect(() => {
-    if (!mapRef.current) return;
-    if (!userPointRef.current) return;
-
     const map = mapRef.current;
+    const BMapGL = window.BMapGL;
 
-    // ✅清除旧目标 markers
-    targetMarkersRef.current.forEach((m) => map.removeOverlay(m));
-    targetMarkersRef.current = [];
+    if (!map) return;
 
-    // ✅所有点：用户 + 多目标
-    const points = [userPointRef.current];
+    // 🧹 1️⃣ 先清空旧 Marker
+    markersRef.current.forEach((marker) => {
+      map.removeOverlay(marker);
+    });
+    markersRef.current = [];
 
-    // ✅添加多个目标 Marker
+    // 🚗 2️⃣ 给每个 targetPlace 画 Marker
     targetPlaces.forEach((place) => {
-      const destPoint = new window.BMapGL.Point(place.lng, place.lat);
-      points.push(destPoint);
+      const point = new BMapGL.Point(place.lng, place.lat);
+      const marker = new BMapGL.Marker(point);
 
-      const marker = new window.BMapGL.Marker(destPoint);
       map.addOverlay(marker);
+      markersRef.current.push(marker);
 
-      marker.setLabel(
-        new window.BMapGL.Label("🎯 " + place.name, {
-          offset: new window.BMapGL.Size(20, -10),
-        })
+      const info = new BMapGL.InfoWindow(
+        `<b>${place.name}</b><br/>${place.desc}`
       );
 
-      targetMarkersRef.current.push(marker);
+      marker.addEventListener("click", () => {
+        map.openInfoWindow(info, point);
+      });
     });
 
-    // ✅自动缩放：显示所有点
-    if (points.length > 1) {
-      const view = map.getViewport(points);
-      map.centerAndZoom(view.center, view.zoom);
+    // 🎯 3️⃣ 如果有地点，自动居中到第一个
+    if (targetPlaces.length > 0) {
+      const p = targetPlaces[0];
+      map.panTo(new BMapGL.Point(p.lng, p.lat));
     }
   }, [targetPlaces]);
 
-  return (
-    <div
-      id="map-container"
-      style={{
-        width: "100%",
-        height: "100vh",
-      }}
-    />
-  );
+  return <div id="map" style={{ width: "100%", height: "100%" }} />;
 }
+
+export default BaiduMap;
