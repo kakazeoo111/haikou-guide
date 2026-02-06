@@ -4,12 +4,13 @@ import BaiduMap from "./BaiduMap";
 
 function App() {
   const [userLocation, setUserLocation] = useState(null);
-  const [map, setMap] = useState(null);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState([]);
   const [targetPlaces, setTargetPlaces] = useState([]);
   const [selectedPlaces, setSelectedPlaces] = useState([]);
+  const [currentPage, setCurrentPage] = useState("home");
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
 
 
@@ -187,7 +188,7 @@ function App() {
     {
       id: 22,
       type: "food",
-      name: "姚记辣饭",
+      name: "姚记辣汤饭",
       desc: "海南特色，值得一试",
       lat: 20.049292,
       lng: 110.352991,
@@ -474,8 +475,6 @@ function App() {
       );
 
       
-
-      setMap(mapInstance);
     });
   }, []);
 
@@ -492,14 +491,21 @@ function App() {
     }))
     .sort((a, b) => a.distance - b.distance);
 
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+
   // ================================
   // ✅页面渲染
   return (
-    <div style={{ display: "flex", height: "100vh" }}>
+    <div style={{ display: isMobile ? "block" : "flex", height: isMobile ? "auto" : "100vh" }}>
       {/* 左侧面板 */}
       <div
         style={{
-          width: "380px",
+          width: isMobile ? "100%" : "380px",
           padding: "20px",
           overflowY: "auto",
           background: "white",
@@ -507,222 +513,279 @@ function App() {
       >
         <h2>📍海口推荐地图</h2>
 
-        {/* ⭐收藏区域 */}
-        <div
-          style={{
-            background: "#fff8e1",
-            padding: "12px",
-            borderRadius: "15px",
-            marginBottom: "20px",
-          }}
-        >
-          <h3>⭐ 我的收藏（{favorites.length}）</h3>
-
-          {favorites.length === 0 && (
-            <p style={{ fontSize: "13px" }}>暂无收藏地点</p>
-          )}
-
-          {favorites.map((f) => {
-
-  // ✅判断这个收藏地点是否已经被标记在地图上
-  const isMarked = targetPlaces.some((p) => p.id === f.id);
-
-  return (
-    <div
-      key={f.id}
-      style={{
-        marginBottom: "10px",
-        padding: "10px",
-        borderRadius: "12px",
-        background: "#fff",
-      }}
-    >
-      ❤️ {f.name}
-
-      {/* ✅按钮区域：二选一显示 */}
-      {!isMarked ? (
-        /* 🚗 去这里（添加标记） */
-        <button
-          onClick={() => {
-            setTargetPlaces((prev) => [...prev, f]);
-          }}
-          style={{
-            width: "100%",
-            padding: "10px",
-            borderRadius: "10px",
-            background: "green",
-            color: "white",
-            fontSize: "15px",
-            marginTop: "8px",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          🚗 去这里
-        </button>
-      ) : (
-        /* ❌ 删除标记（移除标记） */
-        <button
-          onClick={() => {
-            setTargetPlaces((prev) =>
-              prev.filter((p) => p.id !== f.id)
-            );
-          }}
-          style={{
-            width: "100%",
-            padding: "10px",
-            borderRadius: "10px",
-            background: "#999",
-            color: "white",
-            fontSize: "15px",
-            marginTop: "8px",
-            border: "none",
-            cursor: "pointer",
-          }}
-        >
-          ❌ 删除标记
-        </button>
-      )}
-
-      {/* ❌取消收藏按钮 */}
-      <button
-        onClick={() => toggleFavorite(f)}
-        style={{
-          width: "100%",
-          padding: "8px",
-          marginTop: "6px",
-          borderRadius: "10px",
-          border: "none",
-          background: "red",
-          color: "white",
-          cursor: "pointer",
-        }}
-      >
-        ❤️ 取消收藏
-      </button>
-    </div>
-  );
-})}
-
-
+        {/* 页面切换 */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
+          <button
+            onClick={() => setCurrentPage("home")}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "10px",
+              border: "none",
+              cursor: "pointer",
+              background: currentPage === "home" ? "#1677ff" : "#e5e7eb",
+              color: currentPage === "home" ? "white" : "#111",
+              fontWeight: "bold",
+            }}
+          >
+            🗺️ 地点列表
+          </button>
+          <button
+            onClick={() => setCurrentPage("favorites")}
+            style={{
+              flex: 1,
+              padding: "10px",
+              borderRadius: "10px",
+              border: "none",
+              cursor: "pointer",
+              background: currentPage === "favorites" ? "#f59e0b" : "#e5e7eb",
+              color: currentPage === "favorites" ? "white" : "#111",
+              fontWeight: "bold",
+            }}
+          >
+            ⭐ 我的收藏（{favorites.length}）
+          </button>
         </div>
 
-        {/* 搜索框 */}
-        <input
-          placeholder="搜索地点..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "10px",
-            marginBottom: "15px",
-          }}
-        />
+        {currentPage === "home" ? (
+          <>
+            {isMobile && (
+              <div
+                style={{
+                  height: "180px",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  marginBottom: "12px",
+                }}
+              >
+                <BaiduMap targetPlaces={targetPlaces} />
+              </div>
+            )}
 
-        {/* 分类按钮 */}
-        {["all", "food", "view", "street", "cafe"].map((t) => (
-          <button
-            key={t}
-            onClick={() => setFilter(t)}
-            style={{
-              marginRight: "6px",
-              padding: "6px 10px",
-              cursor: "pointer",
-            }}
-          >
-            {t}
-          </button>
-        ))}
-
-        <hr />
-
-        {/* 地点列表 */}
-        {filteredPlaces.map((p) => (
-          <div
-            key={p.id}
-            style={{
-              padding: "12px",
-              borderRadius: "12px",
-              marginBottom: "12px",
-              background: "#f8f8f8",
-            }}
-          >
-            <h3>{p.name}</h3>
-            <p>{p.desc}</p>
-            <p>📏距离：{p.distance} km</p>
-
-            {/* 收藏按钮 */}
-            <button
-              onClick={() => toggleFavorite(p)}
+            {/* 搜索框 */}
+            <input
+              placeholder="搜索地点..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               style={{
                 width: "100%",
                 padding: "10px",
-                borderRadius: "10px",
-                border: "none",
-                background: favorites.find((f) => f.id === p.id)
-                  ? "red"
-                  : "#ddd",
-                color: favorites.find((f) => f.id === p.id)
-                  ? "white"
-                  : "black",
-                cursor: "pointer",
-                marginBottom: "8px",
+                marginBottom: "15px",
               }}
-            >
-              {favorites.find((f) => f.id === p.id)
-                ? "❤️ 已收藏"
-                : "🤍 收藏地点"}
-            </button>
+            />
 
-            {/* 🚗导航按钮 */}
-            {/* 🚩 到这里 / 删除标记 */}
-<button
-  onClick={() => togglePlaceOnMap(p)}
-  style={{
-    width: "100%",
-    padding: "10px",
-    borderRadius: "10px",
-    border: "none",
-    background: selectedPlaces.some(sp => sp.id === p.id)
-      ? "#999"
-      : "green",
-    color: "white",
-    fontSize: "15px",
-    cursor: "pointer",
-    marginBottom: "8px",
-  }}
->
-  {selectedPlaces.some(sp => sp.id === p.id)
-    ? "❌ 取消标记"
-    : "📍 到这里"}
-</button>
+            {/* 分类按钮 */}
+            {["all", "food", "view", "street", "cafe"].map((t) => (
+              <button
+                key={t}
+                onClick={() => setFilter(t)}
+                style={{
+                  marginRight: "6px",
+                  padding: "6px 10px",
+                  cursor: "pointer",
+                }}
+              >
+                {t}
+              </button>
+            ))}
 
-<button
-  onClick={() => openBaiduNavigation(p)}
-  style={{
-    width: "100%",
-    padding: "10px",
-    borderRadius: "10px",
-    border: "none",
-    background: "#1677ff",
-    color: "white",
-    fontSize: "15px",
-    cursor: "pointer",
-  }}
->
-  🧭 导航
-</button>
+            <hr />
 
+            {/* 地点列表 */}
+            {filteredPlaces.map((p) => (
+              <div
+                key={p.id}
+                style={{
+                  padding: "12px",
+                  borderRadius: "12px",
+                  marginBottom: "12px",
+                  background: "#f8f8f8",
+                }}
+              >
+                <h3>{p.name}</h3>
+                <p>{p.desc}</p>
+                <p>📏距离：{p.distance} km</p>
+
+                {/* 收藏按钮 */}
+                <button
+                  onClick={() => toggleFavorite(p)}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: favorites.find((f) => f.id === p.id)
+                      ? "red"
+                      : "#ddd",
+                    color: favorites.find((f) => f.id === p.id)
+                      ? "white"
+                      : "black",
+                    cursor: "pointer",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {favorites.find((f) => f.id === p.id)
+                    ? "❤️ 已收藏"
+                    : "🤍 收藏地点"}
+                </button>
+
+                {/* 🚩 到这里 / 删除标记 */}
+                <button
+                  onClick={() => togglePlaceOnMap(p)}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: selectedPlaces.some((sp) => sp.id === p.id)
+                      ? "#999"
+                      : "green",
+                    color: "white",
+                    fontSize: "15px",
+                    cursor: "pointer",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {selectedPlaces.some((sp) => sp.id === p.id)
+                    ? "❌ 取消标记"
+                    : "📍 到这里"}
+                </button>
+
+                <button
+                  onClick={() => openBaiduNavigation(p)}
+                  style={{
+                    width: "100%",
+                    padding: "10px",
+                    borderRadius: "10px",
+                    border: "none",
+                    background: "#1677ff",
+                    color: "white",
+                    fontSize: "15px",
+                    cursor: "pointer",
+                  }}
+                >
+                  🧭 导航
+                </button>
+              </div>
+            ))}
+          </>
+        ) : (
+          <div
+            style={{
+              background: "#fff8e1",
+              padding: "12px",
+              borderRadius: "15px",
+            }}
+          >
+            <h3>⭐ 我的收藏（{favorites.length}）</h3>
+
+            {favorites.length === 0 && (
+              <p style={{ fontSize: "13px" }}>暂无收藏地点</p>
+            )}
+
+            {favorites.map((f) => {
+              const isMarked = targetPlaces.some((p) => p.id === f.id);
+
+              return (
+                <div
+                  key={f.id}
+                  style={{
+                    marginBottom: "10px",
+                    padding: "10px",
+                    borderRadius: "12px",
+                    background: "#fff",
+                  }}
+                >
+                  ❤️ {f.name}
+
+                  {!isMarked ? (
+                    <button
+                      onClick={() => {
+                        setTargetPlaces((prev) => [...prev, f]);
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "10px",
+                        background: "green",
+                        color: "white",
+                        fontSize: "15px",
+                        marginTop: "8px",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      🚗 去这里
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setTargetPlaces((prev) =>
+                          prev.filter((p) => p.id !== f.id)
+                        );
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px",
+                        borderRadius: "10px",
+                        background: "#999",
+                        color: "white",
+                        fontSize: "15px",
+                        marginTop: "8px",
+                        border: "none",
+                        cursor: "pointer",
+                      }}
+                    >
+                      ❌ 删除标记
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => openBaiduNavigation(f)}
+                    style={{
+                      width: "100%",
+                      padding: "10px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "#1677ff",
+                      color: "white",
+                      fontSize: "15px",
+                      marginTop: "6px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🧭 导航
+                  </button>
+
+                  <button
+                    onClick={() => toggleFavorite(f)}
+                    style={{
+                      width: "100%",
+                      padding: "8px",
+                      marginTop: "6px",
+                      borderRadius: "10px",
+                      border: "none",
+                      background: "red",
+                      color: "white",
+                      cursor: "pointer",
+                    }}
+                  >
+                    ❤️ 取消收藏
+                  </button>
+                </div>
+              );
+            })}
           </div>
-        ))}
+        )}
       </div>
 
-{/* 右侧地图 */}
-<div style={{ flex: 1 }}>
-  <BaiduMap targetPlaces={targetPlaces} />
-</div>
-
-</div>
+      {/* 右侧地图（桌面端） */}
+      {!isMobile && (
+        <div style={{ flex: 1 }}>
+          <BaiduMap targetPlaces={targetPlaces} />
+        </div>
+      )}
+    </div>
   );
 }
 
