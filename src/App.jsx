@@ -187,7 +187,7 @@ function App() {
     {
       id: 22,
       type: "food",
-      name: "姚记辣汤饭",
+      name: "姚记辣饭",
       desc: "海南特色，值得一试",
       lat: 20.049292,
       lng: 110.352991,
@@ -372,11 +372,32 @@ function App() {
 
 
   // ================================
-  // ✅导航链接
-  function navLink(destLat, destLng) {
-    if (!userLocation) return "#";
+  // ✅打开百度地图导航
+  function openBaiduNavigation(place) {
+    const destination = `${place.lat},${place.lng}|name:${encodeURIComponent(
+      place.name
+    )}`;
 
-    return `https://api.map.baidu.com/direction?origin=${userLocation.lat},${userLocation.lng}&destination=${destLat},${destLng}&mode=driving&region=海口&output=html&ak=你的AK`;
+    const origin = userLocation
+      ? `${userLocation.lat},${userLocation.lng}|name:${encodeURIComponent(
+          "我的位置"
+        )}`
+      : "";
+
+    const query = new URLSearchParams({
+      destination,
+      mode: "driving",
+      region: "海口",
+      output: "html",
+      src: "haikou-guide",
+    });
+
+    if (origin) {
+      query.set("origin", origin);
+    }
+
+    const navUrl = `https://api.map.baidu.com/direction?${query.toString()}`;
+    window.open(navUrl, "_blank", "noopener,noreferrer");
   }
 
   // ================================
@@ -674,6 +695,22 @@ function App() {
   {selectedPlaces.some(sp => sp.id === p.id)
     ? "❌ 取消标记"
     : "📍 到这里"}
+</button>
+
+<button
+  onClick={() => openBaiduNavigation(p)}
+  style={{
+    width: "100%",
+    padding: "10px",
+    borderRadius: "10px",
+    border: "none",
+    background: "#1677ff",
+    color: "white",
+    fontSize: "15px",
+    cursor: "pointer",
+  }}
+>
+  🧭 导航
 </button>
 
           </div>
