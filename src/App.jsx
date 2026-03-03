@@ -11,14 +11,15 @@ function App() {
   const [selectedPlaces, setSelectedPlaces] = useState([]);
   const [currentPage, setCurrentPage] = useState("home");
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
   const [currentUser, setCurrentUser] = useState(null);
-  const [loginForm, setLoginForm] = useState({ username: "", email: "" });
-  const [loginError, setLoginError] = useState("");
-
-
   // ================================
   // ✅登录
+  const [loginForm, setLoginForm] = useState({ username: "", email: "", code: "" });
+  const [loginError, setLoginError] = useState("");
+  const [codeHint, setCodeHint] = useState("");
+  const [sentCode, setSentCode] = useState("");
+  const [sentToEmail, setSentToEmail] = useState("");
+
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
     if (savedUser) {
@@ -26,28 +27,88 @@ function App() {
     }
   }, []);
 
+  const getAccounts = () => JSON.parse(localStorage.getItem("haikouAccounts")) || {};
+
+  const isEmailValid = (email) => {
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailPattern.test(email);
+  };
+
+  const handleSendCode = () => {
+    const username = loginForm.username.trim();
+    const email = loginForm.email.trim();
+
+    if (!username || !email) {
+      setLoginError("请先填写用户名和登录邮箱，再获取验证码");
+      return;
+    }
+
+    if (!isEmailValid(email)) {
+      setLoginError("请输入有效的邮箱地址");
+      return;
+    }
+
+    const accounts = getAccounts();
+    const boundUsername = accounts[email];
+
+    if (boundUsername && boundUsername !== username) {
+      setLoginError("该邮箱已绑定其他账号，一个邮箱只能登录一个号");
+      return;
+    }
+
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    setSentCode(code);
+    setSentToEmail(email);
+    setLoginError("");
+    setCodeHint(`验证码已发送到 ${email}（演示验证码：${code}）`);
+  };
+
   const handleLoginSubmit = (e) => {
     e.preventDefault();
 
     const username = loginForm.username.trim();
     const email = loginForm.email.trim();
+    const code = loginForm.code.trim();
 
-    if (!username || !email) {
-      setLoginError("请填写用户名和登录邮箱");
+    if (!username || !email || !code) {
+      setLoginError("请填写用户名、登录邮箱和验证码");
       return;
     }
 
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
+    if (!isEmailValid(email)) {
       setLoginError("请输入有效的邮箱地址");
       return;
     }
+
+    if (!sentCode || sentToEmail !== email) {
+      setLoginError("请先获取当前邮箱的验证码");
+      return;
+    }
+
+    if (code !== sentCode) {
+      setLoginError("验证码错误，请重新输入");
+      return;
+    }
+
+    const accounts = getAccounts();
+    const boundUsername = accounts[email];
+
+    if (boundUsername && boundUsername !== username) {
+      setLoginError("该邮箱已绑定其他账号，一个邮箱只能登录一个号");
+      return;
+    }
+
+    accounts[email] = username;
+    localStorage.setItem("haikouAccounts", JSON.stringify(accounts));
 
     const userData = { username, email };
     setCurrentUser(userData);
     localStorage.setItem("haikouUser", JSON.stringify(userData));
     setLoginError("");
-    setLoginForm({ username: "", email: "" });
+    setCodeHint("");
+    setSentCode("");
+    setSentToEmail("");
+    setLoginForm({ username: "", email: "", code: "" });
   };
 
   const handleLogout = () => {
@@ -56,9 +117,8 @@ function App() {
     setCurrentPage("home");
   };
 
-
   // ================================
-  // ✅你自己的推荐地点（四大分类）
+  // ✅你自己的推荐地（四大分类）
   const places = [
     {
       id: 1,
@@ -572,7 +632,7 @@ function App() {
           }}
         >
           <h2 style={{ color: "#2e6a4a", marginTop: 0 }}>登录海口推荐地图</h2>
-          <p style={{ color: "#4f6f5f", marginBottom: "18px" }}>请先填写用户名和登录邮箱。</p>
+          <p style={{ color: "#4f6f5f", marginBottom: "18px" }}>请先填写用户名、登录邮箱并完成验证码验证。</p>
 
           <label style={{ display: "block", color: "#2f6c4c", marginBottom: "6px" }}>用户名</label>
           <input
@@ -603,6 +663,36 @@ function App() {
             }}
           />
 
+          <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
+            <input
+              value={loginForm.code}
+              onChange={(e) => setLoginForm((prev) => ({ ...prev, code: e.target.value }))}
+              placeholder="请输入验证码"
+              style={{
+                flex: 1,
+                padding: "10px",
+                borderRadius: "10px",
+                border: "1px solid #cfe3d6",
+              }}
+            />
+            <button
+              type="button"
+              onClick={handleSendCode}
+              style={{
+                border: "none",
+                borderRadius: "10px",
+                padding: "0 12px",
+                background: "#7dbf96",
+                color: "white",
+                cursor: "pointer",
+                fontWeight: "bold",
+              }}
+            >
+              获取验证码
+            </button>
+          </div>
+
+          {codeHint && <p style={{ color: "#4f6f5f", margin: "0 0 12px", fontSize: "13px" }}>{codeHint}</p>}
           {loginError && <p style={{ color: "#d94f5c", margin: "0 0 12px" }}>{loginError}</p>}
 
           <button
