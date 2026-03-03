@@ -17,8 +17,10 @@ function App() {
   const [loginForm, setLoginForm] = useState({ username: "", email: "", code: "" });
   const [loginError, setLoginError] = useState("");
   const [codeHint, setCodeHint] = useState("");
-  const [sentCode, setSentCode] = useState("");
-  const [sentToEmail, setSentToEmail] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  const authApiBase = import.meta.env.VITE_AUTH_API_BASE || "http://localhost:3001";
 
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
@@ -27,14 +29,12 @@ function App() {
     }
   }, []);
 
-  const getAccounts = () => JSON.parse(localStorage.getItem("haikouAccounts")) || {};
-
   const isEmailValid = (email) => {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailPattern.test(email);
   };
 
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
     const username = loginForm.username.trim();
     const email = loginForm.email.trim();
 
@@ -48,22 +48,32 @@ function App() {
       return;
     }
 
-    const accounts = getAccounts();
-    const boundUsername = accounts[email];
-
-    if (boundUsername && boundUsername !== username) {
-      setLoginError("该邮箱已绑定其他账号，一个邮箱只能登录一个号");
-      return;
-    }
-
-    const code = String(Math.floor(100000 + Math.random() * 900000));
-    setSentCode(code);
-    setSentToEmail(email);
+    setIsSendingCode(true);
     setLoginError("");
-    setCodeHint(`验证码已发送到 ${email}（演示验证码：${code}）`);
+
+    try {
+      const response = await fetch(`${authApiBase}/api/email/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, username }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "发送验证码失败");
+      }
+
+      setCodeHint(`验证码已发送到 ${email}，请在邮箱中查看。`);
+    } catch (error) {
+      setCodeHint("");
+      setLoginError(error.message || "发送验证码失败");
+    } finally {
+      setIsSendingCode(false);
+    }
   };
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
 
     const username = loginForm.username.trim();
@@ -80,35 +90,33 @@ function App() {
       return;
     }
 
-    if (!sentCode || sentToEmail !== email) {
-      setLoginError("请先获取当前邮箱的验证码");
-      return;
-    }
-
-    if (code !== sentCode) {
-      setLoginError("验证码错误，请重新输入");
-      return;
-    }
-
-    const accounts = getAccounts();
-    const boundUsername = accounts[email];
-
-    if (boundUsername && boundUsername !== username) {
-      setLoginError("该邮箱已绑定其他账号，一个邮箱只能登录一个号");
-      return;
-    }
-
-    accounts[email] = username;
-    localStorage.setItem("haikouAccounts", JSON.stringify(accounts));
-
-    const userData = { username, email };
-    setCurrentUser(userData);
-    localStorage.setItem("haikouUser", JSON.stringify(userData));
+    setIsLoggingIn(true);
     setLoginError("");
-    setCodeHint("");
-    setSentCode("");
-    setSentToEmail("");
-    setLoginForm({ username: "", email: "", code: "" });
+
+    try {
+      const response = await fetch(`${authApiBase}/api/email/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, username, code }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error(result.message || "登录失败");
+      }
+
+      const userData = result.user || { username, email };
+      setCurrentUser(userData);
+      localStorage.setItem("haikouUser", JSON.stringify(userData));
+      setLoginError("");
+      setCodeHint("");
+      setLoginForm({ username: "", email: "", code: "" });
+    } catch (error) {
+      setLoginError(error.message || "登录失败");
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   const handleLogout = () => {
@@ -118,7 +126,7 @@ function App() {
   };
 
   // ================================
-  // ✅你自己的推荐地（四大分类）
+  // ✅你自己的推荐地点（四大分类）
   const places = [
     {
       id: 1,
@@ -209,8 +217,7 @@ function App() {
       lng: 110.330482,
     },
     {
-      id: 12,
-      type: "street",
+      id: 12,      type: "street",
       name: "龙湖天街",
       desc: "人气超大型商场商场",
       lat: 20.002361,
@@ -429,8 +436,7 @@ function App() {
       type: "cafe",
       name: "肆意茶聊 ",
       desc: "清冷感的竹林茶馆",
-      lat: 20.033555,
-      lng: 110.334263,
+      lat: 20.033555,      lng: 110.334263,
     },
     {
       id: 40,
@@ -632,7 +638,7 @@ function App() {
           }}
         >
           <h2 style={{ color: "#2e6a4a", marginTop: 0 }}>登录海口推荐地图</h2>
-          <p style={{ color: "#4f6f5f", marginBottom: "18px" }}>请先填写用户名、登录邮箱并完成验证码验证。</p>
+          <p style={{ color: "#4f6f5f", marginBottom: "18px" }}>请先填写用户名和登录邮箱，系统会发送真实邮箱验证码进行验证。</p>
 
           <label style={{ display: "block", color: "#2f6c4c", marginBottom: "6px" }}>用户名</label>
           <input
@@ -649,8 +655,7 @@ function App() {
           />
 
           <label style={{ display: "block", color: "#2f6c4c", marginBottom: "6px" }}>登录邮箱</label>
-          <input
-            type="email"
+          <input            type="email"
             value={loginForm.email}
             onChange={(e) => setLoginForm((prev) => ({ ...prev, email: e.target.value }))}
             placeholder="请输入登录邮箱"
@@ -678,6 +683,7 @@ function App() {
             <button
               type="button"
               onClick={handleSendCode}
+              disabled={isSendingCode}
               style={{
                 border: "none",
                 borderRadius: "10px",
@@ -688,7 +694,7 @@ function App() {
                 fontWeight: "bold",
               }}
             >
-              获取验证码
+              {isSendingCode ? "发送中..." : "获取验证码"}
             </button>
           </div>
 
@@ -697,6 +703,7 @@ function App() {
 
           <button
             type="submit"
+            disabled={isLoggingIn}
             style={{
               width: "100%",
               border: "none",
@@ -708,7 +715,7 @@ function App() {
               fontWeight: "bold",
             }}
           >
-            登录
+            {isLoggingIn ? "登录中..." : "登录"}
           </button>
         </form>
       </div>
@@ -867,8 +874,7 @@ function App() {
                   onClick={() => toggleFavorite(p)}
                   style={{
                     width: "100%",
-                    padding: "10px",
-                    borderRadius: "10px",
+                    padding: "10px",                    borderRadius: "10px",
                     border: "1px solid #b8d8c6",
                     background: favorites.find((f) => f.id === p.id)
                       ? "#df6b76"
