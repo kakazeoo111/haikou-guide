@@ -339,7 +339,7 @@ function App() {
       id: 40,
       type: "cafe",
       name: "盐巴saltea(金茂店）",
-      desc: "布满绿植的咖啡小院子",
+      desc: "布满绿植的咖啡院子",
       lat: 20.027084,
       lng: 110.307733,
     },
