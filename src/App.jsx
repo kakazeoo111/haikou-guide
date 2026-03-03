@@ -12,6 +12,49 @@ function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loginForm, setLoginForm] = useState({ username: "", email: "" });
+  const [loginError, setLoginError] = useState("");
+
+
+  // ================================
+  // ✅登录
+  useEffect(() => {
+    const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
+    if (savedUser) {
+      setCurrentUser(savedUser);
+    }
+  }, []);
+
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+
+    const username = loginForm.username.trim();
+    const email = loginForm.email.trim();
+
+    if (!username || !email) {
+      setLoginError("请填写用户名和登录邮箱");
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+      setLoginError("请输入有效的邮箱地址");
+      return;
+    }
+
+    const userData = { username, email };
+    setCurrentUser(userData);
+    localStorage.setItem("haikouUser", JSON.stringify(userData));
+    setLoginError("");
+    setLoginForm({ username: "", email: "" });
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("haikouUser");
+    setCurrentUser(null);
+    setCurrentPage("home");
+  };
 
 
   // ================================
@@ -505,6 +548,83 @@ function App() {
 
   // ================================
   // ✅页面渲染
+  if (!currentUser) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "20px",
+          background: "linear-gradient(180deg, #f4fbf6 0%, #e8f5eb 100%)",
+        }}
+      >
+        <form
+          onSubmit={handleLoginSubmit}
+          style={{
+            width: "100%",
+            maxWidth: "420px",
+            background: "#ffffff",
+            borderRadius: "16px",
+            padding: "24px",
+            boxShadow: "0 8px 24px rgba(63, 110, 84, 0.12)",
+          }}
+        >
+          <h2 style={{ color: "#2e6a4a", marginTop: 0 }}>登录海口推荐地图</h2>
+          <p style={{ color: "#4f6f5f", marginBottom: "18px" }}>请先填写用户名和登录邮箱。</p>
+
+          <label style={{ display: "block", color: "#2f6c4c", marginBottom: "6px" }}>用户名</label>
+          <input
+            value={loginForm.username}
+            onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))}
+            placeholder="请输入用户名"
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "10px",
+              border: "1px solid #cfe3d6",
+              marginBottom: "14px",
+            }}
+          />
+
+          <label style={{ display: "block", color: "#2f6c4c", marginBottom: "6px" }}>登录邮箱</label>
+          <input
+            type="email"
+            value={loginForm.email}
+            onChange={(e) => setLoginForm((prev) => ({ ...prev, email: e.target.value }))}
+            placeholder="请输入登录邮箱"
+            style={{
+              width: "100%",
+              padding: "10px",
+              borderRadius: "10px",
+              border: "1px solid #cfe3d6",
+              marginBottom: "14px",
+            }}
+          />
+
+          {loginError && <p style={{ color: "#d94f5c", margin: "0 0 12px" }}>{loginError}</p>}
+
+          <button
+            type="submit"
+            style={{
+              width: "100%",
+              border: "none",
+              borderRadius: "10px",
+              padding: "10px",
+              background: "#5aa77b",
+              color: "white",
+              cursor: "pointer",
+              fontWeight: "bold",
+            }}
+          >
+            登录
+          </button>
+        </form>
+      </div>
+    );
+  }
+
   return (
     <div style={{ display: isMobile ? "block" : "flex", minHeight: "100vh", background: "linear-gradient(180deg, #f4fbf6 0%, #e8f5eb 100%)" }}>
       {/* 左侧面板 */}
@@ -518,7 +638,23 @@ function App() {
           boxShadow: isMobile ? "none" : "4px 0 20px rgba(63, 110, 84, 0.08)",
         }}
       >
-        <h2 style={{ color: "#2e6a4a", marginBottom: "16px" }}>📍海口推荐地图</h2>
+        <h2 style={{ color: "#2e6a4a", marginBottom: "6px" }}>📍海口推荐地图</h2>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <p style={{ margin: 0, color: "#4f6f5f", fontSize: "14px" }}>欢迎你，{currentUser.username}</p>
+          <button
+            onClick={handleLogout}
+            style={{
+              border: "none",
+              borderRadius: "8px",
+              padding: "6px 10px",
+              background: "#df6b76",
+              color: "white",
+              cursor: "pointer",
+            }}
+          >
+            退出登录
+          </button>
+        </div>
 
         {/* 页面切换 */}
         <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
