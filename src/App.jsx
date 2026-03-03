@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import BaiduMap from "./BaiduMap";
-import LoginPage from "./LoginPage";
 import { APP_DEFAULT_COVER } from "./appConfig";
 
 
@@ -339,7 +338,7 @@ function App() {
       id: 40,
       type: "cafe",
       name: "盐巴saltea(金茂店）",
-      desc: "布满绿植的咖啡小院子",
+      desc: "布满绿植的院子",
       lat: 20.027084,
       lng: 110.307733,
     },
@@ -578,20 +577,7 @@ function App() {
           backgroundSize: "cover",
           backgroundPosition: "center",
         }
-      : { background: appCover.value };
-
-  if (!isLoggedIn) {
-    return (
-      <LoginPage
-        currentCover={appCover}
-        onLogin={({ name, phone }) => {
-          setUserName(name);
-          setUserPhone(phone);
-          setIsUserDataLoaded(false);
-          setIsLoggedIn(true);
-        }}
-      />
-    );
+      : { background: appCover.value };;
   }
 
   // ================================
