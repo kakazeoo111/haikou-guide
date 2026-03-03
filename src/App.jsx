@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import BaiduMap from "./BaiduMap";
-import { APP_DEFAULT_COVER } from "./appConfig";
 
 
 function App() {
@@ -9,13 +8,9 @@ function App() {
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState([]);
   const [targetPlaces, setTargetPlaces] = useState([]);
+  const [selectedPlaces, setSelectedPlaces] = useState([]);
   const [currentPage, setCurrentPage] = useState("home");
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState("");
-  const [userPhone, setUserPhone] = useState("");
-  const [isUserDataLoaded, setIsUserDataLoaded] = useState(false);
-  const [appCover] = useState(APP_DEFAULT_COVER);
 
 
 
@@ -338,7 +333,7 @@ function App() {
       id: 40,
       type: "cafe",
       name: "盐巴saltea(金茂店）",
-      desc: "布满绿植的院子",
+      desc: "布满绿植的咖啡小院子",
       lat: 20.027084,
       lng: 110.307733,
     },
@@ -363,16 +358,16 @@ function App() {
   }
 
   const togglePlaceOnMap = (place) => {
-  setTargetPlaces((prev) => {
+  setSelectedPlaces((prev) => {
     const exists = prev.find((p) => p.id === place.id);
 
     if (exists) {
       // 已存在 → 再点一次就移除
       return prev.filter((p) => p.id !== place.id);
+    } else {
+      // 不存在 → 加进去
+      return [...prev, place];
     }
-
-    // 不存在 → 加进去
-    return [...prev, place];
   });
 };
 
@@ -439,71 +434,11 @@ function App() {
 
 
   // ================================
-  // ✅按手机号加载该用户数据
+  // ✅页面加载时读取收藏
   useEffect(() => {
-    if (!isLoggedIn || !userPhone) return;
-
-    const storageKey = `haikou_user_data_${userPhone}`;
-
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) {
-        setFavorites([]);
-        setTargetPlaces([]);
-        setFilter("all");
-        setSearch("");
-        setCurrentPage("home");
-        setIsUserDataLoaded(true);
-        return;
-      }
-
-      const parsed = JSON.parse(raw);
-      setFavorites(Array.isArray(parsed.favorites) ? parsed.favorites : []);
-      setTargetPlaces(Array.isArray(parsed.targetPlaces) ? parsed.targetPlaces : []);
-      setFilter(parsed.filter || "all");
-      setSearch(parsed.search || "");
-      setCurrentPage(parsed.currentPage || "home");
-      setUserName((prev) => parsed.name || prev || "旅行者");
-    } catch {
-      setFavorites([]);
-      setTargetPlaces([]);
-      setFilter("all");
-      setSearch("");
-      setCurrentPage("home");
-    } finally {
-      setIsUserDataLoaded(true);
-    }
-  }, [isLoggedIn, userPhone]);
-
-  // ================================
-  // ✅按手机号保存该用户数据
-  useEffect(() => {
-    if (!isLoggedIn || !userPhone || !isUserDataLoaded) return;
-
-    const storageKey = `haikou_user_data_${userPhone}`;
-    const payload = {
-      phone: userPhone,
-      name: userName || "旅行者",
-      favorites,
-      targetPlaces,
-      filter,
-      search,
-      currentPage,
-      updatedAt: Date.now(),
-    };
-
-    localStorage.setItem(storageKey, JSON.stringify(payload));
-  }, [
-    isLoggedIn,
-    userPhone,
-    userName,
-    favorites,
-    targetPlaces,
-    filter,
-    search,
-    currentPage,
-    isUserDataLoaded,
-  ]);
+    const saved = JSON.parse(localStorage.getItem("favorites")) || [];
+    setFavorites(saved);
+  }, []);
 
   // ================================
   // ✅初始化地图 + Marker
@@ -542,7 +477,6 @@ function App() {
       
     });
   }, []);
-
   // ================================
   // ✅筛选 + 距离排序
   const filteredPlaces = places
@@ -569,21 +503,10 @@ function App() {
   }, []);
 
 
-  const appBackgroundStyle =
-    appCover.kind === "image"
-      ? {
-          backgroundImage: `linear-gradient(rgba(244, 251, 246, 0.82), rgba(232, 245, 235, 0.9)), url(${appCover.value})`,
-          backgroundColor: "#d8eaf6",
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }
-      : { background: appCover.value };;
-  }
-
   // ================================
   // ✅页面渲染
   return (
-    <div style={{ display: isMobile ? "block" : "flex", minHeight: "100vh", ...appBackgroundStyle }}>
+    <div style={{ display: isMobile ? "block" : "flex", minHeight: "100vh", background: "linear-gradient(180deg, #f4fbf6 0%, #e8f5eb 100%)" }}>
       {/* 左侧面板 */}
       <div
         style={{
@@ -595,36 +518,7 @@ function App() {
           boxShadow: isMobile ? "none" : "4px 0 20px rgba(63, 110, 84, 0.08)",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
-          <h2 style={{ color: "#2e6a4a", marginBottom: 0 }}>📍海口推荐地图 · {userName}</h2>
-          <button
-            onClick={() => {
-              setIsLoggedIn(false);
-              setUserName("");
-              setUserPhone("");
-              setIsUserDataLoaded(false);
-              setFavorites([]);
-              setTargetPlaces([]);
-              setFilter("all");
-              setSearch("");
-              setCurrentPage("home");
-            }}
-            style={{
-              border: "1px solid #cfe3d6",
-              borderRadius: "12px",
-              padding: "6px 10px",
-              background: "#f5fbf7",
-              color: "#2f6048",
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-            }}
-          >
-            退出
-          </button>
-        </div>
-        <div style={{ color: "#5f7e6f", fontSize: "12px", marginBottom: "10px" }}>
-          当前账号：{userPhone}
-        </div>
+        <h2 style={{ color: "#2e6a4a", marginBottom: "16px" }}>📍海口推荐地图</h2>
 
         {/* 页面切换 */}
         <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
@@ -632,11 +526,11 @@ function App() {
             onClick={() => setCurrentPage("home")}
             style={{
               flex: 1,
-              padding: "8px 10px",
-              borderRadius: "14px",
+              padding: "10px",
+              borderRadius: "10px",
               border: "none",
               cursor: "pointer",
-              background: currentPage === "home" ? "#69bb8d" : "#e7f3ec",
+              background: currentPage === "home" ? "#5aa77b" : "#d8eadf",
               color: currentPage === "home" ? "white" : "#1f3d32",
               fontWeight: "bold",
             }}
@@ -647,11 +541,11 @@ function App() {
             onClick={() => setCurrentPage("favorites")}
             style={{
               flex: 1,
-              padding: "8px 10px",
-              borderRadius: "14px",
+              padding: "10px",
+              borderRadius: "10px",
               border: "none",
               cursor: "pointer",
-              background: currentPage === "favorites" ? "#8ccaa4" : "#e7f3ec",
+              background: currentPage === "favorites" ? "#7dbf96" : "#d8eadf",
               color: currentPage === "favorites" ? "white" : "#1f3d32",
               fontWeight: "bold",
             }}
@@ -687,60 +581,39 @@ function App() {
               onChange={(e) => setSearch(e.target.value)}
               style={{
                 width: "100%",
-                padding: "9px 11px",
-                marginBottom: "13px",
-                borderRadius: "14px",
+                padding: "10px",
+                marginBottom: "15px",
+                borderRadius: "10px",
                 border: "1px solid #cfe3d6",
                 background: "#f8fcf9",
               }}
             />
 
             {/* 分类按钮 */}
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "6px",
-                marginBottom: "6px",
-              }}
-            >
-              {[
-                { key: "all", label: "全部", icon: "🌟" },
-                { key: "favorite", label: "收藏", icon: "💖" },
-                { key: "food", label: "美食", icon: "🍡" },
-                { key: "view", label: "景点", icon: "🌈" },
-                { key: "street", label: "商圈", icon: "🎀" },
-                { key: "cafe", label: "咖啡", icon: "☕" },
-              ].map((item) => {
-                const active = filter === item.key;
-
-                return (
-                  <button
-                    key={item.key}
-                    onClick={() => setFilter(item.key)}
-                    style={{
-                      padding: "6px 11px",
-                      borderRadius: "999px",
-                      border: active ? "1px solid #62af85" : "1px solid #cfe3d6",
-                      background: active
-                        ? "linear-gradient(135deg, #77c49a 0%, #62af85 100%)"
-                        : "#f1f9f4",
-                      color: active ? "#fff" : "#35624c",
-                      cursor: "pointer",
-                      fontWeight: active ? "700" : "600",
-                      boxShadow: active
-                        ? "0 5px 10px rgba(98, 175, 133, 0.28)"
-                        : "0 1px 2px rgba(34, 84, 61, 0.08)",
-                      transition: "all 0.18s ease",
-                      fontSize: "13px",
-                    }}
-                  >
-                    <span style={{ marginRight: "3px", fontSize: "13px" }}>{item.icon}</span>
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
+            {[
+              { key: "all", label: "全部" },
+              { key: "favorite", label: "收藏" },
+              { key: "food", label: "美食" },
+              { key: "view", label: "景点" },
+              { key: "street", label: "商圈" },
+              { key: "cafe", label: "咖啡" },
+            ].map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setFilter(item.key)}
+                style={{
+                  marginRight: "6px",
+                  padding: "6px 10px",
+                  borderRadius: "20px",
+                  border: "1px solid #cfe3d6",
+                  background: filter === item.key ? "#5aa77b" : "#f1f9f4",
+                  color: filter === item.key ? "#fff" : "#335846",
+                  cursor: "pointer",
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
 
             <hr style={{ border: "none", borderTop: "1px solid #d9ecdf", margin: "14px 0" }} />
 
@@ -794,7 +667,7 @@ function App() {
                     padding: "10px",
                     borderRadius: "10px",
                     border: "1px solid #b8d8c6",
-                    background: targetPlaces.some((tp) => tp.id === p.id)
+                    background: selectedPlaces.some((sp) => sp.id === p.id)
                       ? "#8ca697"
                       : "#4f9b70",
                     color: "white",
@@ -803,7 +676,7 @@ function App() {
                     marginBottom: "8px",
                   }}
                 >
-                  {targetPlaces.some((tp) => tp.id === p.id)
+                  {selectedPlaces.some((sp) => sp.id === p.id)
                     ? "❌ 取消标记"
                     : "📍 到这里"}
                 </button>
@@ -944,6 +817,6 @@ function App() {
       )}
     </div>
   );
-
+}
 
 export default App;
