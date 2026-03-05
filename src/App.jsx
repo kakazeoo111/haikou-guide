@@ -20,7 +20,7 @@ function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   // 后端 API 地址
-  const authApiBase = "http://localhost:3001";
+  const authApiBase = "http://api.suzcore.top";
 
   // ================================
   // 1. 初始化与定位
