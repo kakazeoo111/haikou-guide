@@ -1,128 +1,153 @@
 import React, { useEffect, useState } from "react";
 import BaiduMap from "./BaiduMap";
 
-
 function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [favorites, setFavorites] = useState([]);
-  const [targetPlaces, setTargetPlaces] = useState([]);
-  const [selectedPlaces, setSelectedPlaces] = useState([]);
-  const [currentPage, setCurrentPage] = useState("home");
+  const [favorites, setFavorites] = useState([]); // 这里现在同步 MySQL 数据
+  const [targetPlaces, setTargetPlaces] = useState([]); // 地图上的大头针
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  
+  // ✅ 认证与模式状态
   const [currentUser, setCurrentUser] = useState(null);
-  // ================================
-  // ✅登录
-  const [loginForm, setLoginForm] = useState({ username: "", email: "", code: "" });
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [loginForm, setLoginForm] = useState({ username: "", phone: "", code: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [codeHint, setCodeHint] = useState("");
   const [isSendingCode, setIsSendingCode] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  const authApiBase = import.meta.env.VITE_AUTH_API_BASE || "http://localhost:3001";
+  // 后端 API 地址
+  const authApiBase = "http://localhost:3001";
 
+  // ================================
+  // 1. 初始化与定位
+  // ================================
   useEffect(() => {
+    // 读取本地登录状态
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
-    if (savedUser) {
-      setCurrentUser(savedUser);
-    }
+    if (savedUser) setCurrentUser(savedUser);
+
+    const onResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", onResize);
+    
+    // 获取当前位置
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      (err) => console.error("无法获取定位", err)
+    );
+
+    return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  const isEmailValid = (email) => {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailPattern.test(email);
-  };
+  // ================================
+  // 2. ✅ 云端收藏同步逻辑
+  // ================================
+  useEffect(() => {
+    if (currentUser) {
+      // 登录后，去 MySQL 拿这个人的收藏列表
+      fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            // data.favIds 是一个数字数组，例如 [1, 5, 20]
+            // 从全量地点库中过滤出这些对象
+            const cloudFavs = places.filter(p => data.favIds.includes(p.id));
+            setFavorites(cloudFavs);
+          }
+        })
+        .catch(err => console.error("获取云端收藏失败", err));
+    } else {
+      setFavorites([]); // 退出登录清空收藏预览
+    }
+  }, [currentUser]);
 
+  // 验证码倒计时
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+
+  // ================================
+  // 3. 认证逻辑 (注册/登录)
+  // ================================
   const handleSendCode = async () => {
-    const username = loginForm.username.trim();
-    const email = loginForm.email.trim();
-
-    if (!username || !email) {
-      setLoginError("请先填写用户名和登录邮箱，再获取验证码");
-      return;
-    }
-
-    if (!isEmailValid(email)) {
-      setLoginError("请输入有效的邮箱地址");
-      return;
-    }
-
+    const { phone } = loginForm;
+    if (!/^1\d{10}$/.test(phone)) return setLoginError("手机号不正确");
     setIsSendingCode(true);
-    setLoginError("");
-
     try {
-      const response = await fetch(`${authApiBase}/api/email/send`, {
+      const res = await fetch(`${authApiBase}/api/sms/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, username }),
+        body: JSON.stringify({ phone }),
       });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.message || "发送验证码失败");
-      }
-
-      setCodeHint(`验证码已发送到 ${email}，请在邮箱中查看。`);
-    } catch (error) {
-      setCodeHint("");
-      setLoginError(error.message || "发送验证码失败");
-    } finally {
-      setIsSendingCode(false);
-    }
+      const data = await res.json();
+      if (data.ok) { setCodeHint("验证码已发出"); setCountdown(60); }
+      else setLoginError(data.message);
+    } catch (e) { setLoginError("后端未启动"); }
+    finally { setIsSendingCode(false); }
   };
 
-  const handleLoginSubmit = async (e) => {
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-
-    const username = loginForm.username.trim();
-    const email = loginForm.email.trim();
-    const code = loginForm.code.trim();
-
-    if (!username || !email || !code) {
-      setLoginError("请填写用户名、登录邮箱和验证码");
-      return;
-    }
-
-    if (!isEmailValid(email)) {
-      setLoginError("请输入有效的邮箱地址");
-      return;
-    }
-
-    setIsLoggingIn(true);
+    const endpoint = isRegisterMode ? "/api/auth/register" : "/api/auth/login";
+    setIsAuthLoading(true);
     setLoginError("");
 
     try {
-      const response = await fetch(`${authApiBase}/api/email/verify`, {
+      const res = await fetch(`${authApiBase}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, username, code }),
+        body: JSON.stringify(loginForm),
       });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.ok) {
-        throw new Error(result.message || "登录失败");
-      }
-
-      const userData = result.user || { username, email };
-      setCurrentUser(userData);
-      localStorage.setItem("haikouUser", JSON.stringify(userData));
-      setLoginError("");
-      setCodeHint("");
-      setLoginForm({ username: "", email: "", code: "" });
-    } catch (error) {
-      setLoginError(error.message || "登录失败");
-    } finally {
-      setIsLoggingIn(false);
-    }
+      const data = await res.json();
+      if (data.ok) {
+        if (isRegisterMode) {
+          alert("注册成功，请登录！");
+          setIsRegisterMode(false);
+        } else {
+          setCurrentUser(data.user);
+          localStorage.setItem("haikouUser", JSON.stringify(data.user));
+        }
+      } else { setLoginError(data.message); }
+    } catch (e) { setLoginError("连接服务器失败"); }
+    finally { setIsAuthLoading(false); }
   };
 
   const handleLogout = () => {
     localStorage.removeItem("haikouUser");
     setCurrentUser(null);
-    setCurrentPage("home");
+  };
+
+  // ================================
+  // 4. ✅ 收藏云同步操作
+  // ================================
+  const toggleFavorite = async (place) => {
+    if (!currentUser) return alert("请先登录");
+
+    try {
+      // 请求后端：数据库里有就删除，没有就添加
+      const res = await fetch(`${authApiBase}/api/favorites/toggle`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, placeId: place.id }),
+      });
+      const data = await res.json();
+
+      if (data.ok) {
+        if (data.action === "added") {
+          setFavorites([...favorites, place]);
+        } else {
+          setFavorites(favorites.filter((f) => f.id !== place.id));
+        }
+      }
+    } catch (error) {
+      alert("云端同步失败，请重试");
+    }
   };
 
   // ================================
@@ -217,7 +242,8 @@ function App() {
       lng: 110.330482,
     },
     {
-      id: 12,      type: "street",
+      id: 12,
+      type: "street",
       name: "龙湖天街",
       desc: "人气超大型商场商场",
       lat: 20.002361,
@@ -436,7 +462,8 @@ function App() {
       type: "cafe",
       name: "肆意茶聊 ",
       desc: "清冷感的竹林茶馆",
-      lat: 20.033555,      lng: 110.334263,
+      lat: 20.033555,
+      lng: 110.334263,
     },
     {
       id: 40,
@@ -450,603 +477,117 @@ function App() {
 
 
 
-  // ================================
-  // ✅距离计算（km）
   function getDistance(lat1, lng1, lat2, lng2) {
+    if (!lat1 || !lng1) return "...";
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
     const dLng = ((lng2 - lng1) * Math.PI) / 180;
-
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLng / 2) ** 2;
-
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
     return (R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))).toFixed(2);
   }
 
   const togglePlaceOnMap = (place) => {
-  setSelectedPlaces((prev) => {
-    const exists = prev.find((p) => p.id === place.id);
+    const exists = targetPlaces.find((p) => p.id === place.id);
+    setTargetPlaces(exists ? targetPlaces.filter((p) => p.id !== place.id) : [...targetPlaces, place]);
+  };
 
-    if (exists) {
-      // 已存在 → 再点一次就移除
-      return prev.filter((p) => p.id !== place.id);
-    } else {
-      // 不存在 → 加进去
-      return [...prev, place];
-    }
-  });
-};
-
-
-  // ================================
-  // ✅打开百度地图导航
-  function openBaiduNavigation(place) {
-    const destination = `${place.lat},${place.lng}|name:${encodeURIComponent(
-      place.name
-    )}`;
-
-    const origin = userLocation
-      ? `${userLocation.lat},${userLocation.lng}|name:${encodeURIComponent(
-          "我的位置"
-        )}`
-      : "";
-
-    const query = new URLSearchParams({
-      destination,
-      mode: "driving",
-      region: "海口",
-      output: "html",
-      src: "haikou-guide",
-    });
-
-    if (origin) {
-      query.set("origin", origin);
-    }
-
-    const navUrl = `https://api.map.baidu.com/direction?${query.toString()}`;
-    window.open(navUrl, "_blank", "noopener,noreferrer");
-  }
-
-  // ================================
-  // ✅收藏切换函数
- const toggleFavorite = (place) => {
-
-  // ✅判断这个地点是不是已经收藏了
-  const alreadyFav = favorites.some((f) => f.id === place.id);
-
-  if (alreadyFav) {
-    // ===========================
-    // ❌情况1：已经收藏 → 现在取消收藏
-    // ===========================
-
-    // 1️⃣从收藏列表删除
-    setFavorites((prev) =>
-      prev.filter((f) => f.id !== place.id)
-    );
-
-    // 2️⃣同时从地图标记中删除（重点！！）
-    setTargetPlaces((prev) =>
-      prev.filter((p) => p.id !== place.id)
-    );
-
-  } else {
-    // ===========================
-    // ✅情况2：没收藏 → 添加收藏
-    // ===========================
-
-    setFavorites((prev) => [...prev, place]);
-  }
-};
-
-
-  // ================================
-  // ✅页面加载时读取收藏
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("favorites")) || [];
-    setFavorites(saved);
-  }, []);
-
-  // ================================
-  // ✅初始化地图 + Marker
-  useEffect(() => {
-    navigator.geolocation.getCurrentPosition((pos) => {
-      const location = {
-        lat: pos.coords.latitude,
-        lng: pos.coords.longitude,
-      };
-
-      setUserLocation(location);
-
-      const BMapGL = window.BMapGL;
-      const mapInstance = new BMapGL.Map("map");
-
-      mapInstance.centerAndZoom(
-        new BMapGL.Point(location.lng, location.lat),
-        14
-      );
-
-      mapInstance.enableScrollWheelZoom(true);
-
-      // ✅用户位置
-      const userMarker = new BMapGL.Marker(
-        new BMapGL.Point(location.lng, location.lat)
-      );
-
-      mapInstance.addOverlay(userMarker);
-
-      userMarker.setLabel(
-        new BMapGL.Label("📍你在这里", {
-          offset: new BMapGL.Size(20, -10),
-        })
-      );
-
-      
-    });
-  }, []);
-  // ================================
-  // ✅筛选 + 距离排序
   const filteredPlaces = places
     .filter((p) => {
       if (filter === "all") return true;
-      if (filter === "favorite") {
-        return favorites.some((f) => f.id === p.id);
-      }
+      if (filter === "favorite") return favorites.some((f) => f.id === p.id);
       return p.type === filter;
     })
     .filter((p) => p.name.includes(search))
     .map((p) => ({
       ...p,
-      distance: userLocation
-        ? getDistance(userLocation.lat, userLocation.lng, p.lat, p.lng)
-        : null,
+      distVal: userLocation ? parseFloat(getDistance(userLocation.lat, userLocation.lng, p.lat, p.lng)) : 999
     }))
-    .sort((a, b) => a.distance - b.distance);
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
-
+    .sort((a, b) => a.distVal - b.distVal);
 
   // ================================
-  // ✅页面渲染
+  // 6. UI 渲染
+  // ================================
   if (!currentUser) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px",
-          background: "linear-gradient(180deg, #f4fbf6 0%, #e8f5eb 100%)",
-        }}
-      >
-        <form
-          onSubmit={handleLoginSubmit}
-          style={{
-            width: "100%",
-            maxWidth: "420px",
-            background: "#ffffff",
-            borderRadius: "16px",
-            padding: "24px",
-            boxShadow: "0 8px 24px rgba(63, 110, 84, 0.12)",
-          }}
-        >
-          <h2 style={{ color: "#2e6a4a", marginTop: 0 }}>登录海口推荐地图</h2>
-          <p style={{ color: "#4f6f5f", marginBottom: "18px" }}>请先填写用户名和登录邮箱，系统会发送真实邮箱验证码进行验证。</p>
-
-          <label style={{ display: "block", color: "#2f6c4c", marginBottom: "6px" }}>用户名</label>
-          <input
-            value={loginForm.username}
-            onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))}
-            placeholder="请输入用户名"
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #cfe3d6",
-              marginBottom: "14px",
-            }}
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#e8f5eb" }}>
+        <form onSubmit={handleAuthSubmit} style={{ width: "360px", background: "white", padding: "30px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+          <h2 style={{ textAlign: "center", color: "#2e6a4a" }}>{isRegisterMode ? "账号注册" : "海口推荐地图"}</h2>
+          
+          <input 
+            placeholder="手机号" 
+            style={{ width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" }}
+            onChange={e => setLoginForm({...loginForm, phone: e.target.value})} 
           />
 
-          <label style={{ display: "block", color: "#2f6c4c", marginBottom: "6px" }}>登录邮箱</label>
-          <input            type="email"
-            value={loginForm.email}
-            onChange={(e) => setLoginForm((prev) => ({ ...prev, email: e.target.value }))}
-            placeholder="请输入登录邮箱"
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "10px",
-              border: "1px solid #cfe3d6",
-              marginBottom: "14px",
-            }}
-          />
+          {isRegisterMode && (
+            <>
+              <input placeholder="用户名" style={{ width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" }} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />
+              <div style={{ display: "flex", gap: "5px", marginBottom: "15px" }}>
+                <input placeholder="验证码" style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "1px solid #ddd" }} onChange={e => setLoginForm({...loginForm, code: e.target.value})} />
+                <button type="button" onClick={handleSendCode} disabled={countdown > 0} style={{ borderRadius: "10px", border: "none", background: "#7dbf96", color: "white", cursor: "pointer", width: "80px" }}>
+                  {countdown > 0 ? `${countdown}s` : "获取"}
+                </button>
+              </div>
+            </>
+          )}
 
-          <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
-            <input
-              value={loginForm.code}
-              onChange={(e) => setLoginForm((prev) => ({ ...prev, code: e.target.value }))}
-              placeholder="请输入验证码"
-              style={{
-                flex: 1,
-                padding: "10px",
-                borderRadius: "10px",
-                border: "1px solid #cfe3d6",
-              }}
-            />
-            <button
-              type="button"
-              onClick={handleSendCode}
-              disabled={isSendingCode}
-              style={{
-                border: "none",
-                borderRadius: "10px",
-                padding: "0 12px",
-                background: "#7dbf96",
-                color: "white",
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
-            >
-              {isSendingCode ? "发送中..." : "获取验证码"}
-            </button>
-          </div>
+          <input type="password" placeholder="密码" style={{ width: "100%", padding: "12px", marginBottom: "20px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" }} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
 
-          {codeHint && <p style={{ color: "#4f6f5f", margin: "0 0 12px", fontSize: "13px" }}>{codeHint}</p>}
-          {loginError && <p style={{ color: "#d94f5c", margin: "0 0 12px" }}>{loginError}</p>}
-
-          <button
-            type="submit"
-            disabled={isLoggingIn}
-            style={{
-              width: "100%",
-              border: "none",
-              borderRadius: "10px",
-              padding: "10px",
-              background: "#5aa77b",
-              color: "white",
-              cursor: "pointer",
-              fontWeight: "bold",
-            }}
-          >
-            {isLoggingIn ? "登录中..." : "登录"}
+          {loginError && <p style={{ color: "red", fontSize: "13px" }}>{loginError}</p>}
+          
+          <button type="submit" style={{ width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" }}>
+            {isAuthLoading ? "处理中..." : (isRegisterMode ? "注册" : "登录")}
           </button>
+
+          <p onClick={() => setIsRegisterMode(!isRegisterMode)} style={{ textAlign: "center", color: "#5aa77b", marginTop: "15px", cursor: "pointer", fontSize: "14px" }}>
+            {isRegisterMode ? "已有账号？去登录" : "新用户？去注册账号"}
+          </p>
         </form>
       </div>
     );
   }
 
   return (
-    <div style={{ display: isMobile ? "block" : "flex", minHeight: "100vh", background: "linear-gradient(180deg, #f4fbf6 0%, #e8f5eb 100%)" }}>
-      {/* 左侧面板 */}
-      <div
-        style={{
-          width: isMobile ? "100%" : "380px",
-          padding: "20px",
-          overflowY: isMobile ? "visible" : "auto",
-          background: "#ffffff",
-          borderRight: isMobile ? "none" : "1px solid #d9ecdf",
-          boxShadow: isMobile ? "none" : "4px 0 20px rgba(63, 110, 84, 0.08)",
-        }}
-      >
-        <h2 style={{ color: "#2e6a4a", marginBottom: "6px" }}>📍海口推荐地图</h2>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-          <p style={{ margin: 0, color: "#4f6f5f", fontSize: "14px" }}>欢迎你，{currentUser.username}</p>
-          <button
-            onClick={handleLogout}
-            style={{
-              border: "none",
-              borderRadius: "8px",
-              padding: "6px 10px",
-              background: "#df6b76",
-              color: "white",
-              cursor: "pointer",
-            }}
-          >
-            退出登录
-          </button>
+    <div style={{ display: isMobile ? "block" : "flex", height: "100vh" }}>
+      <div style={{ width: isMobile ? "100%" : "380px", padding: "20px", overflowY: "auto", background: "white", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
+          <h2 style={{ margin: 0 }}>📍 海口推荐</h2>
+          <button onClick={handleLogout} style={{ border: "none", background: "#fdebee", color: "#d94f5c", borderRadius: "5px", padding: "5px 10px", cursor: "pointer" }}>退出</button>
         </div>
 
-        {/* 页面切换 */}
-        <div style={{ display: "flex", gap: "8px", marginBottom: "14px" }}>
-          <button
-            onClick={() => setCurrentPage("home")}
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "10px",
-              border: "none",
-              cursor: "pointer",
-              background: currentPage === "home" ? "#5aa77b" : "#d8eadf",
-              color: currentPage === "home" ? "white" : "#1f3d32",
-              fontWeight: "bold",
-            }}
-          >
-            🗺️ 地点列表
-          </button>
-          <button
-            onClick={() => setCurrentPage("favorites")}
-            style={{
-              flex: 1,
-              padding: "10px",
-              borderRadius: "10px",
-              border: "none",
-              cursor: "pointer",
-              background: currentPage === "favorites" ? "#7dbf96" : "#d8eadf",
-              color: currentPage === "favorites" ? "white" : "#1f3d32",
-              fontWeight: "bold",
-            }}
-          >
-            ⭐ 我的收藏（{favorites.length}）
-          </button>
+        <input placeholder="搜索地点..." value={search} onChange={e => setSearch(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "10px", border: "1px solid #eee", marginBottom: "15px", boxSizing: "border-box" }} />
+
+        <div style={{ display: "flex", gap: "8px", overflowX: "auto", marginBottom: "20px" }}>
+          {["all", "favorite", "food", "view", "street", "cafe"].map(k => (
+            <button key={k} onClick={() => setFilter(k)} style={{ padding: "6px 15px", borderRadius: "20px", border: "none", background: filter === k ? "#5aa77b" : "#eee", color: filter === k ? "white" : "#666", cursor: "pointer", whiteSpace: "nowrap" }}>
+              {k === "all" ? "全部" : k === "favorite" ? "⭐" : k}
+            </button>
+          ))}
         </div>
 
-        {currentPage === "home" ? (
-          <>
-            {isMobile && (
-              <div
-                style={{
-                  height: "180px",
-                  borderRadius: "12px",
-                  overflow: "hidden",
-                  marginBottom: "12px",
-                  position: "sticky",
-                  top: "0",
-                  zIndex: 20,
-                  background: "#f4fbf6",
-                  boxShadow: "0 2px 8px rgba(63, 110, 84, 0.12)",
-                }}
-              >
-                <BaiduMap targetPlaces={targetPlaces} />
-              </div>
-            )}
-
-            {/* 搜索框 */}
-            <input
-              placeholder="搜索地点..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px",
-                marginBottom: "15px",
-                borderRadius: "10px",
-                border: "1px solid #cfe3d6",
-                background: "#f8fcf9",
-              }}
-            />
-
-            {/* 分类按钮 */}
-            {[
-              { key: "all", label: "全部" },
-              { key: "favorite", label: "收藏" },
-              { key: "food", label: "美食" },
-              { key: "view", label: "景点" },
-              { key: "street", label: "商圈" },
-              { key: "cafe", label: "咖啡" },
-            ].map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setFilter(item.key)}
-                style={{
-                  marginRight: "6px",
-                  padding: "6px 10px",
-                  borderRadius: "20px",
-                  border: "1px solid #cfe3d6",
-                  background: filter === item.key ? "#5aa77b" : "#f1f9f4",
-                  color: filter === item.key ? "#fff" : "#335846",
-                  cursor: "pointer",
-                }}
-              >
-                {item.label}
+        {filteredPlaces.map(p => (
+          <div key={p.id} style={{ padding: "15px", borderRadius: "15px", background: "#f9fcf9", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+              <h3 style={{ margin: 0 }}>{p.name}</h3>
+              <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "20px" }}>
+                {favorites.some(f => f.id === p.id) ? "⭐" : "☆"}
+              </span>
+            </div>
+            <p style={{ color: "#666", fontSize: "14px", margin: "5px 0" }}>{p.desc}</p>
+            <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 {p.distVal} km</div>
+            <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+              <button onClick={() => togglePlaceOnMap(p)} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: targetPlaces.some(tp => tp.id === p.id) ? "#df6b76" : "#e8f5eb", color: targetPlaces.some(tp => tp.id === p.id) ? "white" : "#2e6a4a", cursor: "pointer" }}>
+                {targetPlaces.some(tp => tp.id === p.id) ? "移除标记" : "📍 标记"}
               </button>
-            ))}
-
-            <hr style={{ border: "none", borderTop: "1px solid #d9ecdf", margin: "14px 0" }} />
-
-            {filter === "favorite" && filteredPlaces.length === 0 && (
-              <p style={{ color: "#5f7d6d", fontSize: "14px", margin: "8px 0 12px" }}>还没有收藏地点，点击下方“🤍 收藏地点”即可加入。</p>
-            )}
-
-            {/* 地点列表 */}
-            {filteredPlaces.map((p) => (
-              <div
-                key={p.id}
-                style={{
-                  padding: "12px",
-                  borderRadius: "12px",
-                  marginBottom: "12px",
-                  background: "#f4fbf6",
-                }}
-              >
-                <h3 style={{ color: "#2f6c4c", marginBottom: "4px" }}>{p.name}</h3>
-                <p style={{ color: "#4f6f5f", marginBottom: "6px" }}>{p.desc}</p>
-                <p style={{ color: "#5f7d6d", fontSize: "14px", marginBottom: "10px" }}>📏距离：{p.distance} km</p>
-
-                {/* 收藏按钮 */}
-                <button
-                  onClick={() => toggleFavorite(p)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",                    borderRadius: "10px",
-                    border: "1px solid #b8d8c6",
-                    background: favorites.find((f) => f.id === p.id)
-                      ? "#df6b76"
-                      : "#e7f3ec",
-                    color: favorites.find((f) => f.id === p.id)
-                      ? "white"
-                      : "#24523d",
-                    cursor: "pointer",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {favorites.find((f) => f.id === p.id)
-                    ? "❤️ 已收藏"
-                    : "🤍 收藏地点"}
-                </button>
-
-                {/* 🚩 到这里 / 删除标记 */}
-                <button
-                  onClick={() => togglePlaceOnMap(p)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "10px",
-                    border: "1px solid #b8d8c6",
-                    background: selectedPlaces.some((sp) => sp.id === p.id)
-                      ? "#8ca697"
-                      : "#4f9b70",
-                    color: "white",
-                    fontSize: "15px",
-                    cursor: "pointer",
-                    marginBottom: "8px",
-                  }}
-                >
-                  {selectedPlaces.some((sp) => sp.id === p.id)
-                    ? "❌ 取消标记"
-                    : "📍 到这里"}
-                </button>
-
-                <button
-                  onClick={() => openBaiduNavigation(p)}
-                  style={{
-                    width: "100%",
-                    padding: "10px",
-                    borderRadius: "10px",
-                    border: "none",
-                    background: "#5f9f7c",
-                    color: "white",
-                    fontSize: "15px",
-                    cursor: "pointer",
-                  }}
-                >
-                  🧭 导航
-                </button>
-              </div>
-            ))}
-          </>
-        ) : (
-          <div
-            style={{
-              background: "#e9f6ee",
-              padding: "12px",
-              borderRadius: "15px",
-            }}
-          >
-            <h3>⭐ 我的收藏（{favorites.length}）</h3>
-
-            {favorites.length === 0 && (
-              <p style={{ fontSize: "13px" }}>暂无收藏地点</p>
-            )}
-
-            {favorites.map((f) => {
-              const isMarked = targetPlaces.some((p) => p.id === f.id);
-
-              return (
-                <div
-                  key={f.id}
-                  style={{
-                    marginBottom: "10px",
-                    padding: "10px",
-                    borderRadius: "12px",
-                    background: "#ffffff",
-                  }}
-                >
-                  ❤️ {f.name}
-
-                  {!isMarked ? (
-                    <button
-                      onClick={() => {
-                        setTargetPlaces((prev) => [...prev, f]);
-                      }}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "10px",
-                        background: "#4f9b70",
-                        color: "white",
-                        fontSize: "15px",
-                        marginTop: "8px",
-                        border: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      🚗 去这里
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setTargetPlaces((prev) =>
-                          prev.filter((p) => p.id !== f.id)
-                        );
-                      }}
-                      style={{
-                        width: "100%",
-                        padding: "10px",
-                        borderRadius: "10px",
-                        background: "#8ca697",
-                        color: "white",
-                        fontSize: "15px",
-                        marginTop: "8px",
-                        border: "none",
-                        cursor: "pointer",
-                      }}
-                    >
-                      ❌ 删除标记
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => openBaiduNavigation(f)}
-                    style={{
-                      width: "100%",
-                      padding: "10px",
-                      borderRadius: "10px",
-                      border: "none",
-                      background: "#5f9f7c",
-                      color: "white",
-                      fontSize: "15px",
-                      marginTop: "6px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    🧭 导航
-                  </button>
-
-                  <button
-                    onClick={() => toggleFavorite(f)}
-                    style={{
-                      width: "100%",
-                      padding: "8px",
-                      marginTop: "6px",
-                      borderRadius: "10px",
-                      border: "none",
-                      background: "#df6b76",
-                      color: "white",
-                      cursor: "pointer",
-                    }}
-                  >
-                    ❤️ 取消收藏
-                  </button>
-                </div>
-              );
-            })}
+              <button onClick={() => {
+                const url = `https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}|name:${encodeURIComponent(p.name)}&mode=driving&region=海口&output=html&src=haikou-guide`;
+                window.open(url, "_blank");
+              }} style={{ flex: 1, padding: "8px", borderRadius: "8px", border: "none", background: "#5aa77b", color: "white", cursor: "pointer" }}>🧭 导航</button>
+            </div>
           </div>
-        )}
+        ))}
       </div>
-
-      {/* 右侧地图（桌面端） */}
-      {!isMobile && (
-        <div style={{ flex: 1 }}>
-          <BaiduMap targetPlaces={targetPlaces} />
-        </div>
-      )}
+      {!isMobile && <div style={{ flex: 1 }}><BaiduMap targetPlaces={targetPlaces} /></div>}
     </div>
   );
 }
