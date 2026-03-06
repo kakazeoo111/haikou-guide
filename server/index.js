@@ -195,6 +195,10 @@ app.post("/api/favorites/toggle", async (req, res) => {
   }
 });
 
+app.get("/api/health", (req, res) => {
+  res.json({ ok: true, message: "后端与数据库连接测试中" });
+});
+
 app.listen(port, () => {
   console.log(`🚀 后端服务已启动: http://localhost:${port}`);
 });
