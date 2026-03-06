@@ -6,40 +6,47 @@ function App() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [favorites, setFavorites] = useState([]);
-  const [targetPlaces, setTargetPlaces] = useState([]);
+  const [targetPlaces, setTargetPlaces] = useState([]); // 控制地图上显示的标记
+  const [currentPage, setCurrentPage] = useState("home");
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  
-  // ✅ 认证状态：login (登录), register (注册), reset (重置密码)
+
+  // ✅ 认证状态逻辑 (恢复并增强)
   const [currentUser, setCurrentUser] = useState(null);
-  const [authMode, setAuthMode] = useState("login"); 
-  const [form, setForm] = useState({ username: "", phone: "", code: "", password: "" });
-  const [error, setError] = useState("");
-  const [hint, setHint] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [authMode, setAuthMode] = useState("login"); // "login" | "register" | "reset"
+  const [loginForm, setLoginForm] = useState({ username: "", phone: "", code: "", password: "" });
+  const [loginError, setLoginError] = useState("");
+  const [codeHint, setCodeHint] = useState("");
+  const [isSendingCode, setIsSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  const apiBase = "https://api.suzcore.top";
+  const authApiBase = "https://api.suzcore.top";
 
-  // 初始化
+  // 1. 初始化检查本地存储
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem("haikouUser"));
-    if (saved) setCurrentUser(saved);
+    const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
+    if (savedUser) setCurrentUser(savedUser);
+
     const onResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", onResize);
-    navigator.geolocation.getCurrentPosition(p => setUserLocation({ lat: p.coords.latitude, lng: p.coords.longitude }));
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 云端同步收藏
+  // 2. 云端收藏同步 (登录后自动拉取)
   useEffect(() => {
     if (currentUser) {
-      fetch(`${apiBase}/api/favorites/${currentUser.phone}`)
-        .then(r => r.json())
-        .then(d => d.ok && setFavorites(places.filter(p => d.favIds.includes(p.id))));
+      fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            const cloudFavs = places.filter(p => data.favIds.includes(p.id));
+            setFavorites(cloudFavs);
+          }
+        });
     }
   }, [currentUser]);
 
-  // 倒计时
+  // 3. 验证码倒计时
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -47,39 +54,83 @@ function App() {
     }
   }, [countdown]);
 
-  // 发送验证码逻辑
-  const handleSendCode = async () => {
-    if (!/^1\d{10}$/.test(form.phone)) return setError("请输入正确的手机号");
-    setLoading(true);
-    setError("");
+  // 4. 定位功能
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    });
+  }, []);
+
+  // ================================
+  // ✅ 核心业务逻辑 (收藏、标记、导航)
+  // ================================
+
+  const toggleFavorite = async (place) => {
+    if (!currentUser) return;
     try {
-      const res = await fetch(`${apiBase}/api/sms/send`, {
+      const res = await fetch(`${authApiBase}/api/favorites/toggle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: form.phone, type: authMode }),
+        body: JSON.stringify({ phone: currentUser.phone, placeId: place.id }),
       });
       const data = await res.json();
-      if (data.ok) { setHint("验证码已发送"); setCountdown(60); }
-      else setError(data.message);
-    } catch (e) { setError("后端未启动或网络异常"); }
-    finally { setLoading(false); }
+      if (data.ok) {
+        if (data.action === "added") setFavorites([...favorites, place]);
+        else setFavorites(favorites.filter((f) => f.id !== place.id));
+      }
+    } catch (e) { console.error("同步失败"); }
   };
 
-  // 提交逻辑 (登录/注册/重置)
+  const togglePlaceOnMap = (place) => {
+    const exists = targetPlaces.find((p) => p.id === place.id);
+    if (exists) setTargetPlaces(targetPlaces.filter((p) => p.id !== place.id));
+    else setTargetPlaces([...targetPlaces, place]);
+  };
+
+  function openBaiduNavigation(place) {
+    const url = `https://api.map.baidu.com/direction?destination=${place.lat},${place.lng}|name:${encodeURIComponent(place.name)}&mode=driving&region=海口&output=html&src=haikou-guide`;
+    window.open(url, "_blank");
+  }
+
+  // ================================
+  // ✅ 认证逻辑 (支持 找回密码)
+  // ================================
+
+  const handleSendCode = async () => {
+    const { phone } = loginForm;
+    if (!/^1\d{10}$/.test(phone)) return setLoginError("请输入有效的11位手机号");
+    
+    setIsSendingCode(true);
+    setLoginError("");
+    try {
+      // type 参数告诉后端是注册还是找回密码
+      const response = await fetch(`${authApiBase}/api/sms/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone, type: authMode }), 
+      });
+      const result = await response.json();
+      if (result.ok) {
+        setCodeHint("验证码已发送");
+        setCountdown(60);
+      } else { setLoginError(result.message); }
+    } catch (e) { setLoginError("网络错误"); }
+    finally { setIsSendingCode(false); }
+  };
+
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-    
     let endpoint = "/api/auth/login";
     if (authMode === "register") endpoint = "/api/auth/register";
     if (authMode === "reset") endpoint = "/api/auth/reset-password";
 
+    setIsAuthLoading(true);
+    setLoginError("");
     try {
-      const res = await fetch(`${apiBase}${endpoint}`, {
+      const res = await fetch(`${authApiBase}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(loginForm),
       });
       const data = await res.json();
       if (data.ok) {
@@ -88,15 +139,17 @@ function App() {
           localStorage.setItem("haikouUser", JSON.stringify(data.user));
         } else {
           alert(data.message);
-          setAuthMode("login");
-          setForm({ ...form, code: "" });
+          setAuthMode("login"); // 注册/重置成功后回到登录
         }
-      } else { setError(data.message); }
-    } catch (e) { setError("服务器连接失败"); }
-    finally { setLoading(false); }
+      } else { setLoginError(data.message); }
+    } catch (e) { setLoginError("连接后端失败"); }
+    finally { setIsAuthLoading(false); }
   };
 
-  const handleLogout = () => { localStorage.removeItem("haikouUser"); setCurrentUser(null); };
+  const handleLogout = () => {
+    localStorage.removeItem("haikouUser");
+    setCurrentUser(null);
+  };
 
   // ================================
   // ✅你自己的推荐地点（四大分类）
@@ -424,55 +477,73 @@ function App() {
   ];
 
 
-const toggleFavorite = async (p) => {
-    const res = await fetch(`${apiBase}/api/favorites/toggle`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }),
-    });
-    const data = await res.json();
-    if (data.ok) setFavorites(data.action === 'added' ? [...favorites, p] : favorites.filter(f => f.id !== p.id));
-  };
+function getDistance(lat1, lng1, lat2, lng2) {
+    if (!lat1 || !lng1) return "...";
+    const R = 6371;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+    return (R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))).toFixed(2);
+  }
 
-  const filteredPlaces = places.filter(p => (filter === "all" ? true : filter === "favorite" ? favorites.some(f => f.id === p.id) : p.type === filter)).filter(p => p.name.includes(search));
+  const filteredPlaces = places
+    .filter(p => (filter === "all" ? true : filter === "favorite" ? favorites.some(f => f.id === p.id) : p.type === filter))
+    .filter(p => p.name.includes(search))
+    .map(p => ({ ...p, distance: getDistance(userLocation?.lat, userLocation?.lng, p.lat, p.lng) }))
+    .sort((a, b) => a.distance - b.distance);
 
-  // --- 渲染逻辑 ---
+  // ================================
+  // 渲染逻辑 A：登录/注册/找回密码界面
+  // ================================
   if (!currentUser) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f4fbf6", padding: "20px" }}>
-        <form onSubmit={handleAuthSubmit} style={{ width: "100%", maxWidth: "380px", background: "white", padding: "30px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
-          <h2 style={{ textAlign: "center", color: "#2e6a4a" }}>
-            {authMode === "login" ? "欢迎回来" : authMode === "register" ? "新用户注册" : "找回密码"}
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "linear-gradient(180deg, #f4fbf6 0%, #e8f5eb 100%)" }}>
+        <form onSubmit={handleAuthSubmit} style={{ width: "100%", maxWidth: "420px", background: "white", padding: "30px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+          <h2 style={{ textAlign: "center", color: "#2e6a4a", marginTop: 0 }}>
+             {authMode === "login" ? "登录海口地图" : authMode === "register" ? "新用户注册" : "找回密码"}
           </h2>
           
-          <input placeholder="手机号" style={inputStyle} onChange={e => setForm({...form, phone: e.target.value})} />
+          <label style={{ display: "block", marginBottom: "5px", color: "#666", fontSize: "14px" }}>手机号</label>
+          <input 
+            value={loginForm.phone} 
+            onChange={e => setLoginForm({...loginForm, phone: e.target.value})} 
+            placeholder="您的11位手机号"
+            style={{ width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" }}
+          />
 
           {authMode !== "login" && (
             <>
-              {authMode === "register" && <input placeholder="用户名" style={inputStyle} onChange={e => setForm({...form, username: e.target.value})} />}
+              {authMode === "register" && (
+                <>
+                  <label style={{ display: "block", marginBottom: "5px", color: "#666", fontSize: "14px" }}>用户名</label>
+                  <input value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} placeholder="起个名字" style={{ width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" }} />
+                </>
+              )}
+              <label style={{ display: "block", marginBottom: "5px", color: "#666", fontSize: "14px" }}>验证码</label>
               <div style={{ display: "flex", gap: "8px", marginBottom: "15px" }}>
-                <input placeholder="验证码" style={{ ...inputStyle, marginBottom: 0, flex: 1 }} onChange={e => setForm({...form, code: e.target.value})} />
-                <button type="button" onClick={handleSendCode} disabled={countdown > 0} style={btnCodeStyle}>
-                  {countdown > 0 ? `${countdown}s` : "获取"}
+                <input value={loginForm.code} onChange={e => setLoginForm({...loginForm, code: e.target.value})} placeholder="6位验证码" style={{ flex: 1, padding: "12px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" }} />
+                <button type="button" onClick={handleSendCode} disabled={countdown > 0 || isSendingCode} style={{ padding: "0 15px", borderRadius: "10px", border: "none", background: "#7dbf96", color: "white", cursor: "pointer", fontWeight: "bold" }}>
+                  {countdown > 0 ? `${countdown}s` : "获取验证码"}
                 </button>
               </div>
             </>
           )}
 
-          <input type="password" placeholder={authMode === "reset" ? "设置新密码" : "请输入密码"} style={inputStyle} onChange={e => setForm({...form, password: e.target.value})} />
+          <label style={{ display: "block", marginBottom: "5px", color: "#666", fontSize: "14px" }}>{authMode === "reset" ? "新密码" : "密码"}</label>
+          <input type="password" value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} placeholder="不少于6位" style={{ width: "100%", padding: "12px", marginBottom: "20px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" }} />
 
-          {error && <p style={{ color: "red", fontSize: "13px" }}>{error}</p>}
-          {hint && <p style={{ color: "green", fontSize: "13px" }}>{hint}</p>}
+          {loginError && <p style={{ color: "red", fontSize: "13px", textAlign: "center" }}>⚠️ {loginError}</p>}
+          {codeHint && <p style={{ color: "green", fontSize: "13px", textAlign: "center" }}>✅ {codeHint}</p>}
 
-          <button type="submit" style={btnMainStyle}>
-            {loading ? "处理中..." : authMode === "login" ? "立即登录" : authMode === "register" ? "确认注册" : "修改密码"}
+          <button type="submit" disabled={isAuthLoading} style={{ width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", cursor: "pointer", fontWeight: "bold", fontSize: "16px" }}>
+            {isAuthLoading ? "处理中..." : authMode === "login" ? "登录" : authMode === "register" ? "立即注册" : "重置密码"}
           </button>
 
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", fontSize: "14px" }}>
             {authMode === "login" ? (
-              <><span style={linkStyle} onClick={() => setAuthMode("register")}>注册账号</span><span style={linkStyle} onClick={() => setAuthMode("reset")}>忘记密码？</span></>
+              <><span style={{ color: "#5aa77b", cursor: "pointer" }} onClick={() => setAuthMode("register")}>注册账号</span><span style={{ color: "#5aa77b", cursor: "pointer" }} onClick={() => setAuthMode("reset")}>忘记密码？</span></>
             ) : (
-              <span style={linkStyle} onClick={() => { setAuthMode("login"); setError(""); setHint(""); }}>已有账号？返回登录</span>
+              <span style={{ color: "#5aa77b", cursor: "pointer", width: "100%", textAlign: "center" }} onClick={() => { setAuthMode("login"); setLoginError(""); setCodeHint(""); }}>已有账号？返回登录</span>
             )}
           </div>
         </form>
@@ -480,32 +551,68 @@ const toggleFavorite = async (p) => {
     );
   }
 
+  // ================================
+  // 渲染逻辑 B：主地图界面 (完全保留原功能)
+  // ================================
   return (
-    <div style={{ display: isMobile ? "block" : "flex", height: "100vh" }}>
-      <div style={{ width: isMobile ? "100%" : "380px", padding: "20px", overflowY: "auto", background: "white" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
-          <h2>📍 海口推荐</h2>
-          <button onClick={handleLogout} style={{ border: "none", background: "#fdebee", color: "#d94f5c", borderRadius: "5px", padding: "5px 10px" }}>退出</button>
-        </div>
-        {filteredPlaces.map(p => (
-          <div key={p.id} style={{ padding: "15px", background: "#f9fcf9", borderRadius: "15px", marginBottom: "10px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between" }}>
-              <strong>{p.name}</strong>
-              <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer" }}>{favorites.some(f => f.id === p.id) ? "⭐" : "☆"}</span>
-            </div>
-            <p style={{ fontSize: "13px", color: "#666" }}>{p.desc}</p>
+    <div style={{ display: isMobile ? "block" : "flex", minHeight: "100vh", background: "#f4fbf6" }}>
+      {/* 左侧控制栏 */}
+      <div style={{ width: isMobile ? "100%" : "380px", padding: "20px", height: isMobile ? "auto" : "100vh", overflowY: "auto", background: "white", boxShadow: "4px 0 20px rgba(0,0,0,0.05)", boxSizing: "border-box" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+          <div>
+            <h2 style={{ margin: 0, color: "#2e6a4a" }}>📍海口推荐</h2>
+            <p style={{ margin: 0, color: "#666", fontSize: "14px" }}>你好，{currentUser.username} ✨</p>
           </div>
-        ))}
+          <button onClick={handleLogout} style={{ background: "#fdebee", color: "#d94f5c", border: "none", padding: "8px 12px", borderRadius: "8px", cursor: "pointer" }}>退出</button>
+        </div>
+
+        {/* 移动端地图预览 */}
+        {isMobile && (
+          <div style={{ height: "200px", borderRadius: "16px", overflow: "hidden", margin: "15px 0" }}>
+            <BaiduMap targetPlaces={targetPlaces} />
+          </div>
+        )}
+
+        <input placeholder="搜索地点..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: "100%", padding: "12px", borderRadius: "12px", border: "1px solid #eee", marginBottom: "15px", boxSizing: "border-box" }} />
+
+        <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "10px", marginBottom: "10px" }}>
+          {["all", "favorite", "food", "view", "street", "cafe"].map((k) => (
+            <button key={k} onClick={() => setFilter(k)} style={{ padding: "8px 16px", borderRadius: "20px", border: "none", whiteSpace: "nowrap", background: filter === k ? "#5aa77b" : "#eee", color: filter === k ? "white" : "#666", cursor: "pointer" }}>
+              {k === "all" ? "全部" : k === "favorite" ? "⭐ 收藏" : k === "food" ? "🍱 美食" : k === "view" ? "景点" : k === "street" ? "商圈" : "☕ 咖啡"}
+            </button>
+          ))}
+        </div>
+
+        <div>
+          {filteredPlaces.map((p) => (
+            <div key={p.id} style={{ padding: "16px", borderRadius: "16px", background: "#f9fcf9", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <h3 style={{ margin: 0 }}>{p.name}</h3>
+                <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "20px" }}>
+                  {favorites.some((f) => f.id === p.id) ? "⭐" : "☆"}
+                </span>
+              </div>
+              <p style={{ color: "#777", fontSize: "14px", margin: "5px 0" }}>{p.desc}</p>
+              <div style={{ fontSize: "13px", color: "#5aa77b", marginBottom: "12px" }}>📏 距离：{p.distance} km</div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <button onClick={() => togglePlaceOnMap(p)} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", background: targetPlaces.some((tp) => tp.id === p.id) ? "#df6b76" : "#e8f5eb", color: targetPlaces.some((tp) => tp.id === p.id) ? "white" : "#2e6a4a", cursor: "pointer", fontWeight: "bold" }}>
+                  {targetPlaces.some((tp) => tp.id === p.id) ? "移除标记" : "📍 标记"}
+                </button>
+                <button onClick={() => openBaiduNavigation(p)} style={{ flex: 1, padding: "10px", borderRadius: "10px", border: "none", background: "#5aa77b", color: "white", cursor: "pointer", fontWeight: "bold" }}>🧭 导航</button>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-      {!isMobile && <div style={{ flex: 1 }}><BaiduMap targetPlaces={targetPlaces} /></div>}
+
+      {/* 右侧大地图 (桌面端) */}
+      {!isMobile && (
+        <div style={{ flex: 1 }}>
+          <BaiduMap targetPlaces={targetPlaces} />
+        </div>
+      )}
     </div>
   );
 }
-
-// 样式定义
-const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
-const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "80px", cursor: "pointer" };
-const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
-const linkStyle = { color: "#5aa77b", cursor: "pointer", textDecoration: "underline" };
 
 export default App;
