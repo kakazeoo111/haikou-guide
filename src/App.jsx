@@ -209,7 +209,7 @@ function App() {
     { id: 13, type: "street", name: "吾悦广场", desc: "曾经的辉煌商场", lat: 19.982740, lng: 110.345532 },
     { id: 14, type: "street", name: "自在湾", desc: "绝美临海步行街", lat: 20.042410, lng: 110.314577 },
     { id: 15, type: "food", name: "正方华(明珠广场店)", desc: "海南特色老爸茶", lat: 20.035661, lng: 110.349434 },
-    { id: 16, type: "food", name: "高登福(高登街店)", desc: "海南招牌老爸茶", lat: 20.001903, lng: 110.362043 },
+    { id: 16, type: "food", name: "芸鹏休闲茶坊", desc: "半个老爸茶，有招牌烙饼十分美味", lat: 20.00, lng: 110.35 },
     { id: 17, type: "food", name: "九记甜品(华海店)", desc: "海南网红甜品", lat: 20.028871, lng: 110.335004 },
     { id: 18, type: "food", name: "柿里糖水铺(世贸直营店)", desc: "海南特色甜水铺", lat: 20.027454, lng: 110.311212 },
     { id: 19, type: "food", name: "萝冰冰", desc: "人气甜品店 适合带娃", lat: 20.025954, lng: 110.339806 },
