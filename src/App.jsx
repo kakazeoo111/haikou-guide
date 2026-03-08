@@ -19,10 +19,11 @@ function App() {
   const [countdown, setCountdown] = useState(0);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  // ✅ 新增：评论功能相关状态
+  // ✅ 评论功能相关状态
   const [showCommentId, setShowCommentId] = useState(null); // 当前展开评论区的地点ID
   const [activeComments, setActiveComments] = useState({}); // 存放各个地点的评论数据 {placeId: []}
   const [newComment, setNewComment] = useState(""); // 输入框内容
+  const [commentImage, setCommentImage] = useState(null); // ✅ 新增：评论选中的图片文件
 
   const authApiBase = "https://api.suzcore.top";
 
@@ -91,7 +92,7 @@ function App() {
     } catch (e) { alert("上传失败"); }
   };
 
-  // ✅ 新增：获取评论
+  // 获取评论
   const fetchComments = async (placeId) => {
     try {
       const res = await fetch(`${authApiBase}/api/comments/${placeId}`);
@@ -102,25 +103,47 @@ function App() {
     } catch (e) { console.error("获取评论失败"); }
   };
 
-  // ✅ 新增：发表评论
+  // ✅ 修改后：发表评论 (支持图文)
   const handleAddComment = async (placeId) => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() && !commentImage) return alert("写点什么或传张图吧~");
+    
+    const formData = new FormData();
+    formData.append("phone", currentUser.phone);
+    formData.append("placeId", placeId);
+    formData.append("content", newComment);
+    if (commentImage) {
+      formData.append("image", commentImage); // 这里的 'image' 需对应后端的 multer 配置
+    }
+
     try {
       const res = await fetch(`${authApiBase}/api/comments/add`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: currentUser.phone,
-          placeId: placeId,
-          content: newComment
-        }),
+        body: formData, // 使用 FormData 发送图片
       });
       const data = await res.json();
       if (data.ok) {
         setNewComment(""); // 清空输入
+        setCommentImage(null); // 清空图片
         fetchComments(placeId); // 刷新列表
       } else { alert(data.message); }
     } catch (e) { alert("网络异常"); }
+  };
+
+  // ✅ 新增：删除评论逻辑
+  const handleDeleteComment = async (commentId, placeId) => {
+    if (!window.confirm("确定要删除这条评论吗？")) return;
+    
+    try {
+      const res = await fetch(`${authApiBase}/api/comments/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, commentId }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        fetchComments(placeId); // 刷新列表
+      } else { alert(data.message); }
+    } catch (e) { alert("删除请求失败"); }
   };
 
   const handleSendCode = async () => {
@@ -176,10 +199,10 @@ function App() {
     { id: 3, type: "view", name: "假日海滩", desc: "海口海边风景", lat: 20.038396, lng: 110.250973 },
     { id: 4, type: "view", name: "万绿园", desc: "城市中心大公园", lat: 20.039770, lng: 110.320249 },
     { id: 5, type: "street", name: "骑楼老街", desc: "历史商业街，网红打卡地", lat: 20.046030, lng: 110.350885 },
-    { id: 6, type: "street", name: "日月广场免税店", desc: "海口最大商业购物中心", lat: 20.022236, lng: 110.353345 },
+    { id: 6, type: "street", name: "日月广场免税店", desc: "海口最大商业中心", lat: 20.022236, lng: 110.353345 },
     { id: 7, type: "view", name: "天空之山", desc: "适合拍照的美景", lat: 20.064052, lng: 110.313215 },
-    { id: 8, type: "view", name: "西秀海滩", desc: "海边海滩 出片地", lat: 20.029237, lng: 110.270513 },
-    { id: 9, type: "view", name: "观海台", desc: "临近海边网红出片地", lat: 20.037925, lng: 110.304154 },
+    { id: 8, type: "view", name: "西秀海滩", desc: "出片海滩", lat: 20.029237, lng: 110.270513 },
+    { id: 9, type: "view", name: "观海台", desc: "临海网红出片地", lat: 20.037925, lng: 110.304154 },
     { id: 10, type: "view", name: "拾贝公园", desc: "小众高级感海边", lat: 20.094954, lng: 110.375914 },
     { id: 11, type: "street", name: "友谊阳光城", desc: "人气商场", lat: 20.029385, lng: 110.330482 },
     { id: 12, type: "street", name: "龙湖天街", desc: "人气超大型商场商场", lat: 20.002361, lng: 110.336522 },
@@ -187,30 +210,30 @@ function App() {
     { id: 14, type: "street", name: "自在湾", desc: "绝美临海步行街", lat: 20.042410, lng: 110.314577 },
     { id: 15, type: "food", name: "正方华(明珠广场店)", desc: "海南特色老爸茶", lat: 20.035661, lng: 110.349434 },
     { id: 16, type: "food", name: "高登福(高登街店)", desc: "海南招牌老爸茶", lat: 20.001903, lng: 110.362043 },
-    { id: 17, type: "food", name: "九记甜品(华海店)", desc: "海南网红甜品，深受游客喜爱", lat: 20.028871, lng: 110.335004 },
-    { id: 18, type: "food", name: "柿里糖水铺(世贸直营店)", desc: "海南特色甜水铺，氛围好", lat: 20.027454, lng: 110.311212 },
+    { id: 17, type: "food", name: "九记甜品(华海店)", desc: "海南网红甜品", lat: 20.028871, lng: 110.335004 },
+    { id: 18, type: "food", name: "柿里糖水铺(世贸直营店)", desc: "海南特色甜水铺", lat: 20.027454, lng: 110.311212 },
     { id: 19, type: "food", name: "萝冰冰", desc: "人气甜品店 适合带娃", lat: 20.025954, lng: 110.339806 },
-    { id: 20, type: "food", name: "海大南门夜市", desc: "比较火的小吃街，有很多当地特色", lat: 20.056054, lng: 110.343200 },
-    { id: 21, type: "food", name: "阿娥餐饮店", desc: "作者十分喜爱的炸炸店，是甜口的", lat: 20.044653, lng: 110.351382 },
+    { id: 20, type: "food", name: "海大南门夜市", desc: "比较火的小吃街", lat: 20.056054, lng: 110.343200 },
+    { id: 21, type: "food", name: "阿娥餐饮店", desc: "作者十分喜爱的炸炸店", lat: 20.044653, lng: 110.351382 },
     { id: 22, type: "food", name: "姚记辣汤饭", desc: "海南特色，值得一试", lat: 20.049292, lng: 110.352991 },
-    { id: 23, type: "food", name: "文昌邓记清补凉(盛达景都店)", desc: "海南清补凉你值得拥有", lat: 20.026083, lng: 110.080660 },
+    { id: 23, type: "food", name: "文昌邓记清补凉", desc: "海南清补凉", lat: 20.026083, lng: 110.080660 },
     { id: 24, type: "food", name: "美元味饮食店", desc: "海南粉，粉汤伊面汤", lat: 20.010878, lng: 110.360648 },
-    { id: 25, type: "food", name: "老机场陈记粉条王(金牛岭店)", desc: "正宗后安粉，味道top1", lat: 20.008954, lng: 110.320581 },
-    { id: 26, type: "food", name: "三爷糟粕醋", desc: "海南特色糟粕醋 口味独特", lat: 20.045964, lng: 110.349623 },
-    { id: 27, type: "food", name: "老机场陈记粉条王(西沙店)", desc: "正宗后安粉 香极了", lat: 20.025471, lng: 110.341446 },
-    { id: 28, type: "food", name: "韩汪记糟粕醋", desc: "海南特色糟粕醋 口味独特", lat: 20.006376, lng: 110.366164 },
-    { id: 29, type: "food", name: "贞姐十三小鱼煲", desc: "特色鱼煲，作者从小吃到大", lat: 20.044265, lng: 110.353645 },
-    { id: 30, type: "food", name: "无名鸡饭", desc: "海南文昌鸡，小红书口味榜第一", lat: 20.031529, lng: 110.340119 },
-    { id: 31, type: "food", name: "肥婆兰鸡饭", desc: "海南文昌鸡 味道也不错", lat: 20.045125, lng: 110.350187 },
-    { id: 32, type: "food", name: "白明泉椰子鸡", desc: "特色椰子鸡，火锅首选", lat: 20.032235, lng: 110.338479 },
-    { id: 33, type: "food", name: "文昌鸡椰子汤", desc: "特色椰子鸡，还有煲仔饭", lat: 20.073184, lng: 110.336362 },
+    { id: 25, type: "food", name: "老机场陈记粉条王", desc: "正宗后安粉", lat: 20.008954, lng: 110.320581 },
+    { id: 26, type: "food", name: "三爷糟粕醋", desc: "海南特色糟粕醋", lat: 20.045964, lng: 110.349623 },
+    { id: 27, type: "food", name: "陈记粉条王(西沙店)", desc: "香极了", lat: 20.025471, lng: 110.341446 },
+    { id: 28, type: "food", name: "韩汪记糟粕醋", desc: "口味独特", lat: 20.006376, lng: 110.366164 },
+    { id: 29, type: "food", name: "贞姐十三小鱼煲", desc: "特色鱼煲", lat: 20.044265, lng: 110.353645 },
+    { id: 30, type: "food", name: "无名鸡饭", desc: "文昌鸡口味第一", lat: 20.031529, lng: 110.340119 },
+    { id: 31, type: "food", name: "肥婆兰鸡饭", desc: "味道不错", lat: 20.045125, lng: 110.350187 },
+    { id: 32, type: "food", name: "白明泉椰子鸡", desc: "特色椰子鸡火锅", lat: 20.032235, lng: 110.338479 },
+    { id: 33, type: "food", name: "文昌鸡椰子汤", desc: "煲仔饭不错", lat: 20.073184, lng: 110.336362 },
     { id: 34, type: "food", name: "西天庙", desc: "甜品小吃一条街", lat: 20.047292, lng: 110.346373 },
-    { id: 35, type: "cafe", name: "小夜盲", desc: "氛围特别好的一个小咖啡馆", lat: 20.034977, lng: 110.346373 },
-    { id: 36, type: "cafe", name: "工芸咖啡(华彩海口湾店)", desc: "能看海景的咖啡馆", lat: 20.061229, lng: 110.317416 },
-    { id: 37, type: "cafe", name: "斑马院子", desc: "有懒人沙发很舒服", lat: 20.031764, lng: 110.332199 },
-    { id: 38, type: "cafe", name: "青庭咖啡", desc: "有面朝阳光的窗，很出片", lat: 20.041134, lng: 110.325469 },
-    { id: 39, type: "cafe", name: "肆意茶聊", desc: "清冷感的竹林茶馆", lat: 20.033555, lng: 110.334263 },
-    { id: 40, type: "cafe", name: "盐巴saltea(金茂店）", desc: "布满绿植的咖啡小院子", lat: 20.027084, lng: 110.307733 },
+    { id: 35, type: "cafe", name: "小夜盲", desc: "氛围咖啡馆", lat: 20.034977, lng: 110.346373 },
+    { id: 36, type: "cafe", name: "工芸咖啡", desc: "海景咖啡馆", lat: 20.061229, lng: 110.317416 },
+    { id: 37, type: "cafe", name: "斑马院子", desc: "有懒人沙发", lat: 20.031764, lng: 110.332199 },
+    { id: 38, type: "cafe", name: "青庭咖啡", desc: "很出片", lat: 20.041134, lng: 110.325469 },
+    { id: 39, type: "cafe", name: "肆意茶聊", desc: "清冷感竹林", lat: 20.033555, lng: 110.334263 },
+    { id: 40, type: "cafe", name: "盐巴saltea", desc: "绿植小院", lat: 20.027084, lng: 110.307733 },
   ];
 
   function getDistance(lat1, lng1, lat2, lng2) {
@@ -334,7 +357,7 @@ function App() {
                 }} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
               </div>
 
-              {/* ✅ 新增：评论区入口和展示 ✅ */}
+              {/* ✅ 评论区改造：支持发图 + 删除 ✅ */}
               <div style={{ marginTop: '12px', borderTop: '1px dashed #ddd', paddingTop: '10px' }}>
                 <div 
                   onClick={() => {
@@ -349,37 +372,80 @@ function App() {
                 {showCommentId === p.id && (
                   <div style={{ marginTop: '10px', background: '#fff', borderRadius: '12px', padding: '12px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
                     {/* 评论列表 */}
-                    <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '10px' }}>
+                    <div style={{ maxHeight: '300px', overflowY: 'auto', marginBottom: '10px' }}>
                       {(activeComments[p.id] || []).length === 0 ? (
                         <p style={{ fontSize: '12px', color: '#999', textAlign: 'center' }}>暂无评论，快来抢沙发~</p>
                       ) : (
                         activeComments[p.id].map(c => (
-                          <div key={c.id} style={{ display: 'flex', gap: '10px', marginBottom: '12px', borderBottom: '1px solid #f2f2f2', paddingBottom: '8px' }}>
+                          <div key={c.id} style={{ display: 'flex', gap: '10px', marginBottom: '15px', borderBottom: '1px solid #f2f2f2', paddingBottom: '10px', position: 'relative' }}>
                             <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                             <div style={{ flex: 1 }}>
                               <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{c.username}</div>
-                              <div style={{ fontSize: '13px', color: '#555', margin: '4px 0' }}>{c.content}</div>
-                              <div style={{ fontSize: '10px', color: '#bbb' }}>{new Date(c.created_at).toLocaleString()}</div>
+                              {/* 文字内容 */}
+                              {c.content && <div style={{ fontSize: '13px', color: '#555', margin: '4px 0' }}>{c.content}</div>}
+                              {/* ✅ 显示评论图片 ✅ */}
+                              {c.image_url && (
+                                <img 
+                                  src={c.image_url} 
+                                  alt="comment" 
+                                  style={{ width: '100%', maxWidth: '150px', borderRadius: '8px', marginTop: '5px', border: '1px solid #eee' }} 
+                                  onClick={() => window.open(c.image_url)} 
+                                />
+                              )}
+                              <div style={{ fontSize: '10px', color: '#bbb', marginTop: '5px' }}>{new Date(c.created_at).toLocaleString()}</div>
                             </div>
+                            {/* ✅ 删除按钮：仅本人可见 ✅ */}
+                            {c.user_phone === currentUser.phone && (
+                              <span 
+                                onClick={() => handleDeleteComment(c.id, p.id)} 
+                                style={{ position: 'absolute', right: 0, top: 0, color: '#df6b76', fontSize: '11px', cursor: 'pointer', padding: '2px' }}
+                              >
+                                删除
+                              </span>
+                            )}
                           </div>
                         ))
                       )}
                     </div>
 
-                    {/* 发表评论框 */}
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input 
+                    {/* ✅ 发表评论框 (支持发图) ✅ */}
+                    <div style={{ background: '#f9f9f9', padding: '10px', borderRadius: '10px' }}>
+                      <textarea 
                         placeholder="写点评价..." 
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
-                        style={{ flex: 1, padding: '8px 12px', borderRadius: '20px', border: '1px solid #eee', fontSize: '13px', outline: 'none', background: '#f9f9f9' }}
+                        style={{ width: '100%', minHeight: '40px', border: 'none', background: 'transparent', fontSize: '13px', outline: 'none', resize: 'none' }}
                       />
-                      <button 
-                        onClick={() => handleAddComment(p.id)}
-                        style={{ background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '0 15px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold' }}
-                      >
-                        发布
-                      </button>
+                      
+                      {/* 图片预览 */}
+                      {commentImage && (
+                        <div style={{ position: 'relative', width: '60px', height: '60px', marginTop: '5px' }}>
+                          <img src={URL.createObjectURL(commentImage)} style={{ width: '100%', height: '100%', borderRadius: '5px', objectFit: 'cover' }} />
+                          <div 
+                            onClick={() => setCommentImage(null)}
+                            style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '15px', height: '15px', textAlign: 'center', lineHeight: '13px', fontSize: '10px', cursor: 'pointer' }}
+                          >×</div>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                        {/* 选择图片按钮 */}
+                        <div onClick={() => document.getElementById(`comment-img-${p.id}`).click()} style={{ cursor: 'pointer', fontSize: '18px' }}>🖼️</div>
+                        <input 
+                          type="file" 
+                          id={`comment-img-${p.id}`} 
+                          hidden 
+                          accept="image/*" 
+                          onChange={(e) => setCommentImage(e.target.files[0])} 
+                        />
+
+                        <button 
+                          onClick={() => handleAddComment(p.id)}
+                          style={{ background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '5px 15px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}
+                        >
+                          发布
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -392,7 +458,7 @@ function App() {
   );
 }
 
-// 💄 样式保持原样
+// 💄 样式定义
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
 const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "75px", cursor: "pointer", fontSize: "12px" };
 const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold" };
