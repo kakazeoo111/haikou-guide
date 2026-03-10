@@ -247,6 +247,7 @@ function App() {
       album:[
         "https://api.suzcore.top/uploads/places/17_1.jpg",
         "https://api.suzcore.top/uploads/places/17_2.jpg",
+        "https://api.suzcore.top/uploads/places/17_3.jpg",
         "https://api.suzcore.top/uploads/places/17_3.jpg"
       ]
     },
@@ -390,7 +391,8 @@ function App() {
       album:[
         "https://api.suzcore.top/uploads/places/38_1.jpg",
         "https://api.suzcore.top/uploads/places/38_2.jpg",
-        "https://api.suzcore.top/uploads/places/38_3.jpg"
+        "https://api.suzcore.top/uploads/places/38_3.jpg",
+        "https://api.suzcore.top/uploads/places/38_4.jpg"
       ]
     },
     { id: 39, type: "cafe", name: "肆意茶聊", desc: "彷佛像闯进了闹市里的小森林，木质桌椅，中式茶馆，无不透露着松弛感", lat: 20.033555, lng: 110.334263,
