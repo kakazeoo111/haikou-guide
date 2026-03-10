@@ -172,7 +172,8 @@ function App() {
       album:[
         "https://api.suzcore.top/uploads/places/4_1.jpg",
         "https://api.suzcore.top/uploads/places/4_2.jpg",
-        "https://api.suzcore.top/uploads/places/4_3.jpg"
+        "https://api.suzcore.top/uploads/places/4_3.jpg",
+        "https://api.suzcore.top/uploads/places/4_4.jpg"
       ]
     },
     { id: 5, type: "street", name: "骑楼老街", desc: "历史商业街，网红打卡地", lat: 20.046030, lng: 110.350885,
@@ -210,7 +211,9 @@ function App() {
     { id: 10, type: "view", name: "拾贝公园", desc: "小众高级感海边", lat: 20.094954, lng: 110.375914,
       album:[
         "https://api.suzcore.top/uploads/places/10_1.jpg",
-        "https://api.suzcore.top/uploads/places/11_2.jpg"
+        "https://api.suzcore.top/uploads/places/10_2.jpg",
+        "https://api.suzcore.top/uploads/places/10_3.jpg",
+        "https://api.suzcore.top/uploads/places/10_4.jpg"
       ]
     },
     { id: 11, type: "street", name: "友谊阳光城", desc: "人气商场", lat: 20.029385, lng: 110.330482,
