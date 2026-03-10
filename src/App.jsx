@@ -149,26 +149,26 @@ function App() {
   // ✅ 40个完整地点数据
   // ================================
   const places = [
-    { id: 1, type: "view", name: "云洞图书馆", desc: "海口经典打卡地", lat: 20.091026, lng: 110.262594,
+    { id: 1, type: "view", name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景", lat: 20.091026, lng: 110.262594,
       album:[
         "https://api.suzcore.top/uploads/places/1_1.jpg",
         "https://api.suzcore.top/uploads/places/1_2.jpg",
         "https://api.suzcore.top/uploads/places/1_3.jpg"
       ]
     },
-    { id: 2, type: "view", name: "世纪大桥", desc: "夜景唯美", lat: 20.055302, lng: 110.326392,
+    { id: 2, type: "view", name: "世纪大桥", desc: "横跨碧海，可以在桥头远眺，灯光璀璨，夜景唯美，是个出片的好地方", lat: 20.055302, lng: 110.326392,
       album:[
         "https://api.suzcore.top/uploads/places/2_1.jpg",
         "https://api.suzcore.top/uploads/places/2_2.jpg"
       ]
     },
-    { id: 3, type: "view", name: "假日海滩", desc: "海口海边风景", lat: 20.038396, lng: 110.250973,
+    { id: 3, type: "view", name: "假日海滩", desc: "沙细水清，可以在阳光下晒太阳，感受惬意的海风和悠闲度假氛围", lat: 20.038396, lng: 110.250973,
       album:[
         "https://api.suzcore.top/uploads/places/3_1.jpg",
         "https://api.suzcore.top/uploads/places/3_2.jpg"
       ]
     },
-    { id: 4, type: "view", name: "万绿园", desc: "城市中心大公园", lat: 20.039770, lng: 110.320249,
+    { id: 4, type: "view", name: "万绿园", desc: "绿意盎然，湖边风景和林荫小道的宁静与清新是散步者的天堂", lat: 20.039770, lng: 110.320249,
       album:[
         "https://api.suzcore.top/uploads/places/4_1.jpg",
         "https://api.suzcore.top/uploads/places/4_2.jpg",
@@ -176,39 +176,39 @@ function App() {
         "https://api.suzcore.top/uploads/places/4_4.jpg"
       ]
     },
-    { id: 5, type: "street", name: "骑楼老街", desc: "历史商业街，网红打卡地", lat: 20.046030, lng: 110.350885,
+    { id: 5, type: "street", name: "骑楼老街", desc: "充满历史韵味的街巷和南洋建筑，色彩斑斓。有很多的伴手礼销售点，还有许多地道小吃可供选择。", lat: 20.046030, lng: 110.350885,
       album:[
         "https://api.suzcore.top/uploads/places/5_1.jpg",
         "https://api.suzcore.top/uploads/places/5_2.jpg",
         "https://api.suzcore.top/uploads/places/5_3.jpg"
       ]
     },
-    { id: 6, type: "street", name: "日月广场免税店", desc: "海口最大商业中心", lat: 20.022236, lng: 110.353345,
+    { id: 6, type: "street", name: "日月广场免税店", desc: "购物天堂般的现代商圈，琳琅满目的免税商品，时尚亮眼的店铺与广场。", lat: 20.022236, lng: 110.353345,
       album:[
         "https://api.suzcore.top/uploads/places/6_1.jpg",
         "https://api.suzcore.top/uploads/places/6_2.jpg"
       ]
     },
-    { id: 7, type: "view", name: "天空之山", desc: "适合拍照的美景", lat: 20.064052, lng: 110.313215,
+    { id: 7, type: "view", name: "天空之山", desc: "漂浮在云端的秘境，可以登顶远眺全景，旁边靠海，是个休闲打卡的理想点", lat: 20.064052, lng: 110.313215,
       album:[
         "https://api.suzcore.top/uploads/places/7_1.jpg",
         "https://api.suzcore.top/uploads/places/7_2.jpg",
         "https://api.suzcore.top/uploads/places/7_3.jpg"
       ]
     },
-    { id: 8, type: "view", name: "西秀海滩", desc: "出片海滩", lat: 20.029237, lng: 110.270513,
+    { id: 8, type: "view", name: "西秀海滩", desc: "海口目前打卡最多的海滩，蔚蓝秘境一般，好似童话的海边", lat: 20.029237, lng: 110.270513,
       album:[
         "https://api.suzcore.top/uploads/places/8_1.jpg",
         "https://api.suzcore.top/uploads/places/8_2.jpg"
       ]
     },
-    { id: 9, type: "view", name: "观海台", desc: "临海网红出片地", lat: 20.037925, lng: 110.304154,
+    { id: 9, type: "view", name: "观海台", desc: "临海而建，靠近西秀海滩，有人说像是误入了宫崎骏的童话世界。是很有名的打卡点", lat: 20.037925, lng: 110.304154,
       album:[
         "https://api.suzcore.top/uploads/places/9_1.jpg",
         "https://api.suzcore.top/uploads/places/9_2.jpg"
       ]
     },
-    { id: 10, type: "view", name: "拾贝公园", desc: "小众高级感海边", lat: 20.094954, lng: 110.375914,
+    { id: 10, type: "view", name: "拾贝公园", desc: "小众高级感海边，北欧风的电影感，像是被遗忘的孤独之地", lat: 20.094954, lng: 110.375914,
       album:[
         "https://api.suzcore.top/uploads/places/10_1.jpg",
         "https://api.suzcore.top/uploads/places/10_2.jpg",
@@ -216,73 +216,73 @@ function App() {
         "https://api.suzcore.top/uploads/places/10_4.jpg"
       ]
     },
-    { id: 11, type: "street", name: "友谊阳光城", desc: "人气商场", lat: 20.029385, lng: 110.330482,
+    { id: 11, type: "street", name: "友谊阳光城", desc: "现代商业与休闲完美融合的城市空间，阳光洒满的广场，绿意的角落和街区的时尚装置，感受都市惬意生活", lat: 20.029385, lng: 110.330482,
       album:[
         "https://api.suzcore.top/uploads/places/11_1.jpg",
         "https://api.suzcore.top/uploads/places/11_2.jpg"
       ]
     },
-    { id: 12, type: "street", name: "龙湖天街", desc: "人气超大型商场商场", lat: 20.002361, lng: 110.336522,
+    { id: 12, type: "street", name: "龙湖天街", desc: "海口新商场，集购物美食与娱乐于一体的潮流地标，是逛街党的天堂", lat: 20.002361, lng: 110.336522,
       album:[
         "https://api.suzcore.top/uploads/places/12_1.jpg",
         "https://api.suzcore.top/uploads/places/12_2.jpg"
       ]
     },
-    { id: 13, type: "street", name: "吾悦广场", desc: "曾经的辉煌商场", lat: 19.982740, lng: 110.345532,
+    { id: 13, type: "street", name: "吾悦广场", desc: "曾经的辉煌商场，但依然还是城市休闲中心，感受热闹轻松的都市生活氛围", lat: 19.982740, lng: 110.345532,
       album:[
         "https://api.suzcore.top/uploads/places/13_1.jpg"
       ]
     },
-    { id: 14, type: "street", name: "自在湾", desc: "绝美临海步行街", lat: 20.042410, lng: 110.314577,
+    { id: 14, type: "street", name: "自在湾", desc: "唯美临海步行街，面朝大海坐在咖啡厅拍照打卡吃饭，海风轻拂感受自在生活。", lat: 20.042410, lng: 110.314577,
       album:[
         "https://api.suzcore.top/uploads/places/14_1.jpg",
         "https://api.suzcore.top/uploads/places/14_2.jpg",
         "https://api.suzcore.top/uploads/places/14_3.jpg"
       ]
     },
-    { id: 15, type: "food", name: "正方华(明珠广场店)", desc: "海南特色老爸茶", lat: 20.035661, lng: 110.349434,
+    { id: 15, type: "food", name: "正方华(明珠广场店)", desc: "海南特色老爸茶，每天都会有许多人包括本地居民都会来吃老爸茶，非常受欢迎的一家店。", lat: 20.035661, lng: 110.349434,
       album:[
         "https://api.suzcore.top/uploads/places/15_1.jpg",
         "https://api.suzcore.top/uploads/places/15_2.jpg",
         "https://api.suzcore.top/uploads/places/15_3.jpg"
       ]
     },
-    { id: 16, type: "food", name: "芸鹏休闲茶坊", desc: "半个老爸茶，有招牌烙饼十分美味", lat: 20.00, lng: 110.35,
+    { id: 16, type: "food", name: "芸鹏休闲茶坊", desc: "在高登街旁，靠招牌烙饼红火，每一桌必点的烙饼，切记烙饼只有下午三点后才开放", lat: 20.00, lng: 110.35,
       album:[
         "https://api.suzcore.top/uploads/places/16_1.jpg",
         "https://api.suzcore.top/uploads/places/16_2.jpg",
         "https://api.suzcore.top/uploads/places/16_3.jpg"
       ]
     },
-    { id: 17, type: "food", name: "九记甜品(华海店)", desc: "海南网红甜品", lat: 20.028871, lng: 110.335004,
+    { id: 17, type: "food", name: "九记甜品(华海店)", desc: "甜品爱好者的打卡圣地，美味的甜品和精致的摆摊吸引了无数游客", lat: 20.028871, lng: 110.335004,
       album:[
         "https://api.suzcore.top/uploads/places/17_1.jpg",
         "https://api.suzcore.top/uploads/places/17_2.jpg",
         "https://api.suzcore.top/uploads/places/17_3.jpg"
       ]
     },
-    { id: 18, type: "food", name: "柿里糖水铺(世贸直营店)", desc: "海南特色甜水铺", lat: 20.027454, lng: 110.311212,
+    { id: 18, type: "food", name: "柿里糖水铺(世贸直营店)", desc: "地道港式糖水的温暖小天地，店内氛围十分温馨，有甜品有晚餐，可以与朋友分享甜蜜的悠闲地", lat: 20.027454, lng: 110.311212,
       album:[
         "https://api.suzcore.top/uploads/places/18_1.jpg",
         "https://api.suzcore.top/uploads/places/18_2.jpg",
         "https://api.suzcore.top/uploads/places/18_3.jpg"
       ]
     },
-    { id: 19, type: "food", name: "萝冰冰", desc: "人气甜品店 适合带娃", lat: 20.025954, lng: 110.339806,
+    { id: 19, type: "food", name: "萝冰冰", desc: "人气甜品店，五彩缤纷的冰品加上可供小孩玩耍的一方空间，带娃与享受清凉口感两不误", lat: 20.025954, lng: 110.339806,
       album:[
         "https://api.suzcore.top/uploads/places/19_1.jpg",
         "https://api.suzcore.top/uploads/places/19_2.jpg",
         "https://api.suzcore.top/uploads/places/19_3.jpg"
       ]
     },
-    { id: 20, type: "food", name: "海大南门夜市", desc: "比较火的小吃街", lat: 20.056054, lng: 110.343200,
+    { id: 20, type: "food", name: "海大南门夜市", desc: "夜色下的市井烟火地，摊位琳琅满目，品尝地道小吃，感受海口最地道的夜生活氛围", lat: 20.056054, lng: 110.343200,
       album:[
         "https://api.suzcore.top/uploads/places/20_1.jpg",
         "https://api.suzcore.top/uploads/places/20_2.jpg",
         "https://api.suzcore.top/uploads/places/20_3.jpg"
       ]
     },
-    { id: 21, type: "food", name: "阿娥餐饮店", desc: "作者十分喜爱的炸炸店", lat: 20.044653, lng: 110.351382,
+    { id: 21, type: "food", name: "阿娥餐饮店", desc: "老字号炸炸店，是站主最喜欢的炸炸店，物美价廉还有清爽的冰绿豆（有冬瓜意）", lat: 20.044653, lng: 110.351382,
       album:[
         "https://api.suzcore.top/uploads/places/21_1.jpg",
         "https://api.suzcore.top/uploads/places/21_2.jpg",
@@ -290,52 +290,52 @@ function App() {
         "https://api.suzcore.top/uploads/places/21_4.jpg"
       ]
     },
-    { id: 22, type: "food", name: "姚记辣汤饭", desc: "海南特色，值得一试", lat: 20.049292, lng: 110.352991,
+    { id: 22, type: "food", name: "姚记辣汤饭", desc: "海南特色街头小吃，香辣浓郁，热气腾腾，感受地道海口味道带来的烟火气息", lat: 20.049292, lng: 110.352991,
       album:[
         "https://api.suzcore.top/uploads/places/22_1.jpg",
         "https://api.suzcore.top/uploads/places/22_2.jpg"
       ]
     },
-    { id: 23, type: "food", name: "文昌邓记清补凉", desc: "海南清补凉", lat: 20.026083, lng: 110.080660,
+    { id: 23, type: "food", name: "文昌邓记清补凉", desc: "清甜解暑清补凉老字号，好吃又好看，料很多，在炎热的夏天来一碗绝对是一个不错的选择", lat: 20.026083, lng: 110.080660,
       album:[
         "https://api.suzcore.top/uploads/places/23_1.jpg",
         "https://api.suzcore.top/uploads/places/23_2.jpg"
       ]
     },
-    { id: 24, type: "food", name: "美元味饮食店", desc: "海南粉，粉汤伊面汤", lat: 20.010878, lng: 110.360648,
+    { id: 24, type: "food", name: "美元味饮食店", desc: "市井气息浓厚，有甲子海南粉，伊面汤，粉汤，味道真的是让站主难以忘怀，是站主高中夜宵的常客，非常值得推荐的一个地方", lat: 20.010878, lng: 110.360648,
       album:[
         "https://api.suzcore.top/uploads/places/24_1.jpg",
         "https://api.suzcore.top/uploads/places/24_2.jpg",
         "https://api.suzcore.top/uploads/places/24_3.jpg"
       ]
     },
-    { id: 25, type: "food", name: "老机场陈记粉条王", desc: "正宗后安粉", lat: 20.008954, lng: 110.320581,
+    { id: 25, type: "food", name: "老机场陈记粉条王", desc: "正宗后安粉，肉给的很多，是在海口其他地方吃不到的正宗后安粉", lat: 20.008954, lng: 110.320581,
       album:[
         "https://api.suzcore.top/uploads/places/25_1.jpg",
         "https://api.suzcore.top/uploads/places/25_2.jpg"
       ]
     },
-    { id: 26, type: "food", name: "三爷糟粕醋", desc: "海南特色糟粕醋", lat: 20.045964, lng: 110.349623,
+    { id: 26, type: "food", name: "三爷糟粕醋", desc: "海南特色糟粕醋，独具风味的酸香开胃的糟粕醋美味，喜欢海鲜的游客可以选择，旁边还有同家的糟粕醋火锅", lat: 20.045964, lng: 110.349623,
       album:[
         "https://api.suzcore.top/uploads/places/26_1.jpg",
         "https://api.suzcore.top/uploads/places/26_2.jpg"
       ]
     },
-    { id: 27, type: "food", name: "陈记粉条王(西沙店)", desc: "香极了", lat: 20.025471, lng: 110.341446,
+    { id: 27, type: "food", name: "老机场陈记粉条王(西沙店)", desc: "也是正宗后安粉，是分店，除了后安粉还有美味的肉粽，值得一试", lat: 20.025471, lng: 110.341446,
       album:[
         "https://api.suzcore.top/uploads/places/27_1.jpg",
         "https://api.suzcore.top/uploads/places/27_2.jpg",
         "https://api.suzcore.top/uploads/places/27_3.jpg"
       ]
     },
-    { id: 28, type: "food", name: "韩汪记糟粕醋", desc: "口味独特", lat: 20.006376, lng: 110.366164,
+    { id: 28, type: "food", name: "韩汪记糟粕醋", desc: "藏在街边小巷的黄金店家，独特的糟粕醋让人感受海南的独特魅力。此外还销售糟粕醋", lat: 20.006376, lng: 110.366164,
       album:[
         "https://api.suzcore.top/uploads/places/28_1.jpg",
         "https://api.suzcore.top/uploads/places/28_2.jpg",
         "https://api.suzcore.top/uploads/places/28_3.jpg"
       ]
     },
-    { id: 29, type: "food", name: "贞姐十三小鱼煲", desc: "特色鱼煲", lat: 20.044265, lng: 110.353645,
+    { id: 29, type: "food", name: "贞姐十三小鱼煲", desc: "位于角落巷子里的美味特色鱼煲，是站主从小吃到大的东西。空心菜，竹笋和芋头梗配上美味的酱料真的让人忍不住夸赞。", lat: 20.044265, lng: 110.353645,
       album:[
         "https://api.suzcore.top/uploads/places/29_1.jpg",
         "https://api.suzcore.top/uploads/places/29_2.jpg",
@@ -343,39 +343,39 @@ function App() {
         "https://api.suzcore.top/uploads/places/29_4.jpg"
       ]
     },
-    { id: 30, type: "food", name: "无名鸡饭", desc: "文昌鸡口味第一", lat: 20.031529, lng: 110.340119,
+    { id: 30, type: "food", name: "无名鸡饭", desc: "低调却口碑炸裂的文昌鸡店，鲜嫩多汁的鸡肉配上诱人的鸡饭产生了无数回头客", lat: 20.031529, lng: 110.340119,
       album:[
         "https://api.suzcore.top/uploads/places/30_1.jpg"
       ]
     },
-    { id: 31, type: "food", name: "肥婆兰鸡饭", desc: "味道不错", lat: 20.045125, lng: 110.350187,
+    { id: 31, type: "food", name: "肥婆兰鸡饭", desc: "香嫩的鸡肉配上醇香米饭和招牌地瓜叶，每一口都充满浓郁的本地风味", lat: 20.045125, lng: 110.350187,
       album:[
         "https://api.suzcore.top/uploads/places/31_1.jpg",
         "https://api.suzcore.top/uploads/places/32_2.jpg"
       ]
     },
-    { id: 32, type: "food", name: "白明泉椰子鸡", desc: "特色椰子鸡火锅", lat: 20.032235, lng: 110.338479,
+    { id: 32, type: "food", name: "白明泉椰子鸡", desc: "特色椰子鸡火锅，冒着热气的汤锅与晶莹椰子肉轻轻一勺能品出海南阳光与海风的味道，汤的味道也很让人着迷", lat: 20.032235, lng: 110.338479,
       album:[
         "https://api.suzcore.top/uploads/places/32_1.jpg",
         "https://api.suzcore.top/uploads/places/32_2.jpg",
         "https://api.suzcore.top/uploads/places/32_3.jpg"
       ]
     },
-    { id: 33, type: "food", name: "文昌鸡椰子汤", desc: "煲仔饭不错", lat: 20.073184, lng: 110.336362,
+    { id: 33, type: "food", name: "文昌鸡椰子汤", desc: "将海南椰香与现杀的文昌鸡的鲜美融为一体，加上十分清甜的汤，不难成为游客的心之所想", lat: 20.073184, lng: 110.336362,
       album:[
         "https://api.suzcore.top/uploads/places/33_1.jpg",
         "https://api.suzcore.top/uploads/places/33_2.jpg",
         "https://api.suzcore.top/uploads/places/33_3.jpg"
       ]
     },
-    { id: 34, type: "food", name: "西天庙", desc: "甜品小吃一条街", lat: 20.047292, lng: 110.346373,
+    { id: 34, type: "food", name: "西天庙", desc: "热闹非凡的地道美食天堂（几乎所有的特色美食都囊括在内），可以边逛街边打卡品尝美食，", lat: 20.047292, lng: 110.346373,
       album:[
         "https://api.suzcore.top/uploads/places/34_1.jpg",
         "https://api.suzcore.top/uploads/places/34_2.jpg",
         "https://api.suzcore.top/uploads/places/34_3.jpg"
       ]
     },
-    { id: 35, type: "cafe", name: "小夜盲", desc: "氛围咖啡馆", lat: 20.034977, lng: 110.346373,
+    { id: 35, type: "cafe", name: "小夜盲", desc: "极具氛围的小咖啡馆，老板人很好，详情的照片是站主对象亲自拍摄，强力推荐喜欢温馨的游客前去一试", lat: 20.034977, lng: 110.346373,
       album:[
         "https://api.suzcore.top/uploads/places/35_1.jpg",
         "https://api.suzcore.top/uploads/places/35_2.jpg",
@@ -383,39 +383,40 @@ function App() {
         "https://api.suzcore.top/uploads/places/35_4.jpg"
       ]
     },
-    { id: 36, type: "cafe", name: "工芸咖啡", desc: "海景咖啡馆", lat: 20.061229, lng: 110.317416,
+    { id: 36, type: "cafe", name: "工芸咖啡", desc: "海景咖啡馆。绝美海景与温暖阳光让它成为海口最难约的海景下午茶", lat: 20.061229, lng: 110.317416,
       album:[
         "https://api.suzcore.top/uploads/places/36_1.jpg",
         "https://api.suzcore.top/uploads/places/36_2.jpg",
         "https://api.suzcore.top/uploads/places/36_3.jpg"
       ]
     },
-    { id: 37, type: "cafe", name: "斑马院子", desc: "有懒人沙发", lat: 20.031764, lng: 110.332199,
+    { id: 37, type: "cafe", name: "斑马院子", desc: "藏在小巷子深处的可爱小店，店里可约拍立得，还有懒人沙发，非常出片", lat: 20.031764, lng: 110.332199,
       album:[
         "https://api.suzcore.top/uploads/places/37_1.jpg",
         "https://api.suzcore.top/uploads/places/37_2.jpg",
         "https://api.suzcore.top/uploads/places/37_3.jpg"
       ]
     },
-    { id: 38, type: "cafe", name: "青庭咖啡", desc: "很出片", lat: 20.041134, lng: 110.325469,
+    { id: 38, type: "cafe", name: "青庭咖啡", desc: "日系窗景咖啡店，在万绿园里面，一扇窗让它成为了著名的打卡点", lat: 20.041134, lng: 110.325469,
       album:[
         "https://api.suzcore.top/uploads/places/38_1.jpg",
         "https://api.suzcore.top/uploads/places/38_2.jpg",
         "https://api.suzcore.top/uploads/places/38_3.jpg"
       ]
     },
-    { id: 39, type: "cafe", name: "肆意茶聊", desc: "清冷感竹林", lat: 20.033555, lng: 110.334263,
+    { id: 39, type: "cafe", name: "肆意茶聊", desc: "彷佛像闯进了闹市里的小森林，木质桌椅，中式茶馆，无不透露着松弛感", lat: 20.033555, lng: 110.334263,
       album:[
         "https://api.suzcore.top/uploads/places/39_1.jpg",
         "https://api.suzcore.top/uploads/places/39_2.jpg",
         "https://api.suzcore.top/uploads/places/39_3.jpg"
       ]
     },
-    { id: 40, type: "cafe", name: "盐巴saltea", desc: "绿植小院", lat: 20.027084, lng: 110.307733,
+    { id: 40, type: "cafe", name: "盐巴saltea", desc: "城市喧嚣中的一方宁静，绿植和阳光洒落让人感到很舒服惬意。", lat: 20.027084, lng: 110.307733,
       album:[
         "https://api.suzcore.top/uploads/places/40_1.jpg",
         "https://api.suzcore.top/uploads/places/40_2.jpg",
-        "https://api.suzcore.top/uploads/places/40_3.jpg"
+        "https://api.suzcore.top/uploads/places/40_3.jpg",
+        "https://api.suzcore.top/uploads/places/40_4.jpg"
       ]
     },
   ];
