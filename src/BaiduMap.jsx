@@ -15,7 +15,7 @@ function BaiduMap({ targetPlaces, userLocation }) {
     // 初始视角：如果有定位就选定位，没有就选海口市中心
     const initPoint = userLocation 
       ? new BMapGL.Point(userLocation.lng, userLocation.lat)
-      : new BMapGL.Point(110.326392, 20.055302);
+      : new BMapGL.Point(110.331398, 20.031957);
       
     map.centerAndZoom(initPoint, 13);
     map.enableScrollWheelZoom(true);
@@ -31,7 +31,6 @@ function BaiduMap({ targetPlaces, userLocation }) {
     if (!map) return;
 
     // --- 🟢 处理“我的位置” ---
-    // 先清理旧的定位点
     if (userMarkerRef.current) {
       map.removeOverlay(userMarkerRef.current);
     }
@@ -40,7 +39,6 @@ function BaiduMap({ targetPlaces, userLocation }) {
       const myPoint = new BMapGL.Point(userLocation.lng, userLocation.lat);
       const myMarker = new BMapGL.Marker(myPoint);
       
-      // 添加一个显眼的标签
       const label = new BMapGL.Label("🚶 我的位置", {
         offset: new BMapGL.Size(20, -10),
       });
@@ -58,24 +56,41 @@ function BaiduMap({ targetPlaces, userLocation }) {
       map.addOverlay(myMarker);
       userMarkerRef.current = myMarker;
 
-      // 如果只有我的位置而没有标记点，则自动居中到我
       if (targetPlaces.length === 0) {
         map.panTo(myPoint);
       }
     }
 
     // --- 🔴 处理“标记点” (targetPlaces) ---
-    // 🧹 先清空旧的地点 Marker
+    // 🧹 1️⃣ 先清空旧的地点 Marker
     markersRef.current.forEach((marker) => {
       map.removeOverlay(marker);
     });
     markersRef.current = [];
 
-    // 🚗 给每个 targetPlace 画 Marker
+    // 🚗 2️⃣ 给每个 targetPlace 画 Marker 并添加【精致名字标签】
     targetPlaces.forEach((place) => {
       const point = new BMapGL.Point(place.lng, place.lat);
       const marker = new BMapGL.Marker(point);
 
+      // ✅ 创建地点名字标签
+      const placeLabel = new BMapGL.Label(place.name, {
+        offset: new BMapGL.Size(18, -12), // 相对于红点的位置偏移
+      });
+
+      // ✅ 设置标签样式：精致、小巧、不遮挡
+      placeLabel.setStyle({
+        color: "#d94f5c",               // 深红色文字（呼应红点）
+        fontSize: "11px",               // ✅ 字体更小一些
+        backgroundColor: "rgba(255, 255, 255, 0.85)", // ✅ 半透明白底
+        border: "1px solid #d94f5c",    // 细红色边框
+        borderRadius: "3px",
+        padding: "1px 4px",
+        whiteSpace: "nowrap",           // 禁止换行
+        boxShadow: "2px 2px 4px rgba(0,0,0,0.1)" // 增加轻微投影，更有质感
+      });
+
+      marker.setLabel(placeLabel); // ✅ 将名字绑定到红点上
       map.addOverlay(marker);
       markersRef.current.push(marker);
 
@@ -88,12 +103,12 @@ function BaiduMap({ targetPlaces, userLocation }) {
       });
     });
 
-    // 🎯 如果有标记点，自动居中到第一个标记点
+    // 🎯 3️⃣ 如果有地点，自动居中到最新标记的那个地点
     if (targetPlaces.length > 0) {
-      const p = targetPlaces[0];
+      const p = targetPlaces[targetPlaces.length - 1];
       map.panTo(new BMapGL.Point(p.lng, p.lat));
     }
-  }, [targetPlaces, userLocation]); // 🚀 关键：监听这两个参数的变化
+  }, [targetPlaces, userLocation]); 
 
   return <div id="map" style={{ width: "100%", height: "100%" }} />;
 }
