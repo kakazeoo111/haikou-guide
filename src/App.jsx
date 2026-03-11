@@ -9,7 +9,7 @@ function App() {
   const [targetPlaces, setTargetPlaces] = useState([]); 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // ✅ 认证状态
+  // ✅ 认证与用户信息
   const [currentUser, setCurrentUser] = useState(null);
   const [authMode, setAuthMode] = useState("login"); 
   const [loginForm, setLoginForm] = useState({ username: "", phone: "", code: "", password: "" });
@@ -19,12 +19,18 @@ function App() {
   const [countdown, setCountdown] = useState(0);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  // ✅ 评论与详情状态
+  // ✅ 评论与详情
   const [showCommentId, setShowCommentId] = useState(null);
   const [activeComments, setActiveComments] = useState({});
   const [newComment, setNewComment] = useState("");
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
+
+  // ✅ 新增：公告功能状态
+  const [showNotice, setShowNotice] = useState(false); // 是否显示公告弹窗
+  const [noticeContent, setNoticeContent] = useState(""); // 公告内容
+  const [isEditingNotice, setIsEditingNotice] = useState(false); // 是否处于编辑模式
+  const ADMIN_PHONE = "13707584213"; // 👈 您的管理员手机号
 
   const authApiBase = "https://api.suzcore.top";
 
@@ -37,23 +43,33 @@ function App() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => { setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-        (err) => console.error("定位失败", err),
-        { enableHighAccuracy: true }
+        null, { enableHighAccuracy: true }
       );
     }
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 2. 云端收藏同步
+  // 2. 登录后获取：云端收藏 + 系统公告
   useEffect(() => {
     if (currentUser) {
+      // 获取收藏
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
         .then(res => res.json())
         .then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
+      
+      // ✅ 获取公告
+      fetch(`${authApiBase}/api/announcement`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            setNoticeContent(data.content);
+            setShowNotice(true); // 👈 登录成功后弹出
+          }
+        });
     }
   }, [currentUser]);
 
-  // 3. 验证码倒计时
+  // 3. 倒计时
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -62,8 +78,25 @@ function App() {
   }, [countdown]);
 
   // ================================
-  // ✅ 业务逻辑 (保持不变)
+  // ✅ 核心业务逻辑
   // ================================
+
+  // 更新公告 (仅管理员可用)
+  const handleUpdateNotice = async () => {
+    try {
+      const res = await fetch(`${authApiBase}/api/announcement/update`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert("公告修改成功");
+        setIsEditingNotice(false);
+      } else { alert(data.message); }
+    } catch (e) { alert("网络异常"); }
+  };
+
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -86,7 +119,7 @@ function App() {
   };
 
   const handleAddComment = async (placeId) => {
-    if (!newComment.trim() && !commentImage) return alert("写点什么或传张图吧~");
+    if (!newComment.trim() && !commentImage) return alert("内容或图片不能为空");
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
     formData.append("placeId", placeId);
@@ -106,7 +139,7 @@ function App() {
 
   const handleSendCode = async () => {
     const { phone } = loginForm;
-    if (!/^1\d{10}$/.test(phone)) return setLoginError("手机号格式不正确");
+    if (!/^1\d{10}$/.test(phone)) return setLoginError("手机号不正确");
     setIsSendingCode(true);
     const res = await fetch(`${authApiBase}/api/sms/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, type: authMode }) });
     const d = await res.json();
@@ -406,14 +439,14 @@ function App() {
     },
   ];
 
-  function getDistance(lat1, lng1, lat2, lng2) {
-    if (!lat1 || !lng1) return "...";
+   const getDist = (l1, l2) => {
+    if (!l1 || !l2) return 999;
     const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLng = ((lng2 - lng1) * Math.PI) / 180;
-    const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
-    return (R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)))).toFixed(2);
-  }
+    const dLat = (l2.lat - l1.lat) * Math.PI / 180;
+    const dLng = (l2.lng - l1.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(l1.lat*Math.PI/180)*Math.cos(l2.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
+  };
 
   const toggleFavorite = async (p) => {
     const res = await fetch(`${authApiBase}/api/favorites/toggle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }) });
@@ -424,11 +457,10 @@ function App() {
   const filteredPlaces = places
     .filter(p => (filter === "all" ? true : filter === "favorite" ? favorites.some(f => f.id === p.id) : p.type === filter))
     .filter(p => p.name.includes(search))
-    .map(p => ({ ...p, distVal: getDistance(userLocation?.lat, userLocation?.lng, p.lat, p.lng) }))
+    .map(p => ({ ...p, distVal: getDist(userLocation, p) }))
     .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
 
-  // ======================== 渲染逻辑 ========================
-
+  // --- 登录 UI ---
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f4fbf6" }}>
@@ -456,42 +488,68 @@ function App() {
     );
   }
 
-  // ================================
-  // ✅ 渲染逻辑 B：主界面 (手机吸顶优化版)
-  // ================================
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
       
-      {/* 🖼️ 详情相册弹窗 */}
-      {detailPlace && (
-        <div style={modalOverlayStyle} onClick={() => setDetailPlace(null)}>
-          <div style={modalContentStyle} onClick={e => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
-              <h2 style={{ margin: 0, color: '#2e6a4a' }}>{detailPlace.name}</h2>
-              <span style={{ cursor: 'pointer', fontSize: '28px', color: '#999' }} onClick={() => setDetailPlace(null)}>×</span>
+      {/* ✅ 1. 公告弹窗 (登录后可见) */}
+      {showNotice && (
+        <div style={modalOverlayStyle}>
+          <div style={{ ...modalContentStyle, textAlign: 'center', maxWidth: '420px' }}>
+            <h2 style={{ color: '#2e6a4a', marginBottom: '15px' }}>📢 系统公告</h2>
+            {isEditingNotice ? (
+              <textarea 
+                value={noticeContent} 
+                onChange={(e) => setNoticeContent(e.target.value)}
+                style={{ width: '100%', height: '150px', borderRadius: '12px', padding: '10px', border: '1px solid #ddd', fontSize: '14px', outline: 'none' }}
+              />
+            ) : (
+              <div style={{ padding: '10px', color: '#555', fontSize: '15px', whiteSpace: 'pre-wrap', lineHeight: '1.6', textAlign: 'left', background: '#f9fcf9', borderRadius: '12px' }}>
+                {noticeContent}
+              </div>
+            )}
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+              {/* ✅ 仅管理员可见编辑按钮 */}
+              {currentUser.phone === ADMIN_PHONE && (
+                <button 
+                  onClick={() => isEditingNotice ? handleUpdateNotice() : setIsEditingNotice(true)}
+                  style={{ ...btnSmallStyle(false), background: '#7dbf96', color: 'white', flex: 1 }}
+                >
+                  {isEditingNotice ? "💾 保存" : "📝 编辑"}
+                </button>
+              )}
+              <button onClick={() => setShowNotice(false)} style={{ ...btnMainStyle, flex: 2 }}>进入地图</button>
             </div>
-            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '15px' }}>
-              {detailPlace.album?.map((img, i) => <img key={i} src={img} style={{ height: '200px', borderRadius: '15px' }} alt="景点" />)}
-            </div>
-            <button onClick={() => setDetailPlace(null)} style={btnMainStyle}>返回</button>
           </div>
         </div>
       )}
 
-      {/* 🟢 上部/右侧：百度地图 (40vh 固定) */}
+      {/* 2. 详情相册弹窗 */}
+      {detailPlace && (
+        <div style={modalOverlayStyle} onClick={() => setDetailPlace(null)}>
+          <div style={modalContentStyle} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+              <h2 style={{ margin: 0, color: '#2e6a4a', fontSize: '20px' }}>{detailPlace.name}</h2>
+              <span style={{ cursor: 'pointer', fontSize: '28px', color: '#999' }} onClick={() => setDetailPlace(null)}>×</span>
+            </div>
+            <p style={{ color: '#666', fontSize: '14px', lineHeight: '1.6' }}>{detailPlace.desc}</p>
+            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '15px', marginTop: '15px', scrollSnapType: 'x mandatory' }}>
+              {detailPlace.album?.map((img, i) => <img key={i} src={img} style={{ height: '220px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.1)', scrollSnapAlign: 'start' }} alt="景点" />)}
+            </div>
+            <button onClick={() => setDetailPlace(null)} style={{ ...btnMainStyle, marginTop: '10px' }}>关闭详情</button>
+          </div>
+        </div>
+      )}
+
+      {/* 🟢 上部：百度地图 */}
       <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "40vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
         <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} />
         <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
       </div>
 
-      {/* 🟢 下部/左侧：列表区域 (60vh 滚动) */}
-      <div style={{ 
-        width: isMobile ? "100%" : "380px", height: isMobile ? "60vh" : "100vh", 
-        overflowY: "auto", background: "white", boxShadow: "0 -5px 20px rgba(0,0,0,0.05)",
-        zIndex: 15, padding: "0", boxSizing: "border-box" // padding改为0，方便吸顶效果铺满
-      }}>
+      {/* 🟢 下部：列表区域 */}
+      <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "60vh" : "100vh", overflowY: "auto", background: "white", boxShadow: "0 -5px 20px rgba(0,0,0,0.05)", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
         
-        {/* 用户信息与搜索框 - 随页面滚动 */}
+        {/* 用户头像与信息 */}
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <div onClick={() => document.getElementById('avatar-input').click()} style={{ position: 'relative', cursor: 'pointer' }}>
@@ -507,16 +565,8 @@ function App() {
           <input placeholder="搜索目的地、路线..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* ✅ ✅ ✅ 核心改动：吸顶按钮容器 ✅ ✅ ✅ */}
-        <div style={{ 
-          position: "sticky", 
-          top: 0, 
-          background: "white", 
-          zIndex: 100, 
-          padding: "10px 20px", 
-          borderBottom: "1px solid #f0f0f0",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.02)"
-        }}>
+        {/* 分类吸顶导航 */}
+        <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "5px" }}>
             {[{ k: "all", l: "全部" }, { k: "favorite", l: "⭐收藏" }, { k: "food", l: "🍱美食" }, { k: "view", l: "🏞️景点" }, { k: "street", l: "🛍️商圈" }, { k: "cafe", l: "☕咖啡" }].map(item => (
               <button key={item.k} onClick={() => setFilter(item.k)} style={{ padding: "6px 12px", borderRadius: "20px", border: "none", background: filter === item.k ? "#5aa77b" : "#f0f0f0", color: filter === item.k ? "white" : "#666", cursor: "pointer", whiteSpace: "nowrap" }}>{item.l}</button>
@@ -524,7 +574,7 @@ function App() {
           </div>
         </div>
 
-        {/* 列表渲染 */}
+        {/* 地点列表渲染 */}
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map(p => (
             <div key={p.id} style={{ padding: "15px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
@@ -548,20 +598,17 @@ function App() {
               <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{p.desc}</p>
               <div style={{ fontSize: "12px", color: "#5aa77b", marginBottom: "10px" }}>📏 距你：{p.distVal} km</div>
               
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: 'wrap' }}>
                 <button onClick={() => setDetailPlace(p)} style={{ ...btnSmallStyle(false), background: '#e8f5eb', color: '#2e6a4a' }}>🖼️ 详情</button>
                 <button onClick={() => setTargetPlaces(prev => prev.some(tp => tp.id === p.id) ? prev.filter(tp => tp.id !== p.id) : [...prev, p])} style={btnSmallStyle(targetPlaces.some(tp => tp.id === p.id))}>
                   {targetPlaces.some(tp => tp.id === p.id) ? "取消路线" : "标记路线"}
                 </button>
-                <button onClick={() => {
-                  const url = `https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}|name:${encodeURIComponent(p.name)}&mode=driving&region=海口&output=html&src=haikou-guide`;
-                  window.open(url, "_blank");
-                }} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
+                <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}&mode=driving&region=海口&output=html`)} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
               </div>
 
-              {/* 评论区代码保持原样 */}
+              {/* 评论区代码 */}
               <div style={{ marginTop: '12px', borderTop: '1px dashed #ddd', paddingTop: '10px' }}>
-                <div onClick={() => { if (showCommentId === p.id) setShowCommentId(null); else { setShowCommentId(p.id); fetchComments(p.id); } }} style={{ color: '#5aa77b', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '4px' }}>💬 {showCommentId === p.id ? "收起评论" : "查看评论区"}</div>
+                <div onClick={() => { if (showCommentId === p.id) setShowCommentId(null); else { setShowCommentId(p.id); fetchComments(p.id); } }} style={{ color: '#5aa77b', cursor: 'pointer', fontSize: '13px' }}>💬 {showCommentId === p.id ? "收起评论" : "查看评论区"}</div>
                 {showCommentId === p.id && (
                   <div style={{ marginTop: '10px', background: '#fff', borderRadius: '12px', padding: '12px', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
                     <div style={{ maxHeight: '200px', overflowY: 'auto', marginBottom: '10px' }}>
@@ -570,19 +617,18 @@ function App() {
                           <div key={c.id} style={{ display: 'flex', gap: '10px', marginBottom: '15px', borderBottom: '1px solid #f2f2f2', paddingBottom: '10px', position: 'relative' }}>
                             <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{c.username}</div>
-                              {c.content && <div style={{ fontSize: '13px', color: '#555', margin: '4px 0' }}>{c.content}</div>}
+                              <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{c.username}</div>
+                              {c.content && <div style={{ fontSize: '13px', margin: '3px 0' }}>{c.content}</div>}
                               {c.image_url && <img src={c.image_url} alt="comment" style={{ width: '100%', maxWidth: '120px', borderRadius: '8px', marginTop: '5px' }} onClick={() => window.open(c.image_url)} />}
-                              <div style={{ fontSize: '10px', color: '#bbb', marginTop: '5px' }}>{new Date(c.created_at).toLocaleString()}</div>
                             </div>
-                            {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, p.id)} style={{ position: 'absolute', right: 0, top: 0, color: '#df6b76', fontSize: '11px', cursor: 'pointer' }}>删除</span>}
+                            {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, p.id)} style={{ color: '#df6b76', fontSize: '11px', cursor: 'pointer' }}>删除</span>}
                           </div>
                         ))
                       }
                     </div>
                     <div style={{ background: '#f9f9f9', padding: '10px', borderRadius: '10px' }}>
                       <textarea placeholder="写点评..." value={newComment} onChange={e => setNewComment(e.target.value)} style={{ width: '100%', minHeight: '40px', border: 'none', background: 'transparent', fontSize: '13px', outline: 'none', resize: 'none' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
                         <div onClick={() => document.getElementById(`comment-img-${p.id}`).click()} style={{ cursor: 'pointer', fontSize: '18px' }}>🖼️</div>
                         <input type="file" id={`comment-img-${p.id}`} hidden accept="image/*" onChange={(e) => setCommentImage(e.target.files[0])} />
                         <button onClick={() => handleAddComment(p.id)} style={{ background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '5px 15px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>发布</button>
