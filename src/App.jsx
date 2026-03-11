@@ -9,7 +9,7 @@ function App() {
   const [targetPlaces, setTargetPlaces] = useState([]); 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // ✅ 认证与用户信息
+  // ✅ 认证状态
   const [currentUser, setCurrentUser] = useState(null);
   const [authMode, setAuthMode] = useState("login"); 
   const [loginForm, setLoginForm] = useState({ username: "", phone: "", code: "", password: "" });
@@ -19,18 +19,22 @@ function App() {
   const [countdown, setCountdown] = useState(0);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  // ✅ 评论与详情
+  // ✅ 评论与详情状态
   const [showCommentId, setShowCommentId] = useState(null);
   const [activeComments, setActiveComments] = useState({});
   const [newComment, setNewComment] = useState("");
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
 
-  // ✅ 新增：公告功能状态
-  const [showNotice, setShowNotice] = useState(false); // 是否显示公告弹窗
-  const [noticeContent, setNoticeContent] = useState(""); // 公告内容
-  const [isEditingNotice, setIsEditingNotice] = useState(false); // 是否处于编辑模式
-  const ADMIN_PHONE = "13707584213"; // 👈 您的管理员手机号
+  // ✅ 公告状态
+  const [showNotice, setShowNotice] = useState(false);
+  const [noticeContent, setNoticeContent] = useState("");
+  const [isEditingNotice, setIsEditingNotice] = useState(false);
+  const ADMIN_PHONE = "13707584213"; 
+
+  // ✅ 新增：投诉与建议状态
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackContent, setFeedbackContent] = useState("");
 
   const authApiBase = "https://api.suzcore.top";
 
@@ -49,21 +53,19 @@ function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 2. 登录后获取：云端收藏 + 系统公告
+  // 2. 登录后获取数据
   useEffect(() => {
     if (currentUser) {
-      // 获取收藏
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
         .then(res => res.json())
         .then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
       
-      // ✅ 获取公告
       fetch(`${authApiBase}/api/announcement`)
         .then(res => res.json())
         .then(data => {
           if (data.ok) {
             setNoticeContent(data.content);
-            setShowNotice(true); // 👈 登录成功后弹出
+            setShowNotice(true);
           }
         });
     }
@@ -81,7 +83,24 @@ function App() {
   // ✅ 核心业务逻辑
   // ================================
 
-  // 更新公告 (仅管理员可用)
+  // ✅ 新增：提交反馈
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackContent.trim()) return alert("请输入建议内容");
+    try {
+      const res = await fetch(`${authApiBase}/api/feedback/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, content: feedbackContent }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        alert(data.message);
+        setFeedbackContent("");
+        setShowFeedback(false);
+      }
+    } catch (e) { alert("网络异常"); }
+  };
+
   const handleUpdateNotice = async () => {
     try {
       const res = await fetch(`${authApiBase}/api/announcement/update`, {
@@ -90,10 +109,7 @@ function App() {
         body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }),
       });
       const data = await res.json();
-      if (data.ok) {
-        alert("公告修改成功");
-        setIsEditingNotice(false);
-      } else { alert(data.message); }
+      if (data.ok) { alert("公告修改成功"); setIsEditingNotice(false); }
     } catch (e) { alert("网络异常"); }
   };
 
@@ -139,7 +155,7 @@ function App() {
 
   const handleSendCode = async () => {
     const { phone } = loginForm;
-    if (!/^1\d{10}$/.test(phone)) return setLoginError("手机号不正确");
+    if (!/^1\d{10}$/.test(phone)) return setLoginError("手机号错误");
     setIsSendingCode(true);
     const res = await fetch(`${authApiBase}/api/sms/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, type: authMode }) });
     const d = await res.json();
@@ -439,16 +455,7 @@ function App() {
     },
   ];
 
-   const getDist = (l1, l2) => {
-    if (!l1 || !l2) return 999;
-    const R = 6371;
-    const dLat = (l2.lat - l1.lat) * Math.PI / 180;
-    const dLng = (l2.lng - l1.lng) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(l1.lat*Math.PI/180)*Math.cos(l2.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
-  };
-
-  const toggleFavorite = async (p) => {
+    const toggleFavorite = async (p) => {
     const res = await fetch(`${authApiBase}/api/favorites/toggle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }) });
     const d = await res.json();
     if (d.ok) d.action === "added" ? setFavorites([...favorites, p]) : setFavorites(favorites.filter(f => f.id !== p.id));
@@ -457,10 +464,14 @@ function App() {
   const filteredPlaces = places
     .filter(p => (filter === "all" ? true : filter === "favorite" ? favorites.some(f => f.id === p.id) : p.type === filter))
     .filter(p => p.name.includes(search))
-    .map(p => ({ ...p, distVal: getDist(userLocation, p) }))
+    .map(p => ({ 
+        ...p, 
+        distVal: userLocation ? (6371 * 2 * Math.asin(Math.sqrt(Math.pow(Math.sin((p.lat - userLocation.lat) * Math.PI / 180 / 2), 2) + Math.cos(p.lat * Math.PI / 180) * Math.cos(userLocation.lat * Math.PI / 180) * Math.pow(Math.sin((p.lng - userLocation.lng) * Math.PI / 180 / 2), 2)))).toFixed(2) : 999 
+    }))
     .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
 
-  // --- 登录 UI ---
+  // ======================== 渲染逻辑 ========================
+
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f4fbf6" }}>
@@ -480,7 +491,7 @@ function App() {
           {loginError && <p style={{ color: "red", fontSize: "13px" }}>{loginError}</p>}
           <button type="submit" style={btnMainStyle}>确定</button>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", fontSize: "14px" }}>
-            <span style={linkStyle} onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}>{authMode === "login" ? "去注册" : "返回登录"}</span>
+            <span style={linkStyle} onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}>{authMode === "login" ? "注册账号" : "返回登录"}</span>
             {authMode === "login" && <span style={linkStyle} onClick={() => setAuthMode("reset")}>忘记密码？</span>}
           </div>
         </form>
@@ -491,31 +502,19 @@ function App() {
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
       
-      {/* ✅ 1. 公告弹窗 (登录后可见) */}
+      {/* 1. 公告弹窗 */}
       {showNotice && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, textAlign: 'center', maxWidth: '420px' }}>
             <h2 style={{ color: '#2e6a4a', marginBottom: '15px' }}>📢 系统公告</h2>
             {isEditingNotice ? (
-              <textarea 
-                value={noticeContent} 
-                onChange={(e) => setNoticeContent(e.target.value)}
-                style={{ width: '100%', height: '150px', borderRadius: '12px', padding: '10px', border: '1px solid #ddd', fontSize: '14px', outline: 'none' }}
-              />
+              <textarea value={noticeContent} onChange={(e) => setNoticeContent(e.target.value)} style={{ width: '100%', height: '150px', borderRadius: '12px', padding: '10px', border: '1px solid #ddd', fontSize: '14px', outline: 'none' }} />
             ) : (
-              <div style={{ padding: '10px', color: '#555', fontSize: '15px', whiteSpace: 'pre-wrap', lineHeight: '1.6', textAlign: 'left', background: '#f9fcf9', borderRadius: '12px' }}>
-                {noticeContent}
-              </div>
+              <div style={{ padding: '10px', color: '#555', fontSize: '15px', whiteSpace: 'pre-wrap', lineHeight: '1.6', textAlign: 'left', background: '#f9fcf9', borderRadius: '12px' }}>{noticeContent}</div>
             )}
             <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-              {/* ✅ 仅管理员可见编辑按钮 */}
               {currentUser.phone === ADMIN_PHONE && (
-                <button 
-                  onClick={() => isEditingNotice ? handleUpdateNotice() : setIsEditingNotice(true)}
-                  style={{ ...btnSmallStyle(false), background: '#7dbf96', color: 'white', flex: 1 }}
-                >
-                  {isEditingNotice ? "💾 保存" : "📝 编辑"}
-                </button>
+                <button onClick={() => isEditingNotice ? handleUpdateNotice() : setIsEditingNotice(true)} style={{ ...btnSmallStyle(false), background: '#7dbf96', color: 'white', flex: 1 }}>{isEditingNotice ? "💾 保存" : "📝 编辑"}</button>
               )}
               <button onClick={() => setShowNotice(false)} style={{ ...btnMainStyle, flex: 2 }}>进入地图</button>
             </div>
@@ -540,6 +539,26 @@ function App() {
         </div>
       )}
 
+      {/* ✅ 3. 新增：投诉与建议弹窗 */}
+      {showFeedback && (
+        <div style={modalOverlayStyle}>
+          <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
+            <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>💡 投诉与建议</h2>
+            <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginBottom: '15px' }}>您的反馈是作者改进网站的最大动力</p>
+            <textarea 
+                placeholder="请详细描述您的问题或改进建议..." 
+                value={feedbackContent}
+                onChange={(e) => setFeedbackContent(e.target.value)}
+                style={{ width: '100%', height: '180px', borderRadius: '15px', padding: '15px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                <button onClick={() => setShowFeedback(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>取消</button>
+                <button onClick={handleFeedbackSubmit} style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: '#5aa77b', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>提交反馈</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 🟢 上部：百度地图 */}
       <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "40vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
         <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} />
@@ -549,7 +568,7 @@ function App() {
       {/* 🟢 下部：列表区域 */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "60vh" : "100vh", overflowY: "auto", background: "white", boxShadow: "0 -5px 20px rgba(0,0,0,0.05)", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
         
-        {/* 用户头像与信息 */}
+        {/* 用户信息与操作区域 */}
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <div onClick={() => document.getElementById('avatar-input').click()} style={{ position: 'relative', cursor: 'pointer' }}>
@@ -558,8 +577,12 @@ function App() {
             </div>
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={handleAvatarUpload} />
             <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: "16px" }}>{currentUser.username}</h3>
-                <p onClick={() => { localStorage.removeItem("haikouUser"); window.location.reload(); }} style={{ margin: 0, color: "#d94f5c", fontSize: "12px", cursor: "pointer", textDecoration: "underline" }}>退出登录</p>
+                <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{currentUser.username}</h3>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '2px' }}>
+                    <span onClick={() => { localStorage.removeItem("haikouUser"); window.location.reload(); }} style={{ color: "#d94f5c", fontSize: "12px", cursor: "pointer", textDecoration: "underline" }}>退出登录</span>
+                    {/* ✅ 头像最右侧：投诉与建议链接 ✅ */}
+                    <span onClick={() => setShowFeedback(true)} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", background: '#f0f8f3', padding: '2px 8px', borderRadius: '4px' }}>投诉与建议</span>
+                </div>
             </div>
           </div>
           <input placeholder="搜索目的地、路线..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
@@ -574,7 +597,7 @@ function App() {
           </div>
         </div>
 
-        {/* 地点列表渲染 */}
+        {/* 列表渲染 */}
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map(p => (
             <div key={p.id} style={{ padding: "15px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
@@ -598,15 +621,17 @@ function App() {
               <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{p.desc}</p>
               <div style={{ fontSize: "12px", color: "#5aa77b", marginBottom: "10px" }}>📏 距你：{p.distVal} km</div>
               
-              <div style={{ display: "flex", gap: "8px", flexWrap: 'wrap' }}>
+              <div style={{ display: "flex", gap: "8px" }}>
                 <button onClick={() => setDetailPlace(p)} style={{ ...btnSmallStyle(false), background: '#e8f5eb', color: '#2e6a4a' }}>🖼️ 详情</button>
                 <button onClick={() => setTargetPlaces(prev => prev.some(tp => tp.id === p.id) ? prev.filter(tp => tp.id !== p.id) : [...prev, p])} style={btnSmallStyle(targetPlaces.some(tp => tp.id === p.id))}>
                   {targetPlaces.some(tp => tp.id === p.id) ? "取消路线" : "标记路线"}
                 </button>
-                <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}&mode=driving&region=海口&output=html`)} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
+                <button onClick={() => {
+                  const url = `https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}|name:${encodeURIComponent(p.name)}&mode=driving&region=海口&output=html&src=haikou-guide`;
+                  window.open(url, "_blank");
+                }} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
               </div>
 
-              {/* 评论区代码 */}
               <div style={{ marginTop: '12px', borderTop: '1px dashed #ddd', paddingTop: '10px' }}>
                 <div onClick={() => { if (showCommentId === p.id) setShowCommentId(null); else { setShowCommentId(p.id); fetchComments(p.id); } }} style={{ color: '#5aa77b', cursor: 'pointer', fontSize: '13px' }}>💬 {showCommentId === p.id ? "收起评论" : "查看评论区"}</div>
                 {showCommentId === p.id && (
@@ -617,9 +642,10 @@ function App() {
                           <div key={c.id} style={{ display: 'flex', gap: '10px', marginBottom: '15px', borderBottom: '1px solid #f2f2f2', paddingBottom: '10px', position: 'relative' }}>
                             <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{c.username}</div>
-                              {c.content && <div style={{ fontSize: '13px', margin: '3px 0' }}>{c.content}</div>}
+                              <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{c.username}</div>
+                              {c.content && <div style={{ fontSize: '13px', color: '#555', margin: '4px 0' }}>{c.content}</div>}
                               {c.image_url && <img src={c.image_url} alt="comment" style={{ width: '100%', maxWidth: '120px', borderRadius: '8px', marginTop: '5px' }} onClick={() => window.open(c.image_url)} />}
+                              <div style={{ fontSize: '10px', color: '#bbb', marginTop: '5px' }}>{new Date(c.created_at).toLocaleString()}</div>
                             </div>
                             {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, p.id)} style={{ color: '#df6b76', fontSize: '11px', cursor: 'pointer' }}>删除</span>}
                           </div>
@@ -651,7 +677,7 @@ const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", bo
 const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
 const linkStyle = { color: "#5aa77b", cursor: "pointer", textDecoration: "underline" };
 const floatBtnStyle = { position: "absolute", right: "15px", bottom: "15px", width: "40px", height: "40px", borderRadius: "50%", background: "white", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.2)", fontSize: "20px", zIndex: 20 };
-const plusIconStyle = { position: 'absolute', bottom: 0, right: 0, background: '#5aa77b', color: 'white', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '2px solid white', fontSize: '12px' };
+const plusIconStyle = { position: 'absolute', bottom: 0, right: 0, background: '#5aa77b', color: 'white', borderRadius: '50%', width: '18px', height: '18px', border: '2px solid white', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '12px' };
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' };
 const modalContentStyle = { background: 'white', width: '100%', maxWidth: '600px', borderRadius: '24px', padding: '24px', position: 'relative', overflowY: 'auto', maxHeight: '90vh' };
 const btnSmallStyle = (isMarked) => ({ padding: "8px 12px", borderRadius: "8px", border: "none", background: isMarked ? "#df6b76" : "#e8f5eb", color: isMarked ? "white" : "#2e6a4a", fontWeight: "bold", fontSize: "13px", cursor: "pointer", marginBottom: '5px' });
