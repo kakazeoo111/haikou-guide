@@ -291,7 +291,7 @@ function App() {
         "https://api.suzcore.top/uploads/places/17_1.jpg",
         "https://api.suzcore.top/uploads/places/17_2.jpg",
         "https://api.suzcore.top/uploads/places/17_3.jpg",
-        "https://api.suzcore.top/uploads/places/17_3.jpg"
+        "https://api.suzcore.top/uploads/places/17_4.jpg"
       ]
     },
     { id: 18, type: "food", name: "柿里糖水铺(世贸直营店)", desc: "地道港式糖水的温暖小天地，店内氛围十分温馨，有甜品有晚餐，可以与朋友分享甜蜜的悠闲地", lat: 20.027454, lng: 110.311212,
@@ -384,7 +384,7 @@ function App() {
     { id: 31, type: "food", name: "肥婆兰鸡饭", desc: "香嫩的鸡肉配上醇香米饭和招牌地瓜叶，每一口都充满浓郁的本地风味", lat: 20.045125, lng: 110.350187,
       album:[
         "https://api.suzcore.top/uploads/places/31_1.jpg",
-        "https://api.suzcore.top/uploads/places/32_2.jpg"
+        "https://api.suzcore.top/uploads/places/31_2.jpg"
       ]
     },
     { id: 32, type: "food", name: "白明泉椰子鸡", desc: "特色椰子鸡火锅，冒着热气的汤锅与晶莹椰子肉轻轻一勺能品出海南阳光与海风的味道，汤的味道也很让人着迷", lat: 20.032235, lng: 110.338479,
@@ -476,7 +476,7 @@ function App() {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f4fbf6" }}>
         <form onSubmit={handleAuthSubmit} style={{ width: "100%", maxWidth: "420px", background: "white", padding: "30px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
-          <h2 style={{ textAlign: "center", color: "#2e6a4a", marginTop:0 }}>{authMode === "login" ? "海口导览登录" : (authMode === "register" ? "新用户注册" : "找回密码")}</h2>
+          <h2 style={{ textAlign: "center", color: "#2e6a4a", marginTop:0 }}>{authMode === "login" ? "海口之行登录" : (authMode === "register" ? "新用户注册" : "找回密码")}</h2>
           <input placeholder="手机号" style={inputStyle} onChange={e => setLoginForm({...loginForm, phone: e.target.value})} />
           {authMode !== "login" && (
             <>
@@ -546,7 +546,7 @@ function App() {
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>💡 投诉与建议</h2>
             <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginBottom: '15px' }}>您的反馈是作者改进网站的最大动力</p>
             <textarea 
-                placeholder="请详细描述您的问题或改进建议..." 
+                placeholder="请详细描述您的问题或改进建议（如有需要，请备注上您的联系方式）..." 
                 value={feedbackContent}
                 onChange={(e) => setFeedbackContent(e.target.value)}
                 style={{ width: '100%', height: '180px', borderRadius: '15px', padding: '15px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
