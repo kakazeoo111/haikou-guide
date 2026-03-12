@@ -184,7 +184,7 @@ function App() {
   // ✅ 40个完整地点数据
   // ================================
   const places = [
-    { id: 1, type: "view", name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景", lat: 20.091026, lng: 110.262594,
+    { id: 1, type: "view", name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景，进去图书馆需要提前几天预约", lat: 20.091026, lng: 110.262594,
       album:[
         "https://api.suzcore.top/uploads/places/1_1.jpg",
         "https://api.suzcore.top/uploads/places/1_2.jpg",
@@ -587,8 +587,8 @@ function App() {
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
-            <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>投诉建议</h2>
-            <textarea placeholder="请描述建议..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
+            <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>投诉与建议</h2>
+            <textarea placeholder="您的反馈是作者最大的动力（如有需要可以加上个人的联系方式）..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
             {feedbackImage && <img src={URL.createObjectURL(feedbackImage)} style={{ width: '80px', marginTop: '10px', borderRadius: '10px' }} alt="v" />}
             <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                <button onClick={() => document.getElementById('f-img').click()} style={btnIconStyle}>🖼️</button>
