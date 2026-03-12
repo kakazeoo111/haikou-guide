@@ -705,6 +705,16 @@ function App() {
 }
 
 // 💄 样式
+const zoomOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
+const swipeContainerStyle = { display: 'flex', overflowX: 'auto', width: '100vw', height: '100vh', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
+const swipeItemStyle = { flexShrink: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' };
+const zoomedImgStyle = { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' };
+const closeZoomStyle = { position: 'absolute', top: '30px', right: '30px', color: 'white', fontSize: '50px', zIndex: 3100, cursor: 'pointer' };
+const swipeHintStyle = { position: 'absolute', bottom: '40px', color: 'rgba(255,255,255,0.7)', fontSize: '14px', zIndex: 3100 };
+const horizontalScrollWrapper = { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '15px', marginTop: '15px', whiteSpace: 'nowrap', WebkitOverflowScrolling: 'touch' };
+const albumThumbStyle = { height: '200px', borderRadius: '15px', flexShrink: 0, boxShadow: '0 5px 15px rgba(0,0,0,0.1)', cursor: 'zoom-in' };
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '15px', boxSizing: 'border-box' };
+const modalContentStyle = { background: 'white', width: '100%', maxWidth: '600px', borderRadius: '24px', padding: '24px', position: 'relative', overflowY: 'auto', maxHeight: '90vh' };
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
 const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "70px", fontSize: "12px" };
 const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
@@ -716,13 +726,14 @@ const listThumbStyle = { width: "65px", height: "65px", borderRadius: "12px", ob
 const categoryTagStyle = { fontSize: '10px', color: '#5aa77b', background: '#e8f5eb', padding: '2px 6px', borderRadius: '4px' };
 const btnDetailStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: '#e8f5eb', color: '#2e6a4a', fontWeight: "bold", fontSize: "12px", cursor: "pointer" };
 const btnNavStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: "#5aa77b", color: "white", fontWeight: "bold", fontSize: "12px", cursor: "pointer" };
-const btnSmallStyle = (m) => ({ padding: "8px 12px", borderRadius: "8px", border: "none", background: m ? "#df6b76" : "#e8f5eb", color: m ? "white" : "#2e6a4a", fontWeight: "bold", fontSize: "12px", cursor: "pointer", marginBottom: '5px' });
-
-const zoomOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const swipeContainerStyle = { display: 'flex', overflowX: 'auto', width: '100vw', height: '100vh', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
-const swipeItemStyle = { flexShrink: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' };
-const zoomedImgStyle = { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' };
-const closeZoomStyle = { position: 'absolute', top: '30px', right: '30px', color: 'white', fontSize: '50px', zIndex: 3100, cursor: 'pointer' };
-const swipeHintStyle = { position: 'absolute', bottom: '40px', color: 'rgba(255,255,255,0.7)', fontSize: '14px', zIndex: 3100 };
+const btnSmallStyle = (m) => ({ padding: "8px 12px", borderRadius: "8px", border: "none", background: m ? "#df6b76" : "#e8f5eb", color: m ? "white" : "#2e6a4a", fontWeight: "bold", fontSize: "12px", cursor: "pointer" });
+const commentLinkStyle = { color: '#5aa77b', fontSize: '12px', marginTop: '10px', cursor: 'pointer' };
+const commentBoxStyle = { marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '10px' };
+const commentInputStyle = { flex: 1, border: '1px solid #eee', borderRadius: '5px', padding: '5px', fontSize: '11px', outline:'none' };
+const btnSendStyle = { background: '#5aa77b', color: 'white', border: 'none', borderRadius: '5px', padding: '0 10px', cursor:'pointer' };
+const textAreaStyle = { width: '100%', height: '120px', borderRadius: '10px', padding: '10px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none' };
+const btnCancelStyle = { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff' };
+const btnIconStyle = { padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: '18px' };
+const feedbackItemStyle = { padding: '10px', borderBottom: '1px solid #eee', background: '#f9fcf9', borderRadius: '10px', marginBottom: '10px' };
 
 export default App;
