@@ -9,7 +9,7 @@ function App() {
   const [targetPlaces, setTargetPlaces] = useState([]); 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // 认证状态
+  // ✅ 认证状态
   const [currentUser, setCurrentUser] = useState(null);
   const [authMode, setAuthMode] = useState("login"); 
   const [loginForm, setLoginForm] = useState({ username: "", phone: "", code: "", password: "" });
@@ -19,20 +19,20 @@ function App() {
   const [countdown, setCountdown] = useState(0);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  // 评论与详情
+  // ✅ 评论与详情
   const [showCommentId, setShowCommentId] = useState(null);
   const [activeComments, setActiveComments] = useState({});
   const [newComment, setNewComment] = useState("");
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
 
-  // 大图查看状态
+  // ✅ 终极版大图查看状态
   const [zoomMode, setZoomMode] = useState(false); 
   const [initialSlide, setInitialSlide] = useState(0); 
   const [zoomedSingleImage, setZoomedSingleImage] = useState(null); 
   const scrollContainerRef = useRef(null); 
 
-  // 公告与反馈逻辑
+  // ✅ 公告与反馈逻辑
   const [showNotice, setShowNotice] = useState(false);
   const [noticeContent, setNoticeContent] = useState("");
   const [isEditingNotice, setIsEditingNotice] = useState(false);
@@ -45,6 +45,7 @@ function App() {
   const ADMIN_PHONE = "13707584213"; 
   const authApiBase = "https://api.suzcore.top";
 
+  // 1. 初始化
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
     if (savedUser) setCurrentUser(savedUser);
@@ -59,12 +60,14 @@ function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // 核心：大图手势滑动自动定位
   useEffect(() => {
     if (zoomMode && scrollContainerRef.current) {
       scrollContainerRef.current.scrollLeft = window.innerWidth * initialSlide;
     }
   }, [zoomMode, initialSlide]);
 
+  // 2. 登录同步
   useEffect(() => {
     if (currentUser) {
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
@@ -84,9 +87,9 @@ function App() {
   }, [countdown]);
 
   // ================================
-  // ✅ 业务函数逻辑
+  // ✅ 核心业务函数
   // ================================
-  const handleLogout = () => { localStorage.removeItem("haikouUser"); setCurrentUser(null); window.location.reload(); };
+  const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
   const fetchAllFeedbacks = async () => {
     const res = await fetch(`${authApiBase}/api/feedback/all`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone }) });
@@ -102,6 +105,12 @@ function App() {
     const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
     const data = await res.json();
     if (data.ok) { alert(data.message); setFeedbackContent(""); setFeedbackImage(null); setShowFeedback(false); }
+  };
+
+  const handleUpdateNotice = async () => {
+    const res = await fetch(`${authApiBase}/api/announcement/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }) });
+    const data = await res.json();
+    if (data.ok) { alert("已更新"); setIsEditingNotice(false); }
   };
 
   const handleAvatarUpload = async (e) => {
@@ -138,8 +147,8 @@ function App() {
 
   const handleDeleteComment = async (cid, pid) => {
     if (!window.confirm("确定删除？")) return;
-    const res = await fetch(`${authApiBase}/api/comments/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, commentId: cid }) });
-    if (res.ok) fetchComments(pid);
+    await fetch(`${authApiBase}/api/comments/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, commentId: cid }) });
+    fetchComments(pid);
   };
 
   const handleSendCode = async () => {
@@ -175,7 +184,7 @@ function App() {
   // ✅ 40个完整地点数据
   // ================================
   const places = [
-    { id: 1, type: "view", name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景，进去图书馆需要提前几天预约", lat: 20.091026, lng: 110.262594,hours:"10:00-22:00",phone:"19907616926",
+        { id: 1, type: "view", name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景，进去图书馆需要提前几天预约", lat: 20.091026, lng: 110.262594,hours:"10:00-22:00",phone:"19907616926",
       album:[
         "https://api.suzcore.top/uploads/places/1_1.jpg",
         "https://api.suzcore.top/uploads/places/1_2.jpg",
@@ -450,8 +459,7 @@ function App() {
     },
   ];
 
-
-     const getDist = (l1, l2) => {
+      const getDist = (l1, l2) => {
     if (!l1 || !l2) return 999;
     const R = 6371;
     const dLat = (l2.lat - l1.lat) * Math.PI / 180;
@@ -460,17 +468,13 @@ function App() {
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
   };
 
-   const filteredPlaces = places
+  const filteredPlaces = places
     .filter(p => (filter === "all" ? true : filter === "favorite" ? favorites.some(f => f.id === p.id) : p.type === filter))
     .filter(p => p.name.includes(search))
-    .map(p => ({ 
-        ...p, 
-        distVal: userLocation ? (6371 * 2 * Math.asin(Math.sqrt(Math.pow(Math.sin((p.lat - userLocation.lat) * Math.PI / 180 / 2), 2) + Math.cos(p.lat * Math.PI / 180) * Math.cos(userLocation.lat * Math.PI / 180) * Math.pow(Math.sin((p.lng - userLocation.lng) * Math.PI / 180 / 2), 2)))).toFixed(2) : 999 
-    }))
+    .map(p => ({ ...p, distVal: getDist(userLocation, p) }))
     .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
 
-  // ======================== 渲染逻辑 ========================
-
+  // ======================== 渲染逻辑 A：登录 ========================
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f4fbf6" }}>
@@ -498,16 +502,17 @@ function App() {
     );
   }
 
+  // ======================== 渲染逻辑 B：主界面 ========================
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
       
-      {/* 放大图层 */}
-      {(zoomIndex !== null || zoomedSingleImage) && (
-        <div style={zoomOverlayStyle} onClick={() => { setZoomIndex(null); setZoomedSingleImage(null); }}>
-          {zoomIndex !== null && detailPlace?.album && (
+      {/* 🟢 放大图层 */}
+      {(zoomMode || zoomedSingleImage) && (
+        <div style={zoomOverlayStyle} onClick={() => { setZoomMode(false); setZoomedSingleImage(null); }}>
+          {zoomMode && detailPlace?.album && (
             <div ref={scrollContainerRef} style={swipeContainerStyle} onClick={(e) => e.stopPropagation()}>
               {detailPlace.album.map((img, i) => (
-                <div key={i} style={swipeItemStyle} onClick={() => setZoomIndex(null)}>
+                <div key={i} style={swipeItemStyle} onClick={() => setZoomMode(false)}>
                   <img src={img} style={zoomedImgStyle} alt="zoom" />
                 </div>
               ))}
@@ -515,7 +520,7 @@ function App() {
           )}
           {zoomedSingleImage && <img src={zoomedSingleImage} style={zoomedImgStyle} onClick={() => setZoomedSingleImage(null)} alt="single" />}
           <div style={closeZoomStyle}>×</div>
-          {zoomIndex !== null && <div style={swipeHintStyle}>左右滑动切换 · 点击退出</div>}
+          {zoomMode && <div style={swipeHintStyle}>左右滑动切换 · 点击退出</div>}
         </div>
       )}
 
@@ -582,8 +587,8 @@ function App() {
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
-            <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>投诉与建议</h2>
-            <textarea placeholder="您的反馈是作者最大的动力（如有需要可以加上个人的联系方式）..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
+            <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>投诉建议</h2>
+            <textarea placeholder="请描述建议..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
             {feedbackImage && <img src={URL.createObjectURL(feedbackImage)} style={{ width: '80px', marginTop: '10px', borderRadius: '10px' }} alt="v" />}
             <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                <button onClick={() => document.getElementById('f-img').click()} style={btnIconStyle}>🖼️</button>
@@ -595,24 +600,27 @@ function App() {
         </div>
       )}
 
-      {/* 🟢 地图区域 */}
+      {/* 🔵 地图区域 */}
       <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "40vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
         <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} />
         <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
       </div>
 
-      {/* 🟢 列表区域 */}
+      {/* 🔵 列表区域 */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "60vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
         
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
-            <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={avatarStyle} onClick={() => document.getElementById('avatar-input').click()} />
+            <div onClick={() => document.getElementById('avatar-input').click()} style={{ position: 'relative', cursor: 'pointer' }}>
+                <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={avatarStyle} alt="av" />
+                <div style={plusIconStyle}>+</div>
+            </div>
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={handleAvatarUpload} />
             <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{currentUser.username}</h3>
                 <div style={{ display: 'flex', gap: '8px', fontSize: '12px', marginTop: '2px', flexWrap: 'wrap' }}>
                     <span onClick={handleLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>退出</span>
-                    <span onClick={() => setShowFeedback(true)} style={{ color: "#5aa77b", cursor: "pointer" }}>反馈</span>
+                    <span onClick={() => setShowFeedback(true)} style={{ color: "#5aa77b", cursor: "pointer" }}>反馈建议</span>
                     {currentUser.phone === ADMIN_PHONE && <span onClick={fetchAllFeedbacks} style={{ color: "#333", cursor: "pointer" }}>反馈库</span>}
                 </div>
             </div>
@@ -620,7 +628,7 @@ function App() {
           <input placeholder="搜索目的地..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* 分类吸顶 */}
+        {/* 吸顶导航 */}
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
             {[{ k: "all", l: "全部" }, { k: "favorite", l: "⭐收藏" }, { k: "food", l: "🍱美食" }, { k: "view", l: "🏞️景点" }, { k: "street", l: "🛍️商圈" }, { k: "cafe", l: "☕咖啡" }].map(item => (
@@ -637,13 +645,14 @@ function App() {
                  <img 
                     src={p.album && p.album.length > 0 ? p.album[0] : "https://api.suzcore.top/uploads/places/default.jpg"} 
                     style={listThumbStyle} 
-                    onClick={() => { setInitialSlide(0); setZoomIndex(0); setDetailPlace(p); }} 
+                    onClick={() => { setInitialSlide(0); setZoomMode(true); setDetailPlace(p); }} 
                   />
                  <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{p.name}</h3>
                       <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>{favorites.some(f => f.id === p.id) ? "⭐" : "☆"}</span>
                     </div>
+
                     {/* ✅ ✅ ✅ 这里是新增的标签、时间、电话行 ✅ ✅ ✅ */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
                       <span style={categoryTagStyle}>{p.type === 'food' ? '🍱 美食' : p.type === 'view' ? '🏞️ 景点' : p.type === 'cafe' ? '☕ 咖啡' : '🛍️ 商圈'}</span>
@@ -668,7 +677,7 @@ function App() {
                 <button onClick={() => setTargetPlaces(prev => prev.some(tp => tp.id === p.id) ? prev.filter(tp => tp.id !== p.id) : [...prev, p])} style={btnSmallStyle(targetPlaces.some(tp => tp.id === p.id))}>{targetPlaces.some(tp => tp.id === p.id) ? "取消" : "标记"}</button>
                 <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}&mode=driving&region=海口&output=html`)} style={btnNavStyle}>🧭 导航</button>
               </div>
-              
+
               {/* 评论区逻辑 */}
               <div style={{ marginTop: '12px', borderTop: '1px dashed #ddd', paddingTop: '10px' }}>
                 <div onClick={() => { if (showCommentId === p.id) setShowCommentId(null); else { setShowCommentId(p.id); fetchComments(p.id); } }} style={commentLinkStyle}>💬 查看评论区</div>
@@ -704,7 +713,7 @@ function App() {
   );
 }
 
-// 💄 样式
+// 💄 样式合集
 const zoomOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const swipeContainerStyle = { display: 'flex', overflowX: 'auto', width: '100vw', height: '100vh', scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' };
 const swipeItemStyle = { flexShrink: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' };
