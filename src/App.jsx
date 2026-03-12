@@ -19,7 +19,7 @@ function App() {
   const [countdown, setCountdown] = useState(0);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  // ✅ 评论与详情状态
+  // ✅ 评论与详情
   const [showCommentId, setShowCommentId] = useState(null);
   const [activeComments, setActiveComments] = useState({});
   const [newComment, setNewComment] = useState("");
@@ -32,13 +32,13 @@ function App() {
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   const ADMIN_PHONE = "13707584213"; 
 
-  // ✅ 新增：投诉与建议状态
+  // ✅ 投诉与建议状态 (新增图片支持)
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
+  const [feedbackImage, setFeedbackImage] = useState(null); // 反馈图片
 
   const authApiBase = "https://api.suzcore.top";
 
-  // 1. 初始化
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
     if (savedUser) setCurrentUser(savedUser);
@@ -53,7 +53,6 @@ function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 2. 登录后获取数据
   useEffect(() => {
     if (currentUser) {
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
@@ -62,16 +61,10 @@ function App() {
       
       fetch(`${authApiBase}/api/announcement`)
         .then(res => res.json())
-        .then(data => {
-          if (data.ok) {
-            setNoticeContent(data.content);
-            setShowNotice(true);
-          }
-        });
+        .then(data => { if (data.ok) { setNoticeContent(data.content); setShowNotice(true); } });
     }
   }, [currentUser]);
 
-  // 3. 倒计时
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -80,25 +73,33 @@ function App() {
   }, [countdown]);
 
   // ================================
-  // ✅ 核心业务逻辑
+  // ✅ 核心逻辑
   // ================================
 
-  // ✅ 新增：提交反馈
+  // 提交反馈 (支持图文)
   const handleFeedbackSubmit = async () => {
-    if (!feedbackContent.trim()) return alert("请输入建议内容");
+    if (!feedbackContent.trim() && !feedbackImage) return alert("请填写内容或上传图片");
+    
+    const formData = new FormData();
+    formData.append("phone", currentUser.phone);
+    formData.append("content", feedbackContent);
+    if (feedbackImage) formData.append("image", feedbackImage);
+
+    setIsAuthLoading(true);
     try {
       const res = await fetch(`${authApiBase}/api/feedback/submit`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: currentUser.phone, content: feedbackContent }),
+        body: formData, // 使用 FormData 传输
       });
       const data = await res.json();
       if (data.ok) {
         alert(data.message);
         setFeedbackContent("");
+        setFeedbackImage(null);
         setShowFeedback(false);
       }
     } catch (e) { alert("网络异常"); }
+    finally { setIsAuthLoading(false); }
   };
 
   const handleUpdateNotice = async () => {
@@ -122,9 +123,9 @@ function App() {
     const res = await fetch(`${authApiBase}/api/user/upload-avatar`, { method: "POST", body: formData });
     const data = await res.json();
     if (data.ok) {
-      const updatedUser = { ...currentUser, avatar_url: data.avatarUrl };
-      setCurrentUser(updatedUser);
-      localStorage.setItem("haikouUser", JSON.stringify(updatedUser));
+      const updated = { ...currentUser, avatar_url: data.avatarUrl };
+      setCurrentUser(updated);
+      localStorage.setItem("haikouUser", JSON.stringify(updated));
     }
   };
 
@@ -455,7 +456,16 @@ function App() {
     },
   ];
 
-    const toggleFavorite = async (p) => {
+     const getDist = (l1, l2) => {
+    if (!l1 || !l2) return 999;
+    const R = 6371;
+    const dLat = (l2.lat - l1.lat) * Math.PI / 180;
+    const dLng = (l2.lng - l1.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(l1.lat*Math.PI/180)*Math.cos(l2.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
+  };
+
+  const toggleFavorite = async (p) => {
     const res = await fetch(`${authApiBase}/api/favorites/toggle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }) });
     const d = await res.json();
     if (d.ok) d.action === "added" ? setFavorites([...favorites, p]) : setFavorites(favorites.filter(f => f.id !== p.id));
@@ -464,13 +474,8 @@ function App() {
   const filteredPlaces = places
     .filter(p => (filter === "all" ? true : filter === "favorite" ? favorites.some(f => f.id === p.id) : p.type === filter))
     .filter(p => p.name.includes(search))
-    .map(p => ({ 
-        ...p, 
-        distVal: userLocation ? (6371 * 2 * Math.asin(Math.sqrt(Math.pow(Math.sin((p.lat - userLocation.lat) * Math.PI / 180 / 2), 2) + Math.cos(p.lat * Math.PI / 180) * Math.cos(userLocation.lat * Math.PI / 180) * Math.pow(Math.sin((p.lng - userLocation.lng) * Math.PI / 180 / 2), 2)))).toFixed(2) : 999 
-    }))
+    .map(p => ({ ...p, distVal: getDist(userLocation, p) }))
     .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
-
-  // ======================== 渲染逻辑 ========================
 
   if (!currentUser) {
     return (
@@ -489,7 +494,7 @@ function App() {
           )}
           <input type="password" placeholder="密码" style={inputStyle} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
           {loginError && <p style={{ color: "red", fontSize: "13px" }}>{loginError}</p>}
-          <button type="submit" style={btnMainStyle}>确定</button>
+          <button type="submit" style={btnMainStyle}>{isAuthLoading ? "请稍候" : "确定"}</button>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", fontSize: "14px" }}>
             <span style={linkStyle} onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}>{authMode === "login" ? "注册账号" : "返回登录"}</span>
             {authMode === "login" && <span style={linkStyle} onClick={() => setAuthMode("reset")}>忘记密码？</span>}
@@ -502,7 +507,7 @@ function App() {
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
       
-      {/* 1. 公告弹窗 */}
+      {/* 📢 公告弹窗 */}
       {showNotice && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, textAlign: 'center', maxWidth: '420px' }}>
@@ -522,7 +527,7 @@ function App() {
         </div>
       )}
 
-      {/* 2. 详情相册弹窗 */}
+      {/* 🖼️ 详情相册弹窗 */}
       {detailPlace && (
         <div style={modalOverlayStyle} onClick={() => setDetailPlace(null)}>
           <div style={modalContentStyle} onClick={e => e.stopPropagation()}>
@@ -539,21 +544,41 @@ function App() {
         </div>
       )}
 
-      {/* ✅ 3. 新增：投诉与建议弹窗 */}
+      {/* 💡 投诉与建议弹窗 (改造后支持图片) */}
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>💡 投诉与建议</h2>
             <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginBottom: '15px' }}>您的反馈是作者改进网站的最大动力</p>
+            
             <textarea 
-                placeholder="请详细描述您的问题或改进建议（如有需要，请备注上您的联系方式）..." 
+                placeholder="请详细描述您的问题或改进建议..." 
                 value={feedbackContent}
                 onChange={(e) => setFeedbackContent(e.target.value)}
-                style={{ width: '100%', height: '180px', borderRadius: '15px', padding: '15px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                style={{ width: '100%', height: '150px', borderRadius: '15px', padding: '15px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
             />
+
+            {/* ✅ 图片预览区域 */}
+            {feedbackImage && (
+              <div style={{ position: 'relative', width: '80px', height: '80px', marginTop: '10px' }}>
+                <img src={URL.createObjectURL(feedbackImage)} style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} />
+                <div 
+                  onClick={() => setFeedbackImage(null)}
+                  style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '18px', height: '18px', textAlign: 'center', lineHeight: '16px', fontSize: '12px', cursor: 'pointer' }}
+                >×</div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                <button onClick={() => setShowFeedback(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>取消</button>
-                <button onClick={handleFeedbackSubmit} style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: '#5aa77b', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>提交反馈</button>
+                {/* ✅ 添加图片按钮 */}
+                <button 
+                  onClick={() => document.getElementById('feedback-img').click()}
+                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: '18px' }}
+                >🖼️</button>
+                <input type="file" id="feedback-img" hidden accept="image/*" onChange={(e) => setFeedbackImage(e.target.files[0])} />
+                
+                <button onClick={() => { setShowFeedback(false); setFeedbackImage(null); }} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>取消</button>
+                <button onClick={handleFeedbackSubmit} disabled={isAuthLoading} style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: '#5aa77b', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>提交反馈</button>
             </div>
           </div>
         </div>
@@ -568,7 +593,6 @@ function App() {
       {/* 🟢 下部：列表区域 */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "60vh" : "100vh", overflowY: "auto", background: "white", boxShadow: "0 -5px 20px rgba(0,0,0,0.05)", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
         
-        {/* 用户信息与操作区域 */}
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <div onClick={() => document.getElementById('avatar-input').click()} style={{ position: 'relative', cursor: 'pointer' }}>
@@ -580,7 +604,6 @@ function App() {
                 <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{currentUser.username}</h3>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '2px' }}>
                     <span onClick={() => { localStorage.removeItem("haikouUser"); window.location.reload(); }} style={{ color: "#d94f5c", fontSize: "12px", cursor: "pointer", textDecoration: "underline" }}>退出登录</span>
-                    {/* ✅ 头像最右侧：投诉与建议链接 ✅ */}
                     <span onClick={() => setShowFeedback(true)} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", background: '#f0f8f3', padding: '2px 8px', borderRadius: '4px' }}>投诉与建议</span>
                 </div>
             </div>
@@ -588,7 +611,6 @@ function App() {
           <input placeholder="搜索目的地、路线..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* 分类吸顶导航 */}
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "5px" }}>
             {[{ k: "all", l: "全部" }, { k: "favorite", l: "⭐收藏" }, { k: "food", l: "🍱美食" }, { k: "view", l: "🏞️景点" }, { k: "street", l: "🛍️商圈" }, { k: "cafe", l: "☕咖啡" }].map(item => (
@@ -597,7 +619,6 @@ function App() {
           </div>
         </div>
 
-        {/* 列表渲染 */}
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map(p => (
             <div key={p.id} style={{ padding: "15px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
@@ -621,15 +642,12 @@ function App() {
               <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{p.desc}</p>
               <div style={{ fontSize: "12px", color: "#5aa77b", marginBottom: "10px" }}>📏 距你：{p.distVal} km</div>
               
-              <div style={{ display: "flex", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "8px", flexWrap: 'wrap' }}>
                 <button onClick={() => setDetailPlace(p)} style={{ ...btnSmallStyle(false), background: '#e8f5eb', color: '#2e6a4a' }}>🖼️ 详情</button>
                 <button onClick={() => setTargetPlaces(prev => prev.some(tp => tp.id === p.id) ? prev.filter(tp => tp.id !== p.id) : [...prev, p])} style={btnSmallStyle(targetPlaces.some(tp => tp.id === p.id))}>
                   {targetPlaces.some(tp => tp.id === p.id) ? "取消路线" : "标记路线"}
                 </button>
-                <button onClick={() => {
-                  const url = `https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}|name:${encodeURIComponent(p.name)}&mode=driving&region=海口&output=html&src=haikou-guide`;
-                  window.open(url, "_blank");
-                }} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
+                <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}|name:${encodeURIComponent(p.name)}&mode=driving&region=海口&output=html`)} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
               </div>
 
               <div style={{ marginTop: '12px', borderTop: '1px dashed #ddd', paddingTop: '10px' }}>
@@ -654,7 +672,7 @@ function App() {
                     </div>
                     <div style={{ background: '#f9f9f9', padding: '10px', borderRadius: '10px' }}>
                       <textarea placeholder="写点评..." value={newComment} onChange={e => setNewComment(e.target.value)} style={{ width: '100%', minHeight: '40px', border: 'none', background: 'transparent', fontSize: '13px', outline: 'none', resize: 'none' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                         <div onClick={() => document.getElementById(`comment-img-${p.id}`).click()} style={{ cursor: 'pointer', fontSize: '18px' }}>🖼️</div>
                         <input type="file" id={`comment-img-${p.id}`} hidden accept="image/*" onChange={(e) => setCommentImage(e.target.files[0])} />
                         <button onClick={() => handleAddComment(p.id)} style={{ background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '5px 15px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>发布</button>
@@ -671,7 +689,7 @@ function App() {
   );
 }
 
-// 💄 样式
+// 💄 样式保持不变
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
 const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "75px", cursor: "pointer", fontSize: "12px" };
 const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
