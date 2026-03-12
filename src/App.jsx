@@ -19,52 +19,62 @@ function App() {
   const [countdown, setCountdown] = useState(0);
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
-  // ✅ 评论与详情
+  // ✅ 评论区与详情弹窗状态
   const [showCommentId, setShowCommentId] = useState(null);
   const [activeComments, setActiveComments] = useState({});
   const [newComment, setNewComment] = useState("");
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
 
-  // ✅ 公告状态
+  // ✅ 公告与反馈逻辑状态
   const [showNotice, setShowNotice] = useState(false);
   const [noticeContent, setNoticeContent] = useState("");
   const [isEditingNotice, setIsEditingNotice] = useState(false);
-  const ADMIN_PHONE = "13707584213"; 
-
-  // ✅ 投诉与建议状态 (新增图片支持)
+  
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
-  const [feedbackImage, setFeedbackImage] = useState(null); // 反馈图片
+  const [feedbackImage, setFeedbackImage] = useState(null);
+  const [showAdminFeedback, setShowAdminFeedback] = useState(false);
+  const [allFeedbacks, setAllFeedbacks] = useState([]);
 
+  // 管理员手机号锁定
+  const ADMIN_PHONE = "13707584213"; 
   const authApiBase = "https://api.suzcore.top";
 
+  // 1. 初始化与窗口监听
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
     if (savedUser) setCurrentUser(savedUser);
     const onResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener("resize", onResize);
+    
+    // 获取我的位置
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => { setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }); },
-        null, { enableHighAccuracy: true }
+        (err) => console.error("定位失败", err),
+        { enableHighAccuracy: true }
       );
     }
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // 2. 登录后云端同步 (收藏 + 公告)
   useEffect(() => {
     if (currentUser) {
+      // 拿收藏
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
         .then(res => res.json())
         .then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
       
+      // 拿公告
       fetch(`${authApiBase}/api/announcement`)
         .then(res => res.json())
         .then(data => { if (data.ok) { setNoticeContent(data.content); setShowNotice(true); } });
     }
   }, [currentUser]);
 
+  // 3. 验证码倒计时
   useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -73,47 +83,49 @@ function App() {
   }, [countdown]);
 
   // ================================
-  // ✅ 核心逻辑
+  // ✅ 核心业务逻辑函数
   // ================================
 
-  // 提交反馈 (支持图文)
+  // 管理员查看所有反馈
+  const fetchAllFeedbacks = async () => {
+    try {
+      const res = await fetch(`${authApiBase}/api/feedback/all`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone }),
+      });
+      const data = await res.json();
+      if (data.ok) { setAllFeedbacks(data.data); setShowAdminFeedback(true); }
+    } catch (e) { alert("读取反馈库失败"); }
+  };
+
+  // 提交反馈 (支持发图)
   const handleFeedbackSubmit = async () => {
-    if (!feedbackContent.trim() && !feedbackImage) return alert("请填写内容或上传图片");
-    
+    if (!feedbackContent.trim() && !feedbackImage) return alert("请写点什么~");
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
     formData.append("content", feedbackContent);
     if (feedbackImage) formData.append("image", feedbackImage);
-
     setIsAuthLoading(true);
     try {
-      const res = await fetch(`${authApiBase}/api/feedback/submit`, {
-        method: "POST",
-        body: formData, // 使用 FormData 传输
-      });
+      const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
       const data = await res.json();
-      if (data.ok) {
-        alert(data.message);
-        setFeedbackContent("");
-        setFeedbackImage(null);
-        setShowFeedback(false);
-      }
-    } catch (e) { alert("网络异常"); }
-    finally { setIsAuthLoading(false); }
+      if (data.ok) { alert(data.message); setFeedbackContent(""); setFeedbackImage(null); setShowFeedback(false); }
+    } finally { setIsAuthLoading(false); }
   };
 
+  // 修改公告 (仅限管理员)
   const handleUpdateNotice = async () => {
-    try {
-      const res = await fetch(`${authApiBase}/api/announcement/update`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }),
-      });
-      const data = await res.json();
-      if (data.ok) { alert("公告修改成功"); setIsEditingNotice(false); }
-    } catch (e) { alert("网络异常"); }
+    const res = await fetch(`${authApiBase}/api/announcement/update`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }),
+    });
+    const data = await res.json();
+    if (data.ok) { alert("公告已更新"); setIsEditingNotice(false); }
   };
 
+  // 头像上传
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -129,6 +141,7 @@ function App() {
     }
   };
 
+  // 评论逻辑
   const fetchComments = async (placeId) => {
     const res = await fetch(`${authApiBase}/api/comments/${placeId}`);
     const data = await res.json();
@@ -136,27 +149,26 @@ function App() {
   };
 
   const handleAddComment = async (placeId) => {
-    if (!newComment.trim() && !commentImage) return alert("内容或图片不能为空");
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
     formData.append("placeId", placeId);
     formData.append("content", newComment);
     if (commentImage) formData.append("image", commentImage);
     const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.ok) { setNewComment(""); setCommentImage(null); fetchComments(placeId); }
+    const d = await res.json();
+    if (d.ok) { setNewComment(""); setCommentImage(null); fetchComments(placeId); }
   };
 
-  const handleDeleteComment = async (commentId, placeId) => {
-    if (!window.confirm("确定删除吗？")) return;
-    const res = await fetch(`${authApiBase}/api/comments/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, commentId }) });
-    const data = await res.json();
-    if (data.ok) fetchComments(placeId);
+  const handleDeleteComment = async (cid, pid) => {
+    if (!window.confirm("确定删除？")) return;
+    const res = await fetch(`${authApiBase}/api/comments/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, commentId: cid }) });
+    if (res.ok) fetchComments(pid);
   };
 
+  // 认证逻辑
   const handleSendCode = async () => {
     const { phone } = loginForm;
-    if (!/^1\d{10}$/.test(phone)) return setLoginError("手机号错误");
+    if (!/^1\d{10}$/.test(phone)) return setLoginError("手机号不正确");
     setIsSendingCode(true);
     const res = await fetch(`${authApiBase}/api/sms/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, type: authMode }) });
     const d = await res.json();
@@ -456,13 +468,13 @@ function App() {
     },
   ];
 
-     const getDist = (l1, l2) => {
+  const getDist = (l1, l2) => {
     if (!l1 || !l2) return 999;
     const R = 6371;
     const dLat = (l2.lat - l1.lat) * Math.PI / 180;
     const dLng = (l2.lng - l1.lng) * Math.PI / 180;
     const a = Math.sin(dLat/2)**2 + Math.cos(l1.lat*Math.PI/180)*Math.cos(l2.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
   };
 
   const toggleFavorite = async (p) => {
@@ -476,6 +488,8 @@ function App() {
     .filter(p => p.name.includes(search))
     .map(p => ({ ...p, distVal: getDist(userLocation, p) }))
     .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
+
+  // ======================== 渲染逻辑 ========================
 
   if (!currentUser) {
     return (
@@ -494,7 +508,7 @@ function App() {
           )}
           <input type="password" placeholder="密码" style={inputStyle} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
           {loginError && <p style={{ color: "red", fontSize: "13px" }}>{loginError}</p>}
-          <button type="submit" style={btnMainStyle}>{isAuthLoading ? "请稍候" : "确定"}</button>
+          <button type="submit" style={btnMainStyle}>确定</button>
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", fontSize: "14px" }}>
             <span style={linkStyle} onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}>{authMode === "login" ? "注册账号" : "返回登录"}</span>
             {authMode === "login" && <span style={linkStyle} onClick={() => setAuthMode("reset")}>忘记密码？</span>}
@@ -544,42 +558,44 @@ function App() {
         </div>
       )}
 
-      {/* 💡 投诉与建议弹窗 (改造后支持图片) */}
+      {/* 💡 投诉与建议弹窗 */}
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>💡 投诉与建议</h2>
             <p style={{ color: '#888', fontSize: '13px', textAlign: 'center', marginBottom: '15px' }}>您的反馈是作者改进网站的最大动力</p>
-            
-            <textarea 
-                placeholder="请详细描述您的问题或改进建议..." 
-                value={feedbackContent}
-                onChange={(e) => setFeedbackContent(e.target.value)}
-                style={{ width: '100%', height: '150px', borderRadius: '15px', padding: '15px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-            />
-
-            {/* ✅ 图片预览区域 */}
+            <textarea placeholder="请详细描述..." value={feedbackContent} onChange={(e) => setFeedbackContent(e.target.value)} style={{ width: '100%', height: '150px', borderRadius: '15px', padding: '15px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
             {feedbackImage && (
               <div style={{ position: 'relative', width: '80px', height: '80px', marginTop: '10px' }}>
-                <img src={URL.createObjectURL(feedbackImage)} style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} />
-                <div 
-                  onClick={() => setFeedbackImage(null)}
-                  style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '18px', height: '18px', textAlign: 'center', lineHeight: '16px', fontSize: '12px', cursor: 'pointer' }}
-                >×</div>
+                <img src={URL.createObjectURL(feedbackImage)} style={{ width: '100%', height: '100%', borderRadius: '10px', objectFit: 'cover' }} alt="预览" />
+                <div onClick={() => setFeedbackImage(null)} style={{ position: 'absolute', top: '-5px', right: '-5px', background: 'red', color: 'white', borderRadius: '50%', width: '18px', height: '18px', textAlign: 'center', lineHeight: '16px', fontSize: '12px', cursor: 'pointer' }}>×</div>
               </div>
             )}
-
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                {/* ✅ 添加图片按钮 */}
-                <button 
-                  onClick={() => document.getElementById('feedback-img').click()}
-                  style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: '18px' }}
-                >🖼️</button>
+                <button onClick={() => document.getElementById('feedback-img').click()} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: '18px' }}>🖼️</button>
                 <input type="file" id="feedback-img" hidden accept="image/*" onChange={(e) => setFeedbackImage(e.target.files[0])} />
-                
                 <button onClick={() => { setShowFeedback(false); setFeedbackImage(null); }} style={{ flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer' }}>取消</button>
-                <button onClick={handleFeedbackSubmit} disabled={isAuthLoading} style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: '#5aa77b', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>提交反馈</button>
+                <button onClick={handleFeedbackSubmit} style={{ flex: 2, padding: '12px', borderRadius: '12px', border: 'none', background: '#5aa77b', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }}>提交反馈</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 👔 管理员反馈库 */}
+      {showAdminFeedback && (
+        <div style={modalOverlayStyle}>
+          <div style={{ ...modalContentStyle, maxWidth: '500px' }}>
+            <h2 style={{ textAlign: 'center', color: '#2e6a4a' }}>📩 反馈库</h2>
+            <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              {allFeedbacks.map(item => (
+                <div key={item.id} style={{ padding: '15px', borderBottom: '1px solid #eee', background: '#f9fcf9', borderRadius: '12px', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '11px', color: '#999' }}>{item.user_phone} | {new Date(item.created_at).toLocaleString()}</div>
+                  <div style={{ fontSize: '14px', marginTop: '5px' }}>{item.content}</div>
+                  {item.image_url && <img src={item.image_url} style={{ width: '100%', borderRadius: '8px', marginTop: '10px' }} onClick={() => window.open(item.image_url)} alt="反馈图" />}
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setShowAdminFeedback(false)} style={{ ...btnMainStyle, marginTop: '20px' }}>关闭</button>
           </div>
         </div>
       )}
@@ -591,26 +607,30 @@ function App() {
       </div>
 
       {/* 🟢 下部：列表区域 */}
-      <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "60vh" : "100vh", overflowY: "auto", background: "white", boxShadow: "0 -5px 20px rgba(0,0,0,0.05)", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
+      <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "60vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
         
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <div onClick={() => document.getElementById('avatar-input').click()} style={{ position: 'relative', cursor: 'pointer' }}>
-                <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={{ width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover", border: "2px solid #5aa77b" }} />
+                <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={{ width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover", border: "2px solid #5aa77b" }} alt="avatar" />
                 <div style={plusIconStyle}>+</div>
             </div>
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={handleAvatarUpload} />
             <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{currentUser.username}</h3>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '2px' }}>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
                     <span onClick={() => { localStorage.removeItem("haikouUser"); window.location.reload(); }} style={{ color: "#d94f5c", fontSize: "12px", cursor: "pointer", textDecoration: "underline" }}>退出登录</span>
                     <span onClick={() => setShowFeedback(true)} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", background: '#f0f8f3', padding: '2px 8px', borderRadius: '4px' }}>投诉与建议</span>
+                    {currentUser.phone === ADMIN_PHONE && (
+                      <span onClick={fetchAllFeedbacks} style={{ color: "#fff", fontSize: "11px", cursor: "pointer", background: '#2e6a4a', padding: '2px 8px', borderRadius: '4px' }}>反馈库</span>
+                    )}
                 </div>
             </div>
           </div>
           <input placeholder="搜索目的地、路线..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
+        {/* 分类吸顶 */}
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto", paddingBottom: "5px" }}>
             {[{ k: "all", l: "全部" }, { k: "favorite", l: "⭐收藏" }, { k: "food", l: "🍱美食" }, { k: "view", l: "🏞️景点" }, { k: "street", l: "🛍️商圈" }, { k: "cafe", l: "☕咖啡" }].map(item => (
@@ -621,7 +641,7 @@ function App() {
 
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map(p => (
-            <div key={p.id} style={{ padding: "15px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
+            <div key={p.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
               <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
                  <div style={{ width: "65px", height: "65px", borderRadius: "12px", overflow: "hidden", flexShrink: 0, background: "#eee" }}>
                     <img src={p.album && p.album.length > 0 ? p.album[0] : "https://api.suzcore.top/uploads/places/default.jpg"} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="thumb" />
@@ -647,7 +667,7 @@ function App() {
                 <button onClick={() => setTargetPlaces(prev => prev.some(tp => tp.id === p.id) ? prev.filter(tp => tp.id !== p.id) : [...prev, p])} style={btnSmallStyle(targetPlaces.some(tp => tp.id === p.id))}>
                   {targetPlaces.some(tp => tp.id === p.id) ? "取消路线" : "标记路线"}
                 </button>
-                <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}|name:${encodeURIComponent(p.name)}&mode=driving&region=海口&output=html`)} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
+                <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}&mode=driving&region=海口&output=html`)} style={{ ...btnSmallStyle(false), background: "#5aa77b", color: "white" }}>🧭 导航</button>
               </div>
 
               <div style={{ marginTop: '12px', borderTop: '1px dashed #ddd', paddingTop: '10px' }}>
@@ -658,21 +678,21 @@ function App() {
                       {(activeComments[p.id] || []).length === 0 ? <p style={{ fontSize: '12px', color: '#999', textAlign: 'center' }}>暂无评论</p> : 
                         activeComments[p.id].map(c => (
                           <div key={c.id} style={{ display: 'flex', gap: '10px', marginBottom: '15px', borderBottom: '1px solid #f2f2f2', paddingBottom: '10px', position: 'relative' }}>
-                            <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                            <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} alt="c-avatar" />
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#333' }}>{c.username}</div>
+                              <div style={{ fontSize: '12px', fontWeight: 'bold' }}>{c.username}</div>
                               {c.content && <div style={{ fontSize: '13px', color: '#555', margin: '4px 0' }}>{c.content}</div>}
-                              {c.image_url && <img src={c.image_url} alt="comment" style={{ width: '100%', maxWidth: '120px', borderRadius: '8px', marginTop: '5px' }} onClick={() => window.open(c.image_url)} />}
-                              <div style={{ fontSize: '10px', color: '#bbb', marginTop: '5px' }}>{new Date(c.created_at).toLocaleString()}</div>
+                              {c.image_url && <img src={c.image_url} alt="c-img" style={{ width: '100%', maxWidth: '120px', borderRadius: '8px', marginTop: '5px' }} onClick={() => window.open(c.image_url)} />}
+                              <div style={{ fontSize: '10px', color: '#bbb' }}>{new Date(c.created_at).toLocaleString()}</div>
                             </div>
-                            {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, p.id)} style={{ color: '#df6b76', fontSize: '11px', cursor: 'pointer' }}>删除</span>}
+                            {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, p.id)} style={{ color: '#df6b76', fontSize: '11px', cursor: 'pointer', position: 'absolute', right: 0, top: 0 }}>删除</span>}
                           </div>
                         ))
                       }
                     </div>
                     <div style={{ background: '#f9f9f9', padding: '10px', borderRadius: '10px' }}>
                       <textarea placeholder="写点评..." value={newComment} onChange={e => setNewComment(e.target.value)} style={{ width: '100%', minHeight: '40px', border: 'none', background: 'transparent', fontSize: '13px', outline: 'none', resize: 'none' }} />
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
                         <div onClick={() => document.getElementById(`comment-img-${p.id}`).click()} style={{ cursor: 'pointer', fontSize: '18px' }}>🖼️</div>
                         <input type="file" id={`comment-img-${p.id}`} hidden accept="image/*" onChange={(e) => setCommentImage(e.target.files[0])} />
                         <button onClick={() => handleAddComment(p.id)} style={{ background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '5px 15px', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>发布</button>
@@ -689,7 +709,7 @@ function App() {
   );
 }
 
-// 💄 样式保持不变
+// 💄 样式
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
 const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "75px", cursor: "pointer", fontSize: "12px" };
 const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
