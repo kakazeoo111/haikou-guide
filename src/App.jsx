@@ -588,7 +588,7 @@ function App() {
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>投诉建议</h2>
-            <textarea placeholder="请描述建议..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
+            <textarea placeholder="您的反馈是作者最大的动力（如有需要可以留下您的联系方式）..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
             {feedbackImage && <img src={URL.createObjectURL(feedbackImage)} style={{ width: '80px', marginTop: '10px', borderRadius: '10px' }} alt="v" />}
             <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                <button onClick={() => document.getElementById('f-img').click()} style={btnIconStyle}>🖼️</button>
