@@ -160,18 +160,12 @@ function App() {
     if((await res.json()).ok) fetchRecommendations();
   };
 
-  // ✅ 兼容处理：获取当前的百度地图全局对象
   const getBMap = () => window.BMapGL || window.BMap;
 
-  // ✅ 改进后的地点输入实时搜索逻辑
   const handleRecommendInputChange = (val) => {
     setNewRec({ ...newRec, name: val, lat: null, lng: null }); 
     const BMap = getBMap();
-
-    if (!BMap) {
-      console.warn("地图SDK未加载");
-      return;
-    }
+    if (!BMap) return;
 
     if (val.trim().length > 1) {
       const local = new BMap.LocalSearch("海口市", {
@@ -191,7 +185,6 @@ function App() {
     }
   };
 
-  // ✅ 选择建议点位
   const selectPoi = (poi) => {
     setNewRec({
       ...newRec,
@@ -610,7 +603,7 @@ function App() {
     },
   ];
 
-  const getDist = (l1, l2) => {
+    const getDist = (l1, l2) => {
     if (!l1 || !l2 || !l2.lat) return 999;
     const R = 6371;
     const dLat = (l2.lat - l1.lat) * Math.PI / 180;
