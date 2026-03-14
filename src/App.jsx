@@ -286,7 +286,7 @@ function App() {
         "https://api.suzcore.top/uploads/places/8_2.jpg"
       ]
     },
-    { id: 9, type: "view", name: "观海台", desc: "临海而建，靠近西秀海滩，有人说像是误入了宫崎骏的童话世界。是很有名的打卡点", lat: 20.037925, lng: 110.304154,hours:"全天开放",phone:"无",
+    { id: 9, type: "view", name: "观海台", desc: "临海而建，近西秀海滩，有人说像是误入了宫崎骏的童话世界。是很有名的打卡点", lat: 20.037925, lng: 110.304154,hours:"全天开放",phone:"无",
       album:[
         "https://api.suzcore.top/uploads/places/9_1.jpg",
         "https://api.suzcore.top/uploads/places/9_2.jpg"
