@@ -35,6 +35,7 @@ function App() {
   const [showAddRecommend, setShowAddRecommend] = useState(false);
   const [newRec, setNewRec] = useState({ name: "", desc: "", lat: null, lng: null });
   const [recImage, setRecImage] = useState(null);
+  const [recommendSuggestions, setRecommendSuggestions] = useState([]); // 👈 新增：搜索建议列表
 
   // ✅ 终极版大图查看状态
   const [zoomMode, setZoomMode] = useState(false); 
@@ -137,7 +138,6 @@ function App() {
     }
   };
 
-  // 推荐点赞
   const handleLikeRec = async (e, recId) => {
     e.stopPropagation();
     const res = await fetch(`${authApiBase}/api/recommendations/like`, {
@@ -149,7 +149,6 @@ function App() {
     if (data.ok) fetchRecommendations();
   };
 
-  // 删除推荐
   const handleDeleteRec = async (e, recId) => {
     e.stopPropagation();
     if(!window.confirm("确定删除这条分享吗？")) return;
@@ -161,7 +160,39 @@ function App() {
     if((await res.json()).ok) fetchRecommendations();
   };
 
-  // 推荐定位搜索
+  // ✅ 改进后的地点输入实时搜索
+  const handleRecommendInputChange = (val) => {
+    setNewRec({ ...newRec, name: val, lat: null, lng: null }); // 输入变化时重置坐标
+    if (val.trim().length > 1) {
+      const local = new window.BMap.LocalSearch("海口市", {
+        onSearchComplete: (results) => {
+          if (local.getStatus() === 0) {
+            let tempSuggestions = [];
+            for (let i = 0; i < results.getCurrentNumPois(); i++) {
+              tempSuggestions.push(results.getPoi(i));
+            }
+            setRecommendSuggestions(tempSuggestions);
+          }
+        }
+      });
+      local.search(val);
+    } else {
+      setRecommendSuggestions([]);
+    }
+  };
+
+  // ✅ 选择建议点位
+  const selectPoi = (poi) => {
+    setNewRec({
+      ...newRec,
+      name: poi.title,
+      lat: poi.point.lat,
+      lng: poi.point.lng
+    });
+    setRecommendSuggestions([]); // 清空列表
+  };
+
+  // 保留原有的点击定位按钮功能作为兜底
   const handleSearchLoc = () => {
     if (!newRec.name) return alert("请输入地点名称");
     const local = new window.BMap.LocalSearch("海口市", {
@@ -169,9 +200,9 @@ function App() {
             if (local.getStatus() === 0 && results.getPoi(0)) {
                 const poi = results.getPoi(0);
                 setNewRec({ ...newRec, lat: poi.point.lat, lng: poi.point.lng });
-                alert(`成功定位到：${poi.title}\n${poi.address}`);
+                alert(`成功定位到：${poi.title}`);
             } else {
-                alert("未找到该地址，请尝试输入更准确的名字");
+                alert("未找到该地址，请在建议列表中选择");
             }
         }
     });
@@ -179,7 +210,7 @@ function App() {
   };
 
   const handleSubmitRec = async () => {
-    if (!newRec.name || !newRec.lat) return alert("请先输入地点名并点击定位按钮");
+    if (!newRec.name || !newRec.lat) return alert("请先在建议列表中选择一个精确地点");
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
     formData.append("place_name", newRec.name);
@@ -742,16 +773,40 @@ function App() {
         </div>
       )}
 
-      {/* 🟢 我要推荐弹窗 */}
+      {/* 🟢 我要推荐弹窗 (增加了搜索建议列表) */}
       {showAddRecommend && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center', marginTop: 0 }}>分享好去处</h2>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
-               <input placeholder="地点名字 (如: 海口骑楼老街)" style={{...inputStyle, marginBottom:0, flex:1}} 
-                      value={newRec.name} onChange={e => setNewRec({...newRec, name:e.target.value})} />
-               <button onClick={handleSearchLoc} style={{...btnCodeStyle, width:'60px'}}>定位</button>
+            
+            <div style={{ position: 'relative', marginBottom: '15px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                   <input 
+                      placeholder="地点名字 (如: 海口骑楼老街)" 
+                      style={{...inputStyle, marginBottom:0, flex:1}} 
+                      value={newRec.name} 
+                      onChange={e => handleRecommendInputChange(e.target.value)} 
+                   />
+                   <button onClick={handleSearchLoc} style={{...btnCodeStyle, width:'60px'}}>定位</button>
+                </div>
+
+                {/* ✅ 百度地图搜索建议列表层 */}
+                {recommendSuggestions.length > 0 && (
+                  <div style={suggestionListStyle}>
+                    {recommendSuggestions.map((poi, idx) => (
+                      <div 
+                        key={idx} 
+                        style={suggestionItemStyle} 
+                        onClick={() => selectPoi(poi)}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{poi.title}</div>
+                        <div style={{ fontSize: '10px', color: '#999' }}>{poi.address}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
             </div>
+
             {newRec.lat && <p style={{fontSize:'10px', color:'#5aa77b', marginTop:'-10px', marginBottom:'10px'}}>✅ 定位锁定: {newRec.lat.toFixed(3)}, {newRec.lng.toFixed(3)}</p>}
             
             <textarea placeholder="推荐理由..." value={newRec.desc} onChange={e => setNewRec({...newRec, desc:e.target.value})} style={textAreaStyle} />
@@ -769,7 +824,7 @@ function App() {
         </div>
       )}
 
-      {/* 公告弹窗 */}
+      {/* 公告弹窗 (保持不变...) */}
       {showNotice && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, textAlign: 'center', maxWidth: '420px' }}>
@@ -785,7 +840,7 @@ function App() {
         </div>
       )}
 
-      {/* 公告编辑 */}
+      {/* 公告编辑 (保持不变...) */}
       {isEditingNotice && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle }}>
@@ -799,7 +854,7 @@ function App() {
         </div>
       )}
 
-      {/* 详情相册 */}
+      {/* 详情相册 (保持不变...) */}
       {detailPlace && (
         <div style={modalOverlayStyle} onClick={() => setDetailPlace(null)}>
           <div style={{ ...modalContentStyle }} onClick={e => e.stopPropagation()}>
@@ -818,7 +873,7 @@ function App() {
         </div>
       )}
 
-      {/* 反馈建议 */}
+      {/* 反馈建议 (保持不变...) */}
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
@@ -951,7 +1006,9 @@ function App() {
   );
 }
 
-// 💄 样式合集 (保持不变)
+// 💄 样式合集 (保持不变...)
+const suggestionListStyle = { position: 'absolute', top: '45px', left: 0, width: '100%', background: 'white', border: '1px solid #eee', borderRadius: '10px', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '200px', overflowY: 'auto' };
+const suggestionItemStyle = { padding: '10px 15px', borderBottom: '1px solid #f9f9f9', cursor: 'pointer' };
 const rankBadgeStyle = (idx) => ({ position: 'absolute', top: '-5px', left: '-5px', width: '24px', height: '24px', background: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7dbf96', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 1, boxShadow: '0 2px 5px rgba(0,0,0,0.1)' });
 const placeLikeBtnStyle = (liked) => ({ cursor: 'pointer', fontSize: '12px', padding: '6px 14px', borderRadius: '20px', background: liked ? '#e8f5eb' : '#f0f0f0', color: liked ? '#2e6a4a' : '#888', fontWeight: 'bold', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px' });
 const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
