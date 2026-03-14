@@ -35,7 +35,7 @@ function App() {
   const [showAddRecommend, setShowAddRecommend] = useState(false);
   const [newRec, setNewRec] = useState({ name: "", desc: "", lat: null, lng: null });
   const [recImage, setRecImage] = useState(null);
-  const [recommendSuggestions, setRecommendSuggestions] = useState([]); // 👈 新增：搜索建议列表
+  const [recommendSuggestions, setRecommendSuggestions] = useState([]); // 搜索建议列表
 
   // ✅ 终极版大图查看状态
   const [zoomMode, setZoomMode] = useState(false); 
@@ -160,18 +160,21 @@ function App() {
     if((await res.json()).ok) fetchRecommendations();
   };
 
-  // ✅ 改进后的地点输入实时搜索
-  const handleRecommendInputChange = (val) => {
-    setNewRec({ ...newRec, name: val, lat: null, lng: null }); // 输入变化时重置坐标
+  // ✅ 兼容处理：获取当前的百度地图全局对象
+  const getBMap = () => window.BMapGL || window.BMap;
 
-    // ✅ 核心修复：检查 BMap 是否存在
-  if (!window.BMap) {
-    console.error("百度地图API尚未加载完毕");
-    return;
-  }
+  // ✅ 改进后的地点输入实时搜索逻辑
+  const handleRecommendInputChange = (val) => {
+    setNewRec({ ...newRec, name: val, lat: null, lng: null }); 
+    const BMap = getBMap();
+
+    if (!BMap) {
+      console.warn("地图SDK未加载");
+      return;
+    }
 
     if (val.trim().length > 1) {
-      const local = new window.BMap.LocalSearch("海口市", {
+      const local = new BMap.LocalSearch("海口市", {
         onSearchComplete: (results) => {
           if (local.getStatus() === 0) {
             let tempSuggestions = [];
@@ -196,19 +199,15 @@ function App() {
       lat: poi.point.lat,
       lng: poi.point.lng
     });
-    setRecommendSuggestions([]); // 清空列表
+    setRecommendSuggestions([]); 
   };
 
-  // 保留原有的点击定位按钮功能作为兜底
   const handleSearchLoc = () => {
     if (!newRec.name) return alert("请输入地点名称");
+    const BMap = getBMap();
+    if (!BMap) return alert("地图插件加载中，请稍后再试...");
 
-    // ✅ 核心修复
-  if (!window.BMap) {
-    alert("地图插件加载中，请稍后再试...");
-    return;
-  }
-    const local = new window.BMap.LocalSearch("海口市", {
+    const local = new BMap.LocalSearch("海口市", {
         onSearchComplete: (results) => {
             if (local.getStatus() === 0 && results.getPoi(0)) {
                 const poi = results.getPoi(0);
