@@ -140,8 +140,9 @@ function App() {
     }
   };
 
+  // 获取评论（带点赞状态判断）
   const fetchComments = async (id) => {
-    const res = await fetch(`${authApiBase}/api/comments/${id}`);
+    const res = await fetch(`${authApiBase}/api/comments/${id}?phone=${currentUser.phone}`);
     const data = await res.json();
     if (data.ok) setActiveComments(prev => ({ ...prev, [id]: data.comments }));
   };
@@ -155,6 +156,19 @@ function App() {
     const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
     const data = await res.json();
     if (data.ok) { setNewComment(""); setCommentImage(null); fetchComments(id); }
+  };
+
+  // 新增：点赞/取消赞处理
+  const handleLikeComment = async (commentId, placeId) => {
+    const res = await fetch(`${authApiBase}/api/comments/like`, { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ phone: currentUser.phone, commentId }) 
+    });
+    const data = await res.json();
+    if (data.ok) {
+        fetchComments(placeId); // 重新拉取该地点的评论以刷新点赞数和状态
+    }
   };
 
   const handleDeleteComment = async (cid, pid) => {
@@ -323,7 +337,7 @@ function App() {
         "https://api.suzcore.top/uploads/places/19_3.jpg"
       ]
     },
-    { id: 20, type: "food", name: "海大南门夜市", desc: "夜色下的市井烟火地，摊位琳琅满目，品尝地道小吃，感受海口最地道的夜生活氛围", lat: 20.056054, lng: 110.343200,hours:"09:00-23:00",phone:"13637540649",
+    { id: 20, type: "food", name: "海大南门夜市", desc: "夜色下的市井烟火地，摊位琳琅目，品尝地道小吃，感受海口最地道的夜生活氛围", lat: 20.056054, lng: 110.343200,hours:"09:00-23:00",phone:"13637540649",
       album:[
         "https://api.suzcore.top/uploads/places/20_1.jpg",
         "https://api.suzcore.top/uploads/places/20_2.jpg",
@@ -612,13 +626,13 @@ function App() {
         </div>
       )}
 
-      {/* 🔵 地图区域 */}
+      {/* 🔵 地图区域：高度从 40vh 缩小到 30vh */}
       <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "30vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
         <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} />
         <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
       </div>
 
-      {/* 🔵 列表区域 */}
+      {/* 🔵 列表区域：高度从 60vh 增加到 70vh */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
         
         <div style={{ padding: "20px 20px 0 20px" }}>
@@ -698,23 +712,19 @@ function App() {
                     <div style={{maxHeight:'250px', overflowY:'auto', marginBottom:'10px'}}>
                       {(activeComments[p.id] || []).map(c => (
                         <div key={c.id} style={{ display: 'flex', gap: '10px', marginBottom: '15px', position:'relative' }}>
-                          {/* 用户头像 */}
                           <img 
                             src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} 
                             style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit:'cover', border:'1px solid #eee' }} 
                             alt="avatar"
                           />
                           <div style={{ flex: 1 }}>
-                            {/* 第一行：名字和时间 */}
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#333' }}>{c.username}</span>
                                 <span style={{ fontSize: '10px', color: '#bbb' }}>{formatCommentTime(c.created_at)}</span>
                             </div>
-                            {/* 第二行：评论内容 */}
                             <div style={{ fontSize: '12px', color: '#555', marginTop: '4px', lineHeight: '1.5' }}>
                               {c.content}
                             </div>
-                            {/* 第三行：图片(如果有) */}
                             {c.image_url && (
                               <img 
                                 src={c.image_url} 
@@ -723,8 +733,17 @@ function App() {
                                 alt="comment-img"
                               />
                             )}
+                            
+                            {/* ✅ 新增：点赞按钮展示 ✅ */}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '8px' }}>
+                                <span 
+                                    onClick={() => handleLikeComment(c.id, p.id)} 
+                                    style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 8px', borderRadius: '12px', background: c.is_liked ? '#ffebeb' : '#f0f0f0', color: c.is_liked ? '#ff4d4f' : '#888', fontSize: '12px', transition: '0.2s' }}
+                                >
+                                    {c.is_liked ? "❤️" : "🤍"} {c.like_count || 0}
+                                </span>
+                            </div>
                           </div>
-                          {/* 删除按钮 */}
                           {c.user_phone === currentUser.phone && (
                             <span 
                               onClick={() => handleDeleteComment(c.id, p.id)} 
@@ -734,7 +753,6 @@ function App() {
                         </div>
                       ))}
                     </div>
-                    {/* 发送评论框 */}
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'white', padding: '8px', borderRadius: '12px', border: '1px solid #f0f0f0' }}>
                       <input value={newComment} onChange={e => setNewComment(e.target.value)} style={commentInputStyle} placeholder="说点什么吧..." />
                       <div onClick={() => document.getElementById(`c-i-${p.id}`).click()} style={{cursor:'pointer', fontSize:'18px'}}>🖼️</div>
