@@ -20,8 +20,9 @@ function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   // ✅ 评论与详情
-  const [viewingCommentsPlace, setViewingCommentsPlace] = useState(null); // 全屏评论页控制
+  const [viewingCommentsPlace, setViewingCommentsPlace] = useState(null); 
   const [activeComments, setActiveComments] = useState({});
+  const [commentSort, setCommentSort] = useState("default"); // 新增排序状态: default, latest, hot
   const [newComment, setNewComment] = useState("");
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
@@ -39,20 +40,18 @@ function App() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
   const [feedbackImage, setFeedbackImage] = useState(null);
-  const [showAdminFeedback, setShowAdminFeedback] = useState(false); // 管理员反馈库显示
-  const [allFeedbacks, setAllFeedbacks] = useState([]); // 反馈数据
+  const [showAdminFeedback, setShowAdminFeedback] = useState(false); 
+  const [allFeedbacks, setAllFeedbacks] = useState([]); 
 
   const ADMIN_PHONE = "13707584213"; 
   const authApiBase = "https://api.suzcore.top";
 
-  // 时间格式化
   const formatCommentTime = (dateStr) => {
     if (!dateStr) return "刚刚";
     const date = new Date(dateStr);
     return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
-  // 1. 初始化
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
     if (savedUser) setCurrentUser(savedUser);
@@ -73,7 +72,6 @@ function App() {
     }
   }, [zoomMode, initialSlide]);
 
-  // 2. 登录同步
   useEffect(() => {
     if (currentUser) {
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
@@ -92,9 +90,6 @@ function App() {
     }
   }, [countdown]);
 
-  // ================================
-  // ✅ 核心业务函数
-  // ================================
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
   const fetchComments = async (id) => {
@@ -127,6 +122,21 @@ function App() {
     fetchComments(pid);
   };
 
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("avatar", file);
+    formData.append("phone", currentUser.phone);
+    const res = await fetch(`${authApiBase}/api/user/upload-avatar`, { method: "POST", body: formData });
+    const data = await res.json();
+    if (data.ok) {
+      const updated = { ...currentUser, avatar_url: data.avatarUrl };
+      setCurrentUser(updated);
+      localStorage.setItem("haikouUser", JSON.stringify(updated));
+    }
+  };
+
   const handleFeedbackSubmit = async () => {
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
@@ -147,21 +157,6 @@ function App() {
     const res = await fetch(`${authApiBase}/api/announcement/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }) });
     const data = await res.json();
     if (data.ok) { alert("已更新"); setIsEditingNotice(false); }
-  };
-
-  const handleAvatarUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const formData = new FormData();
-    formData.append("avatar", file);
-    formData.append("phone", currentUser.phone);
-    const res = await fetch(`${authApiBase}/api/user/upload-avatar`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.ok) {
-      const updated = { ...currentUser, avatar_url: data.avatarUrl };
-      setCurrentUser(updated);
-      localStorage.setItem("haikouUser", JSON.stringify(updated));
-    }
   };
 
   const handleSendCode = async () => {
@@ -472,7 +467,7 @@ function App() {
     },
   ];
 
-    const getDist = (l1, l2) => {
+   const getDist = (l1, l2) => {
     if (!l1 || !l2) return 999;
     const R = 6371;
     const dLat = (l2.lat - l1.lat) * Math.PI / 180;
@@ -487,7 +482,6 @@ function App() {
     .map(p => ({ ...p, distVal: getDist(userLocation, p) }))
     .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
 
-  // ======================== 渲染逻辑 A：登录 ========================
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f4fbf6" }}>
@@ -515,7 +509,18 @@ function App() {
     );
   }
 
-  // ======================== 渲染逻辑 B：主界面 ========================
+  // ✅ 处理评论区排序逻辑
+  const getSortedComments = () => {
+    if (!viewingCommentsPlace) return [];
+    let list = [...(activeComments[viewingCommentsPlace.id] || [])];
+    if (commentSort === "latest") {
+      list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (commentSort === "hot") {
+      list.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+    }
+    return list;
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
       
@@ -523,15 +528,22 @@ function App() {
       {viewingCommentsPlace && (
         <div style={fullPageOverlayStyle}>
           <div style={navHeaderStyle}>
-            <span onClick={() => setViewingCommentsPlace(null)} style={{ cursor: 'pointer', fontSize: '18px' }}>← 返回</span>
+            <span onClick={() => { setViewingCommentsPlace(null); setCommentSort("default"); }} style={{ cursor: 'pointer', fontSize: '18px' }}>← 返回</span>
             <span style={{ fontWeight: 'bold' }}>{viewingCommentsPlace.name}的点评</span>
             <span style={{ width: '40px' }}></span>
           </div>
+
+          {/* ✅ 排序切换栏 */}
+          <div style={sortContainerStyle}>
+             <button onClick={() => setCommentSort("latest")} style={sortBtnStyle(commentSort === "latest")}>按照最新</button>
+             <button onClick={() => setCommentSort("hot")} style={sortBtnStyle(commentSort === "hot")}>按照最火</button>
+          </div>
+
           <div style={scrollContentStyle}>
-             {(activeComments[viewingCommentsPlace.id] || []).length === 0 ? (
+             {getSortedComments().length === 0 ? (
                <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>
              ) : (
-               (activeComments[viewingCommentsPlace.id] || []).map(c => (
+               getSortedComments().map(c => (
                  <div key={c.id} style={commentCardStyle}>
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={commentAvatarStyle} />
@@ -567,7 +579,7 @@ function App() {
         </div>
       )}
 
-      {/* 🟢 反馈库 (管理员版) */}
+      {/* 🟢 反馈库 */}
       {showAdminFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto' }}>
@@ -672,7 +684,6 @@ function App() {
 
       {/* 🔵 列表区域 (70vh) */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
-        
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={avatarStyle} onClick={() => document.getElementById('avatar-input').click()} />
@@ -689,7 +700,6 @@ function App() {
           <input placeholder="搜索目的地..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* 吸顶导航 */}
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
             {[{ k: "all", l: "全部" }, { k: "favorite", l: "⭐收藏" }, { k: "food", l: "🍱美食" }, { k: "view", l: "🏞️景点" }, { k: "street", l: "🛍️商圈" }, { k: "cafe", l: "☕咖啡" }].map(item => (
@@ -698,7 +708,6 @@ function App() {
           </div>
         </div>
 
-        {/* 列表内容 */}
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map(p => (
             <div key={p.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1" }}>
@@ -718,17 +727,12 @@ function App() {
               </div>
               <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{p.desc}</p>
               <div style={{ fontSize: "12px", color: "#5aa77b", marginBottom: "10px" }}>📏 距你：{p.distVal} km</div>
-              
               <div style={{ display: "flex", gap: "8px" }}>
                 <button onClick={() => setDetailPlace(p)} style={btnDetailStyle}>🖼️ 详情</button>
                 <button onClick={() => setTargetPlaces(prev => prev.some(tp => tp.id === p.id) ? prev.filter(tp => tp.id !== p.id) : [...prev, p])} style={btnSmallStyle(targetPlaces.some(tp => tp.id === p.id))}>{targetPlaces.some(tp => tp.id === p.id) ? "取消" : "标记"}</button>
                 <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}&mode=driving&region=海口&output=html`)} style={btnNavStyle}>🧭 导航</button>
               </div>
-
-              <div 
-                onClick={() => { fetchComments(p.id); setViewingCommentsPlace(p); }} 
-                style={{ marginTop: '15px', borderTop: '1px dashed #eee', paddingTop: '10px', color: '#5aa77b', fontSize: '12px', cursor: 'pointer' }}
-              >
+              <div onClick={() => { fetchComments(p.id); setViewingCommentsPlace(p); }} style={{ marginTop: '15px', borderTop: '1px dashed #eee', paddingTop: '10px', color: '#5aa77b', fontSize: '12px', cursor: 'pointer' }}>
                 💬 查看评论区
               </div>
             </div>
@@ -742,6 +746,8 @@ function App() {
 // 💄 样式
 const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
 const navHeaderStyle = { background: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', zIndex: 2100 };
+const sortContainerStyle = { background: 'white', padding: '8px 20px', display: 'flex', gap: '15px', borderBottom: '1px solid #eee' };
+const sortBtnStyle = (active) => ({ border: 'none', background: 'transparent', fontSize: '12px', color: active ? '#5aa77b' : '#999', fontWeight: active ? 'bold' : 'normal', cursor: 'pointer', padding: '4px 0', borderBottom: active ? '2px solid #5aa77b' : '2px solid transparent' });
 const scrollContentStyle = { flex: 1, overflowY: 'auto', padding: '20px' };
 const fixedBottomBarStyle = { background: 'white', padding: '12px 20px', borderTop: '1px solid #eee' };
 const bottomInputContainer = { display: 'flex', gap: '12px', alignItems: 'center', background: '#f5f5f5', padding: '8px 16px', borderRadius: '25px' };
@@ -751,7 +757,6 @@ const commentAvatarStyle = { width: '36px', height: '36px', borderRadius: '50%',
 const commentImgStyle = { width: '160px', borderRadius: '10px', marginTop: '10px', display: 'block', cursor: 'zoom-in' };
 const likeBtnStyle = (liked) => ({ cursor: 'pointer', padding: '4px 12px', borderRadius: '15px', background: liked ? '#ffecec' : '#f0f0f0', color: liked ? '#ff4d4f' : '#888', fontSize: '12px' });
 const feedbackItemStyle = { padding: '10px', borderBottom: '1px solid #eee', background: '#f9fcf9', borderRadius: '10px', marginBottom: '10px' };
-
 const zoomOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
 const zoomedImgStyle = { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' };
 const closeZoomStyle = { position: 'absolute', top: '30px', right: '30px', color: 'white', fontSize: '50px', zIndex: 3100, cursor: 'pointer' };
