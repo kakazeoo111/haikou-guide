@@ -42,7 +42,7 @@ function App() {
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
-  const [feedbackImage, setFeedbackImage] = useState(null); // 反馈图片状态
+  const [feedbackImage, setFeedbackImage] = useState(null); 
   const [showAdminFeedback, setShowAdminFeedback] = useState(false); 
   const [allFeedbacks, setAllFeedbacks] = useState([]); 
 
@@ -104,10 +104,6 @@ function App() {
   }, [countdown]);
 
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
-
-  // ================================
-  // ✅ 核心业务函数
-  // ================================
 
   const handleLikePlace = async (e, placeId) => {
     e.stopPropagation();
@@ -187,12 +183,7 @@ function App() {
     if (feedbackImage) formData.append("image", feedbackImage);
     const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
     const data = await res.json();
-    if (data.ok) { 
-        alert(data.message); 
-        setFeedbackContent(""); 
-        setFeedbackImage(null); 
-        setShowFeedback(false); 
-    }
+    if (data.ok) { alert(data.message); setFeedbackContent(""); setFeedbackImage(null); setShowFeedback(false); }
   };
 
   const handleUpdateNotice = async () => {
@@ -600,11 +591,11 @@ function App() {
                     <div style={{ display: 'flex', gap: '12px' }}>
                         <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={commentAvatarStyle} />
                         <div style={{ flex: 1 }}>
-                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{c.username}</span>
                               <span style={{ fontSize: '10px', color: '#bbb' }}>{formatCommentTime(c.created_at)}</span>
                            </div>
-                           <div style={{ fontSize: '14px', color: '#555', marginTop: '5px' }}>{c.content}</div>
+                           <div style={{ fontSize: '14px', color: '#444', marginTop: '5px' }}>{c.content}</div>
                            {c.image_url && <img src={c.image_url} style={commentImgStyle} onClick={() => setZoomedSingleImage(c.image_url)} />}
                            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} style={likeBtnStyle(c.is_liked)}>
@@ -714,42 +705,22 @@ function App() {
         </div>
       )}
 
-      {/* ✅ 反馈建议弹窗 (已修复图片配图功能) */}
+      {/* 反馈建议 */}
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>反馈建议</h2>
-            <textarea 
-                placeholder="在这里写下您的建议..." 
-                value={feedbackContent} 
-                onChange={e => setFeedbackContent(e.target.value)} 
-                style={textAreaStyle} 
-            />
-            {/* 图片预览 */}
+            <textarea placeholder="您的反馈是作者最大的动力（如果需要您可以留下联系方式）..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
             {feedbackImage && (
                 <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
-                    <img 
-                        src={URL.createObjectURL(feedbackImage)} 
-                        style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #eee' }} 
-                        alt="preview" 
-                    />
-                    <div 
-                        onClick={() => setFeedbackImage(null)} 
-                        style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ff4d4f', color: 'white', borderRadius: '50%', width: '18px', height: '18px', textAlign: 'center', fontSize: '12px', cursor: 'pointer' }}
-                    >×</div>
+                    <img src={URL.createObjectURL(feedbackImage)} style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover' }} />
+                    <div onClick={() => setFeedbackImage(null)} style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ff4d4f', color: 'white', borderRadius: '50%', width: '18px', height: '18px', textAlign: 'center', cursor: 'pointer' }}>×</div>
                 </div>
             )}
             <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-               {/* 📸 图片选择按钮 */}
-               <button onClick={() => document.getElementById('feedback-img-input').click()} style={btnIconStyle}>🖼️</button>
-               <input 
-                    type="file" 
-                    id="feedback-img-input" 
-                    hidden 
-                    accept="image/*" 
-                    onChange={e => setFeedbackImage(e.target.files[0])} 
-                />
-               <button onClick={() => { setShowFeedback(false); setFeedbackImage(null); }} style={btnCancelStyle}>取消</button>
+               <button onClick={() => document.getElementById('f-img-i').click()} style={btnIconStyle}>🖼️</button>
+               <input type="file" id="f-img-i" hidden accept="image/*" onChange={e => setFeedbackImage(e.target.files[0])} />
+               <button onClick={() => setShowFeedback(false)} style={btnCancelStyle}>取消</button>
                <button onClick={handleFeedbackSubmit} style={btnMainStyle}>提交</button>
             </div>
           </div>
@@ -764,6 +735,7 @@ function App() {
 
       {/* 🔵 列表区域 (70vh) */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
+        
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={avatarStyle} onClick={() => document.getElementById('avatar-input').click()} />
@@ -812,10 +784,18 @@ function App() {
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{p.name}</h3>
                       <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>{favorites.some(f => f.id === p.id) ? "⭐" : "☆"}</span>
                     </div>
+                    {/* 分类、出片及电话标签行 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                       <span style={categoryTagStyle}>{p.type === 'food' ? '🍱 美食' : p.type === 'view' ? '🏞️ 景点' : p.type === 'cafe' ? '☕ 咖啡' : '🛍️ 商圈'}</span>
                       {p.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
                       {p.hours && <span style={{ fontSize: '11px', color: '#888' }}>🕒 {p.hours}</span>}
+                      
+                      {/* ✅ 恢复：电话显示逻辑 ✅ */}
+                      {p.phone && p.phone !== "无" && (
+                        <a href={`tel:${p.phone}`} style={{ fontSize: '11px', color: '#5aa77b', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '2px' }}>
+                          📞 {p.phone}
+                        </a>
+                      )}
                     </div>
                  </div>
               </div>
@@ -847,7 +827,7 @@ function App() {
   );
 }
 
-// 💄 样式
+// 💄 样式合集
 const rankBadgeStyle = (idx) => ({ position: 'absolute', top: '-5px', left: '-5px', width: '24px', height: '24px', background: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7dbf96', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 1, boxShadow: '0 2px 5px rgba(0,0,0,0.1)' });
 const placeLikeBtnStyle = (liked) => ({ cursor: 'pointer', fontSize: '12px', padding: '6px 14px', borderRadius: '20px', background: liked ? '#e8f5eb' : '#f0f0f0', color: liked ? '#2e6a4a' : '#888', fontWeight: 'bold', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px' });
 const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
@@ -880,7 +860,7 @@ const btnDetailStyle = { padding: "8px 12px", borderRadius: "8px", border: "none
 const btnNavStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: "#5aa77b", color: "white", fontSize: "12px", cursor: "pointer" };
 const btnSendStyle = { background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '6px 16px', cursor:'pointer', fontSize: '13px', fontWeight: 'bold' };
 const btnCancelStyle = { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white' };
-const btnIconStyle = { padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '18px' }; // 图标按钮样式
+const btnIconStyle = { padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '18px' }; 
 const textAreaStyle = { width: '100%', height: '120px', borderRadius: '12px', padding: '12px', border: '1px solid #eee', outline: 'none' };
 const floatBtnStyle = { position: "absolute", right: "15px", bottom: "15px", width: "45px", height: "45px", borderRadius: "50%", background: "white", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.2)", fontSize: "20px", zIndex: 20 };
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
