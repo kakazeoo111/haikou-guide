@@ -14,8 +14,6 @@ function App() {
   const [authMode, setAuthMode] = useState("login"); 
   const [loginForm, setLoginForm] = useState({ username: "", phone: "", code: "", password: "" });
   const [loginError, setLoginError] = useState("");
-  const [codeHint, setCodeHint] = useState("");
-  const [isSendingCode, setIsSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
 
   // ✅ 评论与详情
@@ -26,14 +24,14 @@ function App() {
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
 
-  // ✅ 地点点赞数据同步
+  // ✅ 点赞与统计
   const [placeStats, setPlaceStats] = useState({}); 
   const [myLikedPlaceIds, setMyLikedPlaceIds] = useState([]); 
 
-  // ✅ 用户推荐相关逻辑
+  // ✅ 用户推荐 (输入地址版)
   const [recommendList, setRecommendList] = useState([]);
   const [showAddRecommend, setShowAddRecommend] = useState(false);
-  const [recForm, setRecForm] = useState({ name: "", desc: "", lat: 0, lng: 0, image: null });
+  const [recForm, setRecForm] = useState({ name: "", desc: "", address: "", image: null });
 
   // ✅ 终极版大图查看状态
   const [zoomMode, setZoomMode] = useState(false); 
@@ -53,6 +51,16 @@ function App() {
 
   const ADMIN_PHONE = "13707584213"; 
   const authApiBase = "https://api.suzcore.top";
+
+  // ✅ 距离计算核心算法 (回归)
+  const getDist = (l1, l2) => {
+    if (!l1 || !l2) return 999;
+    const R = 6371;
+    const dLat = (l2.lat - l1.lat) * Math.PI / 180;
+    const dLng = (l2.lng - l1.lng) * Math.PI / 180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(l1.lat*Math.PI/180)*Math.cos(l2.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
+  };
 
   const formatCommentTime = (dateStr) => {
     if (!dateStr) return "刚刚";
@@ -75,12 +83,16 @@ function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 2. 登录同步数据
+  // 2. 数据同步
   useEffect(() => {
     if (currentUser) {
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`).then(res => res.json()).then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
       fetch(`${authApiBase}/api/places/stats?phone=${currentUser.phone}`).then(res => res.json()).then(data => { if(data.ok) { setPlaceStats(data.stats || {}); setMyLikedPlaceIds(data.myLikedIds || []); } });
-      fetch(`${authApiBase}/api/announcement`).then(res => res.json()).then(data => { if (data.ok) { setNoticeContent(data.content); setShowNotice(true); } });
+      
+      // 📢 恢复公告加载
+      fetch(`${authApiBase}/api/announcement`).then(res => res.json()).then(data => {
+        if (data.ok) { setNoticeContent(data.content); setShowNotice(true); }
+      });
       fetchRecommendations();
     }
   }, [currentUser]);
@@ -95,26 +107,44 @@ function App() {
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
   // ================================
-  // ✅ 业务函数合集
+  // ✅ 核心业务函数
   // ================================
 
-  // --- 推荐模块 ---
+  // --- 💡 推荐地点逻辑 ---
   const fetchRecommendations = () => {
-    fetch(`${authApiBase}/api/recommendations?phone=${currentUser.phone}`)
-      .then(res => res.json()).then(data => data.ok && setRecommendList(data.data));
+    fetch(`${authApiBase}/api/recommendations?phone=${currentUser.phone}`).then(res => res.json()).then(data => data.ok && setRecommendList(data.data));
   };
 
   const handleRecSubmit = async () => {
-    if (!recForm.name || !recForm.lat) return alert("请填写名称并获取定位");
-    const formData = new FormData();
-    formData.append("phone", currentUser.phone);
-    formData.append("place_name", recForm.name);
-    formData.append("description", recForm.desc);
-    formData.append("lat", recForm.lat);
-    formData.append("lng", recForm.lng);
-    if (recForm.image) formData.append("image", recForm.image);
-    const res = await fetch(`${authApiBase}/api/recommendations/add`, { method: "POST", body: formData });
-    if ((await res.json()).ok) { setShowAddRecommend(false); setRecForm({ name: "", desc: "", lat: 0, lng: 0, image: null }); fetchRecommendations(); }
+    if (!recForm.name || !recForm.address) return alert("请填写名字和详细地址");
+    // 调用百度地图 Geocoder 地址解析坐标
+    const myGeo = new window.BMapGL.Geocoder();
+    myGeo.getPoint(recForm.address, async (point) => {
+        if (point) {
+            const formData = new FormData();
+            formData.append("phone", currentUser.phone);
+            formData.append("place_name", recForm.name);
+            formData.append("description", recForm.desc);
+            formData.append("lat", point.lat);
+            formData.append("lng", point.lng);
+            if (recForm.image) formData.append("image", recForm.image);
+            const res = await fetch(`${authApiBase}/api/recommendations/add`, { method: "POST", body: formData });
+            if ((await res.json()).ok) {
+                setShowAddRecommend(false);
+                setRecForm({ name: "", desc: "", address: "", image: null });
+                fetchRecommendations();
+                alert("发布推荐成功！");
+            }
+        } else {
+            alert("地址无法解析，请输入更详细的地址(如：海口市xxx路)");
+        }
+    }, "海口市");
+  };
+
+  const handleDeleteRec = async (recId) => {
+    if (!window.confirm("确定删除吗？")) return;
+    const res = await fetch(`${authApiBase}/api/recommendations/delete`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, recId }) });
+    if ((await res.json()).ok) fetchRecommendations();
   };
 
   const handleLikeRec = async (id) => {
@@ -122,7 +152,13 @@ function App() {
     if ((await res.json()).ok) fetchRecommendations();
   };
 
-  // --- 地点/评论点赞 ---
+  // --- 📢 公告编辑 ---
+  const handleUpdateNotice = async () => {
+    const res = await fetch(`${authApiBase}/api/announcement/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }) });
+    if ((await res.json()).ok) { alert("已更新！"); setIsEditingNotice(false); setShowNotice(true); }
+  };
+
+  // --- 点赞/反馈/评论逻辑 ---
   const handleLikePlace = async (e, placeId) => {
     e.stopPropagation();
     const res = await fetch(`${authApiBase}/api/places/like`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, placeId }) });
@@ -162,7 +198,6 @@ function App() {
     fetchComments(pid);
   };
 
-  // --- 反馈与头像 ---
   const handleFeedbackSubmit = async () => {
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
@@ -186,19 +221,14 @@ function App() {
     formData.append("phone", currentUser.phone);
     const res = await fetch(`${authApiBase}/api/user/upload-avatar`, { method: "POST", body: formData });
     const data = await res.json();
-    if (data.ok) {
-      const updated = { ...currentUser, avatar_url: data.avatarUrl };
-      setCurrentUser(updated);
-      localStorage.setItem("haikouUser", JSON.stringify(updated));
-    }
+    if (data.ok) { const updated = { ...currentUser, avatar_url: data.avatarUrl }; setCurrentUser(updated); localStorage.setItem("haikouUser", JSON.stringify(updated)); }
   };
 
-  // --- 登录/短信 ---
   const handleSendCode = async () => {
     const { phone } = loginForm;
     const res = await fetch(`${authApiBase}/api/sms/send`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone, type: authMode }) });
     const d = await res.json();
-    if (d.ok) { setCountdown(60); } else alert(d.message);
+    if (d.ok) setCountdown(60); else alert(d.message);
   };
 
   const handleAuthSubmit = async (e) => {
@@ -206,20 +236,8 @@ function App() {
     let ep = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
     const res = await fetch(`${authApiBase}${ep}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(loginForm) });
     const d = await res.json();
-    if (d.ok) {
-      if (authMode === "login") { setCurrentUser(d.user); localStorage.setItem("haikouUser", JSON.stringify(d.user)); }
-      else { setAuthMode("login"); }
-    } else alert(d.message);
-  };
-
-  const toggleFavorite = async (p) => {
-    const res = await fetch(`${authApiBase}/api/favorites/toggle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }) });
-    if ((await res.json()).ok) { favorites.some(f => f.id === p.id) ? setFavorites(favorites.filter(f => f.id !== p.id)) : setFavorites([...favorites, p]); }
-  };
-
-  const handleUpdateNotice = async () => {
-    const res = await fetch(`${authApiBase}/api/announcement/update`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }) });
-    if ((await res.json()).ok) { alert("已更新"); setIsEditingNotice(false); }
+    if (d.ok) { if (authMode === "login") { setCurrentUser(d.user); localStorage.setItem("haikouUser", JSON.stringify(d.user)); } else setAuthMode("login"); }
+    else alert(d.message);
   };
   // ================================
   // ✅ 40个完整地点数据
@@ -500,22 +518,27 @@ function App() {
     },
   ];
 
-  const getDist = (l1, l2) => {
-    if (!l1 || !l2) return 999;
-    const R = 6371;
-    const dLat = (l2.lat - l1.lat) * Math.PI / 180;
-    const dLng = (l2.lng - l1.lng) * Math.PI / 180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(l1.lat*Math.PI/180)*Math.cos(l2.lat*Math.PI/180)*Math.sin(dLng/2)**2;
-    return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
-  };
-
+  // ✅ 核心过滤逻辑：计算并集成 getDist
   const getFilteredPlaces = () => {
-    let list = places.map(p => ({ ...p, distVal: getDist(userLocation, p), likes: placeStats[p.id] || 0, isPlaceLiked: myLikedPlaceIds.includes(p.id) }));
+    let list = places.map(p => ({ 
+        ...p, 
+        distVal: getDist(userLocation, p),
+        likes: placeStats[p.id] || 0,
+        isPlaceLiked: myLikedPlaceIds.includes(p.id)
+    }));
+
     list = list.filter(p => p.name.includes(search));
-    if (filter === "favorite") list = list.filter(p => favorites.some(f => f.id === p.id));
-    else if (filter === "top10") return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
-    else if (filter === "photo") list = list.filter(p => p.isPhotoReady);
-    else if (filter !== "all" && filter !== "recommend") list = list.filter(p => p.type === filter);
+
+    if (filter === "favorite") {
+        list = list.filter(p => favorites.some(f => f.id === p.id));
+    } else if (filter === "top10") {
+        return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
+    } else if (filter === "photo") {
+        list = list.filter(p => p.isPhotoReady);
+    } else if (filter !== "all" && filter !== "recommend") {
+        list = list.filter(p => p.type === filter);
+    }
+    
     return list.sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
   };
 
@@ -548,32 +571,42 @@ function App() {
     );
   }
 
-  const getSortedComments = () => {
-    if (!viewingCommentsPlace) return [];
-    let list = [...(activeComments[viewingCommentsPlace.id] || [])];
-    if (commentSort === "latest") list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    else if (commentSort === "hot") list.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
-    return list;
-  };
-
   return (
     <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
       
-      {/* 🟢 弹窗逻辑集 (推荐地点/评论/反馈等) */}
+      {/* 📢 回归：公告系统弹窗 */}
+      {showNotice && (
+        <div style={modalOverlayStyle}>
+          <div style={{ ...modalContentStyle, textAlign: 'center', maxWidth: '420px' }}>
+            <h2 style={{ color: '#2e6a4a' }}>📢 系统公告</h2>
+            {isEditingNotice ? (
+              <textarea value={noticeContent} onChange={e => setNoticeContent(e.target.value)} style={{ width: '100%', height: '150px', padding: '10px', borderRadius: '12px', border:'1px solid #ddd' }} />
+            ) : (
+              <div style={{ padding: '10px', textAlign: 'left', color: '#555', fontSize: '14px', whiteSpace: 'pre-wrap', background: '#f9fcf9', borderRadius: '12px' }}>{noticeContent}</div>
+            )}
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+              {currentUser.phone === ADMIN_PHONE && (
+                <button onClick={() => isEditingNotice ? handleUpdateNotice() : setIsEditingNotice(true)} style={{ ...btnSmallStyle(false), flex: 1 }}>{isEditingNotice ? "💾 保存" : "📝 编辑"}</button>
+              )}
+              <button onClick={() => setShowNotice(false)} style={{ ...btnMainStyle, flex: 2 }}>进入地图</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 💡 推荐地点发布窗 (地址手动输入) */}
       {showAddRecommend && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '450px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>推荐好地方</h2>
-            <input placeholder="地点名字" value={recForm.name} onChange={e => setRecForm({...recForm, name: e.target.value})} style={inputStyle} />
+            <input placeholder="地点名字 (如：万绿园)" value={recForm.name} onChange={e => setRecForm({...recForm, name: e.target.value})} style={inputStyle} />
+            <input placeholder="详细地址 (如：海口市滨海大道...)" value={recForm.address} onChange={e => setRecForm({...recForm, address: e.target.value})} style={inputStyle} />
             <textarea placeholder="描述一下这里为什么值得推荐..." value={recForm.desc} onChange={e => setRecForm({...recForm, desc: e.target.value})} style={textAreaStyle} />
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '15px' }}>
-                <button onClick={() => setRecForm({...recForm, lat: userLocation?.lat || 0, lng: userLocation?.lng || 0})} style={btnSmallStyle(false)}>📍 获取当前位置</button>
-                <span style={{ fontSize: '11px', color: '#999' }}>{recForm.lat ? "✅ 已锁定坐标" : "❌ 未获取坐标"}</span>
-            </div>
+            
             {recForm.image && <img src={URL.createObjectURL(recForm.image)} style={{ width: '80px', borderRadius: '10px', marginBottom: '10px' }} />}
             <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => document.getElementById('rec-img').click()} style={btnIconStyle}>🖼️</button>
-                <input type="file" id="rec-img" hidden accept="image/*" onChange={e => setRecForm({...recForm, image: e.target.files[0]})} />
+                <button onClick={() => document.getElementById('rec-img-v').click()} style={btnIconStyle}>🖼️</button>
+                <input type="file" id="rec-img-v" hidden accept="image/*" onChange={e => setRecForm({...recForm, image: e.target.files[0]})} />
                 <button onClick={() => setShowAddRecommend(false)} style={btnCancelStyle}>取消</button>
                 <button onClick={handleRecSubmit} style={btnMainStyle}>发布推荐</button>
             </div>
@@ -581,6 +614,7 @@ function App() {
         </div>
       )}
 
+      {/* 💬 全屏评论页 */}
       {viewingCommentsPlace && (
         <div style={fullPageOverlayStyle}>
           <div style={navHeaderStyle}>
@@ -626,6 +660,7 @@ function App() {
         </div>
       )}
 
+      {/* 🖼️ 大图查看 & 反馈管理逻辑 (回归图片) */}
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
@@ -638,8 +673,8 @@ function App() {
                 </div>
             )}
             <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-               <button onClick={() => document.getElementById('f-img-ii').click()} style={btnIconStyle}>🖼️</button>
-               <input type="file" id="f-img-ii" hidden accept="image/*" onChange={e => setFeedbackImage(e.target.files[0])} />
+               <button onClick={() => document.getElementById('f-img-v-i').click()} style={btnIconStyle}>🖼️</button>
+               <input type="file" id="f-img-v-i" hidden accept="image/*" onChange={e => setFeedbackImage(e.target.files[0])} />
                <button onClick={() => setShowFeedback(false)} style={btnCancelStyle}>取消</button>
                <button onClick={handleFeedbackSubmit} style={btnMainStyle}>提交</button>
             </div>
@@ -671,6 +706,22 @@ function App() {
                 </div>
               ))}
             <button onClick={() => setShowAdminFeedback(false)} style={{ ...btnMainStyle, marginTop: '20px' }}>关闭</button>
+          </div>
+        </div>
+      )}
+
+      {detailPlace && (
+        <div style={modalOverlayStyle} onClick={() => setDetailPlace(null)}>
+          <div style={{ ...modalContentStyle }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <h2 style={{ margin: 0, color: '#2e6a4a' }}>{detailPlace.name}</h2>
+              <span style={{ cursor: 'pointer', fontSize: '28px' }} onClick={() => setDetailPlace(null)}>×</span>
+            </div>
+            <p style={{ color: '#666', fontSize: '14px', margin: '10px 0' }}>{detailPlace.desc}</p>
+            <div style={horizontalScrollWrapper}>
+              {detailPlace.album?.map((img, i) => ( <img key={i} src={img} style={albumThumbStyle} onClick={() => { setInitialSlide(i); setZoomMode(true); }} /> ))}
+            </div>
+            <button onClick={() => setDetailPlace(null)} style={{ ...btnMainStyle, marginTop: '15px' }}>返回列表</button>
           </div>
         </div>
       )}
@@ -715,9 +766,12 @@ function App() {
               {recommendList.map(r => (
                 <div key={r.id} style={commentCardStyle}>
                    <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                      <img src={r.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + r.user_phone} style={{ width: '35px', height: '35px', borderRadius: '50%', objectFit:'cover' }} />
+                      <img src={r.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + r.phone} style={{ width: '35px', height: '35px', borderRadius: '50%', objectFit:'cover' }} />
                       <div style={{ flex: 1 }}>
-                         <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{r.username} <span style={{ fontWeight: 'normal', color: '#bbb', fontSize: '11px' }}>推荐了</span></div>
+                         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{r.username} <span style={{ fontWeight: 'normal', color: '#bbb', fontSize: '11px' }}>推荐了</span></div>
+                            {r.phone === currentUser.phone && ( <span onClick={() => handleDeleteRec(r.id)} style={{ color:'#ff4d4f', fontSize:'11px', cursor:'pointer' }}>删除</span> )}
+                         </div>
                          <div style={{ fontSize: '11px', color: '#999' }}>{new Date(r.created_at).toLocaleString()}</div>
                       </div>
                    </div>
@@ -746,7 +800,7 @@ function App() {
                         <span style={categoryTagStyle}>{p.type === 'food' ? '🍱 美食' : p.type === 'view' ? '🏞️ 景点' : p.type === 'cafe' ? '☕ 咖啡' : '🛍️ 商圈'}</span>
                         {p.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
                         {p.hours && <span style={{ fontSize: '11px', color: '#888' }}>🕒 {p.hours}</span>}
-                        {p.phone && p.phone !== "无" && ( <a href={`tel:${p.phone}`} style={{ fontSize: '11px', color: '#5aa77b', textDecoration: 'none' }}>📞 {p.phone}</a> )}
+                        {p.phone && p.phone !== "无" && ( <a href={`tel:${p.phone}`} style={{ fontSize: '11px', color: '#5aa77b', textDecoration: 'none', display: 'flex', alignItems:'center', gap:'2px' }}> 📞 {p.phone}</a> )}
                       </div>
                    </div>
                 </div>
@@ -770,7 +824,7 @@ function App() {
   );
 }
 
-// 💄 样式合集 (完整保留)
+// 💄 样式
 const rankBadgeStyle = (idx) => ({ position: 'absolute', top: '-5px', left: '-5px', width: '24px', height: '24px', background: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7dbf96', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 1, boxShadow: '0 2px 5px rgba(0,0,0,0.1)' });
 const placeLikeBtnStyle = (liked) => ({ cursor: 'pointer', fontSize: '12px', padding: '6px 14px', borderRadius: '20px', background: liked ? '#e8f5eb' : '#f0f0f0', color: liked ? '#2e6a4a' : '#888', fontWeight: 'bold', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px' });
 const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
@@ -791,7 +845,7 @@ const zoomedImgStyle = { maxWidth: '100%', maxHeight: '100%', objectFit: 'contai
 const closeZoomStyle = { position: 'absolute', top: '30px', right: '30px', color: 'white', fontSize: '50px', zIndex: 3100, cursor: 'pointer' };
 const swipeContainerStyle = { display: 'flex', overflowX: 'auto', width: '100vw', height: '100vh', scrollSnapType: 'x mandatory' };
 const swipeItemStyle = { flexShrink: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' };
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' };
+const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 3500, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' };
 const modalContentStyle = { background: 'white', width: '100%', maxWidth: '500px', borderRadius: '24px', padding: '24px' };
 const avatarStyle = { width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover", border: "2px solid #5aa77b", cursor: 'pointer' };
 const listThumbStyle = { width: "70px", height: "70px", borderRadius: "12px", objectFit: "cover", cursor: 'zoom-in' };
@@ -804,7 +858,7 @@ const btnNavStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", 
 const btnSendStyle = { background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '6px 16px', cursor:'pointer', fontSize: '13px', fontWeight: 'bold' };
 const btnCancelStyle = { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white' };
 const btnIconStyle = { padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '18px' }; 
-const textAreaStyle = { width: '100%', height: '120px', borderRadius: '12px', padding: '12px', border: '1px solid #eee', outline: 'none' };
+const textAreaStyle = { width: '100%', height: '120px', borderRadius: '12px', padding: '12px', border: '1px solid #eee', outline: 'none', marginBottom:'15px' };
 const floatBtnStyle = { position: "absolute", right: "15px", bottom: "15px", width: "45px", height: "45px", borderRadius: "50%", background: "white", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.2)", fontSize: "20px", zIndex: 20 };
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
 const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "70px", fontSize: "12px" };
