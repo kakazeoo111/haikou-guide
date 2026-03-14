@@ -27,9 +27,9 @@ function App() {
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
 
-  // ✅ 地点点赞数据 (新增)
-  const [placeStats, setPlaceStats] = useState({}); // { placeId: likeCount }
-  const [myLikedPlaceIds, setMyLikedPlaceIds] = useState([]); // 用户点赞过的地点ID列表
+  // ✅ 地点点赞数据
+  const [placeStats, setPlaceStats] = useState({}); 
+  const [myLikedPlaceIds, setMyLikedPlaceIds] = useState([]); 
 
   // ✅ 终极版大图查看状态
   const [zoomMode, setZoomMode] = useState(false); 
@@ -56,6 +56,7 @@ function App() {
     return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
+  // 初始化
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
     if (savedUser) setCurrentUser(savedUser);
@@ -70,27 +71,21 @@ function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  useEffect(() => {
-    if (zoomMode && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollLeft = window.innerWidth * initialSlide;
-    }
-  }, [zoomMode, initialSlide]);
-
-  // 同步用户数据及地点点赞榜
+  // 登录后同步数据
   useEffect(() => {
     if (currentUser) {
-      // 获取个人收藏
+      // 获取收藏
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
         .then(res => res.json())
         .then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
       
-      // 获取地点点赞统计 (新增)
+      // 获取地点点赞榜统计
       fetch(`${authApiBase}/api/places/stats?phone=${currentUser.phone}`)
         .then(res => res.json())
         .then(data => {
             if(data.ok) {
-                setPlaceStats(data.stats); // {1: 50, 2: 30...}
-                setMyLikedPlaceIds(data.myLikedIds); // [1, 5, 10...]
+                setPlaceStats(data.stats || {});
+                setMyLikedPlaceIds(data.myLikedIds || []);
             }
         });
 
@@ -110,11 +105,12 @@ function App() {
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
   // ================================
-  // ✅ 核心业务函数
+  // ✅ 核心业务逻辑 (修复点赞点击响应)
   // ================================
 
-  // 地点点赞处理 (新增)
-  const handleLikePlace = async (placeId) => {
+  // 1. 地点点赞 (👍)
+  const handleLikePlace = async (e, placeId) => {
+    e.stopPropagation(); // 阻止点击穿透到卡片
     const res = await fetch(`${authApiBase}/api/places/like`, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
@@ -122,11 +118,24 @@ function App() {
     });
     const data = await res.json();
     if (data.ok) {
-        // 更新本地状态以获得即时反馈
         setPlaceStats(prev => ({ ...prev, [placeId]: data.newCount }));
         setMyLikedPlaceIds(prev => 
             data.action === 'liked' ? [...prev, placeId] : prev.filter(id => id !== placeId)
         );
+    }
+  };
+
+  // 2. 评论点赞 (❤️)
+  const handleLikeComment = async (e, commentId, placeId) => {
+    e.stopPropagation();
+    const res = await fetch(`${authApiBase}/api/comments/like`, { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ phone: currentUser.phone, commentId }) 
+    });
+    const data = await res.json();
+    if (data.ok) {
+        fetchComments(placeId); // 成功后刷新该评论区列表
     }
   };
 
@@ -146,15 +155,6 @@ function App() {
     const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
     const data = await res.json();
     if (data.ok) { setNewComment(""); setCommentImage(null); fetchComments(id); }
-  };
-
-  const handleLikeComment = async (commentId, placeId) => {
-    const res = await fetch(`${authApiBase}/api/comments/like`, { 
-      method: "POST", headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify({ phone: currentUser.phone, commentId }) 
-    });
-    const data = await res.json();
-    if (data.ok) fetchComments(placeId);
   };
 
   const handleDeleteComment = async (cid, pid) => {
@@ -508,7 +508,7 @@ function App() {
     },
   ];
 
-   const getDist = (l1, l2) => {
+  const getDist = (l1, l2) => {
     if (!l1 || !l2) return 999;
     const R = 6371;
     const dLat = (l2.lat - l1.lat) * Math.PI / 180;
@@ -517,29 +517,21 @@ function App() {
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
   };
 
-  // ✅ 核心过滤与排序逻辑
   const getFilteredPlaces = () => {
     let list = places.map(p => ({ 
         ...p, 
         distVal: getDist(userLocation, p),
-        likes: placeStats[p.id] || 0, // 注入点赞数
-        isPlaceLiked: myLikedPlaceIds.includes(p.id) // 注入用户是否点赞
+        likes: placeStats[p.id] || 0,
+        isPlaceLiked: myLikedPlaceIds.includes(p.id)
     }));
-
-    // 先按搜索词过滤
     list = list.filter(p => p.name.includes(search));
-
-    // 根据分类过滤
     if (filter === "favorite") {
         list = list.filter(p => favorites.some(f => f.id === p.id));
     } else if (filter === "top10") {
-        // 🏆 榜单逻辑：按点赞数从高到低取前10名
         return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
     } else if (filter !== "all") {
         list = list.filter(p => p.type === filter);
     }
-
-    // 默认列表按距离排序
     return list.sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
   };
 
@@ -572,7 +564,6 @@ function App() {
     );
   }
 
-  // 处理评论区内部排序
   const getSortedComments = () => {
     if (!viewingCommentsPlace) return [];
     let list = [...(activeComments[viewingCommentsPlace.id] || [])];
@@ -595,12 +586,10 @@ function App() {
             <span style={{ fontWeight: 'bold' }}>{viewingCommentsPlace.name}的点评</span>
             <span style={{ width: '40px' }}></span>
           </div>
-
           <div style={sortContainerStyle}>
              <button onClick={() => setCommentSort("latest")} style={sortBtnStyle(commentSort === "latest")}>按照最新</button>
              <button onClick={() => setCommentSort("hot")} style={sortBtnStyle(commentSort === "hot")}>按照最火</button>
           </div>
-
           <div style={scrollContentStyle}>
              {getSortedComments().length === 0 ? (
                <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>
@@ -617,7 +606,11 @@ function App() {
                            <div style={{ fontSize: '14px', color: '#555', marginTop: '5px' }}>{c.content}</div>
                            {c.image_url && <img src={c.image_url} style={commentImgStyle} onClick={() => setZoomedSingleImage(c.image_url)} />}
                            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span onClick={() => handleLikeComment(c.id, viewingCommentsPlace.id)} style={likeBtnStyle(c.is_liked)}>
+                              {/* 修复：评论点赞点击事件 */}
+                              <span 
+                                onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} 
+                                style={likeBtnStyle(c.is_liked)}
+                              >
                                 {c.is_liked ? "❤️" : "🤍"} {c.like_count || 0}
                               </span>
                               {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, viewingCommentsPlace.id)} style={{ color: 'red', fontSize: '12px', cursor: 'pointer' }}>删除</span>}
@@ -641,7 +634,7 @@ function App() {
         </div>
       )}
 
-      {/* 🟢 反馈库 */}
+      {/* 🟢 反馈库 (管理员版) */}
       {showAdminFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '500px', maxHeight: '80vh', overflowY: 'auto' }}>
@@ -763,12 +756,11 @@ function App() {
           <input placeholder="搜索目的地..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* 吸顶导航 */}
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
             {[
                 { k: "all", l: "全部" }, 
-                { k: "top10", l: "🏆 榜单" }, // 新增榜单分类
+                { k: "top10", l: "🏆 榜单" }, 
                 { k: "favorite", l: "⭐收藏" }, 
                 { k: "food", l: "🍱美食" }, 
                 { k: "view", l: "🏞️景点" }, 
@@ -780,12 +772,10 @@ function App() {
           </div>
         </div>
 
-        {/* 列表内容 */}
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map((p, index) => (
             <div key={p.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position:'relative' }}>
               
-              {/* 排名勋章 (仅榜单模式显示) */}
               {filter === "top10" && (
                 <div style={rankBadgeStyle(index)}>{index + 1}</div>
               )}
@@ -801,15 +791,17 @@ function App() {
                       <span style={categoryTagStyle}>{p.type === 'food' ? '🍱 美食' : p.type === 'view' ? '🏞️ 景点' : p.type === 'cafe' ? '☕ 咖啡' : '🛍️ 商圈'}</span>
                       {p.hours && <span style={{ fontSize: '11px', color: '#888' }}>🕒 {p.hours}</span>}
                     </div>
-                    {p.phone && p.phone !== "无" && <a href={`tel:${p.phone}`} style={{ fontSize: '11px', color: '#5aa77b', textDecoration: 'none', display: 'block', marginTop: '4px' }}>📞 {p.phone}</a>}
                  </div>
               </div>
               <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{p.desc}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你：{p.distVal} km</div>
                 
-                {/* ✅ 地点点赞按钮 ✅ */}
-                <div onClick={() => handleLikePlace(p.id)} style={placeLikeBtnStyle(p.isPlaceLiked)}>
+                {/* 修复：景点点赞点击事件 */}
+                <div 
+                    onClick={(e) => handleLikePlace(e, p.id)} 
+                    style={placeLikeBtnStyle(p.isPlaceLiked)}
+                >
                     {p.isPlaceLiked ? "👍" : "🤍"} {p.likes}
                 </div>
               </div>
@@ -836,8 +828,7 @@ function App() {
 
 // 💄 样式
 const rankBadgeStyle = (idx) => ({ position: 'absolute', top: '-5px', left: '-5px', width: '24px', height: '24px', background: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7dbf96', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 1, boxShadow: '0 2px 5px rgba(0,0,0,0.1)' });
-const placeLikeBtnStyle = (liked) => ({ cursor: 'pointer', fontSize: '12px', padding: '4px 10px', borderRadius: '15px', background: liked ? '#e8f5eb' : '#f0f0f0', color: liked ? '#2e6a4a' : '#888', fontWeight: 'bold', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px' });
-
+const placeLikeBtnStyle = (liked) => ({ cursor: 'pointer', fontSize: '12px', padding: '6px 14px', borderRadius: '20px', background: liked ? '#e8f5eb' : '#f0f0f0', color: liked ? '#2e6a4a' : '#888', fontWeight: 'bold', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px' });
 const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
 const navHeaderStyle = { background: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', zIndex: 2100 };
 const sortContainerStyle = { background: 'white', padding: '8px 20px', display: 'flex', gap: '15px', borderBottom: '1px solid #eee' };
@@ -870,7 +861,7 @@ const btnCancelStyle = { flex: 1, padding: '12px', borderRadius: '12px', border:
 const textAreaStyle = { width: '100%', height: '120px', borderRadius: '12px', padding: '12px', border: '1px solid #eee', outline: 'none' };
 const floatBtnStyle = { position: "absolute", right: "15px", bottom: "15px", width: "45px", height: "45px", borderRadius: "50%", background: "white", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.2)", fontSize: "20px", zIndex: 20 };
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
-const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "70px", fontSize: "12px" };
+const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", padding: "0 10px" };
 const horizontalScrollWrapper = { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '15px' };
 const albumThumbStyle = { height: '150px', borderRadius: '12px', flexShrink: 0 };
 const linkStyle = { color: "#5aa77b", cursor: "pointer", textDecoration: "underline" };
