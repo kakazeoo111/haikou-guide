@@ -17,7 +17,6 @@ function App() {
   const [codeHint, setCodeHint] = useState("");
   const [isSendingCode, setIsSendingCode] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [isAuthLoading, setIsAuthLoading] = useState(false);
 
   // ✅ 评论与详情
   const [viewingCommentsPlace, setViewingCommentsPlace] = useState(null); 
@@ -56,7 +55,6 @@ function App() {
     return date.toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
 
-  // 初始化
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
     if (savedUser) setCurrentUser(savedUser);
@@ -71,15 +69,18 @@ function App() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
-  // 登录后同步数据
+  useEffect(() => {
+    if (zoomMode && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = window.innerWidth * initialSlide;
+    }
+  }, [zoomMode, initialSlide]);
+
   useEffect(() => {
     if (currentUser) {
-      // 获取收藏
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
         .then(res => res.json())
         .then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
       
-      // 获取地点点赞榜统计
       fetch(`${authApiBase}/api/places/stats?phone=${currentUser.phone}`)
         .then(res => res.json())
         .then(data => {
@@ -105,12 +106,11 @@ function App() {
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
   // ================================
-  // ✅ 核心业务逻辑 (修复点赞点击响应)
+  // ✅ 核心业务函数
   // ================================
 
-  // 1. 地点点赞 (👍)
   const handleLikePlace = async (e, placeId) => {
-    e.stopPropagation(); // 阻止点击穿透到卡片
+    e.stopPropagation();
     const res = await fetch(`${authApiBase}/api/places/like`, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
@@ -125,18 +125,14 @@ function App() {
     }
   };
 
-  // 2. 评论点赞 (❤️)
   const handleLikeComment = async (e, commentId, placeId) => {
     e.stopPropagation();
     const res = await fetch(`${authApiBase}/api/comments/like`, { 
-      method: "POST", 
-      headers: { "Content-Type": "application/json" }, 
+      method: "POST", headers: { "Content-Type": "application/json" }, 
       body: JSON.stringify({ phone: currentUser.phone, commentId }) 
     });
     const data = await res.json();
-    if (data.ok) {
-        fetchComments(placeId); // 成功后刷新该评论区列表
-    }
+    if (data.ok) fetchComments(placeId);
   };
 
   const fetchComments = async (id) => {
@@ -178,6 +174,12 @@ function App() {
     }
   };
 
+  const fetchAllFeedbacks = async () => {
+    const res = await fetch(`${authApiBase}/api/feedback/all`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone }) });
+    const data = await res.json();
+    if (data.ok) { setAllFeedbacks(data.data); setShowAdminFeedback(true); }
+  };
+
   const handleFeedbackSubmit = async () => {
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
@@ -186,12 +188,6 @@ function App() {
     const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
     const data = await res.json();
     if (data.ok) { alert(data.message); setFeedbackContent(""); setFeedbackImage(null); setShowFeedback(false); }
-  };
-
-  const fetchAllFeedbacks = async () => {
-    const res = await fetch(`${authApiBase}/api/feedback/all`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone }) });
-    const data = await res.json();
-    if (data.ok) { setAllFeedbacks(data.data); setShowAdminFeedback(true); }
   };
 
   const handleUpdateNotice = async () => {
@@ -214,14 +210,12 @@ function App() {
   const handleAuthSubmit = async (e) => {
     e.preventDefault();
     let ep = authMode === "register" ? "/api/auth/register" : (authMode === "reset" ? "/api/auth/reset-password" : "/api/auth/login");
-    setIsAuthLoading(true);
     const res = await fetch(`${authApiBase}${ep}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(loginForm) });
     const d = await res.json();
     if (d.ok) {
       if (authMode === "login") { setCurrentUser(d.user); localStorage.setItem("haikouUser", JSON.stringify(d.user)); }
       else { alert(d.message); setAuthMode("login"); }
     } else alert(d.message);
-    setIsAuthLoading(false);
   };
 
   const toggleFavorite = async (p) => {
@@ -233,7 +227,7 @@ function App() {
   // ✅ 40个完整地点数据
   // ================================
   const places = [
-        { id: 1, type: "view", name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景，进去图书馆需要提前几天预约", lat: 20.091026, lng: 110.262594,hours:"10:00-22:00",phone:"19907616926",
+        { id: 1, type: "view", isPhotoReady:true,name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景，进去图书馆需要提前几天预约", lat: 20.091026, lng: 110.262594,hours:"10:00-22:00",phone:"19907616926",
       album:[
         "https://api.suzcore.top/uploads/places/1_1.jpg",
         "https://api.suzcore.top/uploads/places/1_2.jpg",
@@ -252,7 +246,7 @@ function App() {
         "https://api.suzcore.top/uploads/places/3_2.jpg"
       ]
     },
-    { id: 4, type: "view", name: "万绿园", desc: "绿意盎然，湖边风景和林荫小道的宁静与清新是散步者的天堂", lat: 20.039770, lng: 110.320249,hours:"全天开放",phone:"0898-68511069",
+    { id: 4, type: "view",isPhotoReady:true, name: "万绿园", desc: "绿意盎然，湖边风景和林荫小道的宁静与清新是散步者的天堂", lat: 20.039770, lng: 110.320249,hours:"全天开放",phone:"0898-68511069",
       album:[
         "https://api.suzcore.top/uploads/places/4_1.jpg",
         "https://api.suzcore.top/uploads/places/4_2.jpg",
@@ -260,7 +254,7 @@ function App() {
         "https://api.suzcore.top/uploads/places/4_4.jpg"
       ]
     },
-    { id: 5, type: "street", name: "骑楼老街", desc: "充满历史韵味的街巷和南洋建筑，色彩斑斓。有很多的伴手礼销售点，还有许多地道小吃可供选择。", lat: 20.046030, lng: 110.350885,hours:"全天开放",phone:"无",
+    { id: 5, type: "street",isPhotoReady:true, name: "骑楼老街", desc: "充满历史韵味的街巷和南洋建筑，色彩斑斓。有很多的伴手礼销售点，还有许多地道小吃可供选择。", lat: 20.046030, lng: 110.350885,hours:"全天开放",phone:"无",
       album:[
         "https://api.suzcore.top/uploads/places/5_1.jpg",
         "https://api.suzcore.top/uploads/places/5_2.jpg",
@@ -273,26 +267,26 @@ function App() {
         "https://api.suzcore.top/uploads/places/6_2.jpg"
       ]
     },
-    { id: 7, type: "view", name: "天空之山", desc: "漂浮在云端的秘境，可以登顶远眺全景，旁边靠海，是个休闲打卡的理想点", lat: 20.064052, lng: 110.313215,hours:"全天开放",phone:"无",
+    { id: 7, type: "view",isPhotoReady:true, name: "天空之山", desc: "漂浮在云端的秘境，可以登顶远眺全景，旁边靠海，是个休闲打卡的理想点", lat: 20.064052, lng: 110.313215,hours:"全天开放",phone:"无",
       album:[
         "https://api.suzcore.top/uploads/places/7_1.jpg",
         "https://api.suzcore.top/uploads/places/7_2.jpg",
         "https://api.suzcore.top/uploads/places/7_3.jpg"
       ]
     },
-    { id: 8, type: "view", name: "西秀海滩", desc: "海口目前打卡最多的海滩，蔚蓝秘境一般，好似童话的海边", lat: 20.029237, lng: 110.270513,hours:"全天开放",phone:"0898-68654616",
+    { id: 8, type: "view",isPhotoReady:true, name: "西秀海滩", desc: "海口目前打卡最多的海滩，蔚蓝秘境一般，好似童话的海边", lat: 20.029237, lng: 110.270513,hours:"全天开放",phone:"0898-68654616",
       album:[
         "https://api.suzcore.top/uploads/places/8_1.jpg",
         "https://api.suzcore.top/uploads/places/8_2.jpg"
       ]
     },
-    { id: 9, type: "view", name: "观海台", desc: "临海而建，近西秀海滩，有人说像是误入了宫崎骏的童话世界。是很有名的打卡点", lat: 20.037925, lng: 110.304154,hours:"全天开放",phone:"无",
+    { id: 9, type: "view",isPhotoReady:true, name: "观海台", desc: "临海而建，近西秀海滩，有人说像是误入了宫崎骏的童话世界。是很有名的打卡点", lat: 20.037925, lng: 110.304154,hours:"全天开放",phone:"无",
       album:[
         "https://api.suzcore.top/uploads/places/9_1.jpg",
         "https://api.suzcore.top/uploads/places/9_2.jpg"
       ]
     },
-    { id: 10, type: "view", name: "拾贝公园", desc: "小众高级感海边，北欧风的电影感，像是被遗忘的孤独之地", lat: 20.094954, lng: 110.375914,hours:"全天开放",phone:"0898-66555888",
+    { id: 10, type: "view",isPhotoReady:true, name: "拾贝公园", desc: "小众高级感海边，北欧风的电影感，像是被遗忘的孤独之地", lat: 20.094954, lng: 110.375914,hours:"全天开放",phone:"0898-66555888",
       album:[
         "https://api.suzcore.top/uploads/places/10_1.jpg",
         "https://api.suzcore.top/uploads/places/10_2.jpg",
@@ -317,7 +311,7 @@ function App() {
         "https://api.suzcore.top/uploads/places/13_1.jpg"
       ]
     },
-    { id: 14, type: "street", name: "自在湾", desc: "唯美临海步行街，面朝大海坐在咖啡厅拍照打卡吃饭，海风轻拂感受自在生活。", lat: 20.042410, lng: 110.314577,hours:"全天开放",phone:"无",
+    { id: 14, type: "street",isPhotoReady:true, name: "自在湾", desc: "唯美临海步行街，面朝大海坐在咖啡厅拍照打卡吃饭，海风轻拂感受自在生活。", lat: 20.042410, lng: 110.314577,hours:"全天开放",phone:"无",
       album:[
         "https://api.suzcore.top/uploads/places/14_1.jpg",
         "https://api.suzcore.top/uploads/places/14_2.jpg",
@@ -460,7 +454,7 @@ function App() {
         "https://api.suzcore.top/uploads/places/34_3.jpg"
       ]
     },
-    { id: 35, type: "cafe", name: "小夜盲", desc: "极具氛围的小咖啡馆，老板人很好，详情的照片是站主对象亲自拍摄，强力推荐喜欢温馨的游客前去一试", lat: 20.034977, lng: 110.346373,hours:"12:00-02:00",phone:"18976264285",
+    { id: 35, type: "cafe",isPhotoReady:true, name: "小夜盲", desc: "极具氛围的小咖啡馆，老板人很好，详情的照片是站主对象亲自拍摄，强力推荐喜欢温馨的游客前去一试", lat: 20.034977, lng: 110.346373,hours:"12:00-02:00",phone:"18976264285",
       album:[
         "https://api.suzcore.top/uploads/places/35_1.jpg",
         "https://api.suzcore.top/uploads/places/35_2.jpg",
@@ -468,21 +462,21 @@ function App() {
         "https://api.suzcore.top/uploads/places/35_4.jpg"
       ]
     },
-    { id: 36, type: "cafe", name: "工芸咖啡", desc: "海景咖啡馆。绝美海景与温暖阳光让它成为海口最难约的海景下午茶", lat: 20.061229, lng: 110.317416,hours:"10:00-24:00",phone:"18086897848",
+    { id: 36, type: "cafe",isPhotoReady:true, name: "工芸咖啡", desc: "海景咖啡馆。绝美海景与温暖阳光让它成为海口最难约的海景下午茶", lat: 20.061229, lng: 110.317416,hours:"10:00-24:00",phone:"18086897848",
       album:[
         "https://api.suzcore.top/uploads/places/36_1.jpg",
         "https://api.suzcore.top/uploads/places/36_2.jpg",
         "https://api.suzcore.top/uploads/places/36_3.jpg"
       ]
     },
-    { id: 37, type: "cafe", name: "斑马院子", desc: "藏在小巷子深处的可爱小店，店里可约拍立得，还有懒人沙发，非常出片", lat: 20.031764, lng: 110.332199,hours:"14:30-19:00",phone:"187896755607",
+    { id: 37, type: "cafe",isPhotoReady:true, name: "斑马院子", desc: "藏在小巷子深处的可爱小店，店里可约拍立得，还有懒人沙发，非常出片", lat: 20.031764, lng: 110.332199,hours:"14:30-19:00",phone:"187896755607",
       album:[
         "https://api.suzcore.top/uploads/places/37_1.jpg",
         "https://api.suzcore.top/uploads/places/37_2.jpg",
         "https://api.suzcore.top/uploads/places/37_3.jpg"
       ]
     },
-    { id: 38, type: "cafe", name: "青庭咖啡", desc: "日系窗景咖啡店，在万绿园里面，一扇窗让它成为了著名的打卡点", lat: 20.041134, lng: 110.325469,hours:"10:00-21:00",phone:"0868-68553237",
+    { id: 38, type: "cafe",isPhotoReady:true, name: "青庭咖啡", desc: "日系窗景咖啡店，在万绿园里面，一扇窗让它成为了著名的打卡点", lat: 20.041134, lng: 110.325469,hours:"10:00-21:00",phone:"0868-68553237",
       album:[
         "https://api.suzcore.top/uploads/places/38_1.jpg",
         "https://api.suzcore.top/uploads/places/38_2.jpg",
@@ -529,6 +523,8 @@ function App() {
         list = list.filter(p => favorites.some(f => f.id === p.id));
     } else if (filter === "top10") {
         return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
+    } else if (filter === "photo") {
+        list = list.filter(p => p.isPhotoReady); // 新增出片过滤
     } else if (filter !== "all") {
         list = list.filter(p => p.type === filter);
     }
@@ -606,11 +602,7 @@ function App() {
                            <div style={{ fontSize: '14px', color: '#555', marginTop: '5px' }}>{c.content}</div>
                            {c.image_url && <img src={c.image_url} style={commentImgStyle} onClick={() => setZoomedSingleImage(c.image_url)} />}
                            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              {/* 修复：评论点赞点击事件 */}
-                              <span 
-                                onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} 
-                                style={likeBtnStyle(c.is_liked)}
-                              >
+                              <span onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} style={likeBtnStyle(c.is_liked)}>
                                 {c.is_liked ? "❤️" : "🤍"} {c.like_count || 0}
                               </span>
                               {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, viewingCommentsPlace.id)} style={{ color: 'red', fontSize: '12px', cursor: 'pointer' }}>删除</span>}
@@ -756,11 +748,13 @@ function App() {
           <input placeholder="搜索目的地..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
+        {/* 吸顶导航 */}
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
             {[
                 { k: "all", l: "全部" }, 
                 { k: "top10", l: "🏆 榜单" }, 
+                { k: "photo", l: "📸 出片" }, // 新增出片按钮
                 { k: "favorite", l: "⭐收藏" }, 
                 { k: "food", l: "🍱美食" }, 
                 { k: "view", l: "🏞️景点" }, 
@@ -772,6 +766,7 @@ function App() {
           </div>
         </div>
 
+        {/* 列表内容 */}
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map((p, index) => (
             <div key={p.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position:'relative' }}>
@@ -787,8 +782,10 @@ function App() {
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{p.name}</h3>
                       <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>{favorites.some(f => f.id === p.id) ? "⭐" : "☆"}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                       <span style={categoryTagStyle}>{p.type === 'food' ? '🍱 美食' : p.type === 'view' ? '🏞️ 景点' : p.type === 'cafe' ? '☕ 咖啡' : '🛍️ 商圈'}</span>
+                      {/* ✅ 新增：可出片标签渲染 ✅ */}
+                      {p.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
                       {p.hours && <span style={{ fontSize: '11px', color: '#888' }}>🕒 {p.hours}</span>}
                     </div>
                  </div>
@@ -797,7 +794,6 @@ function App() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你：{p.distVal} km</div>
                 
-                {/* 修复：景点点赞点击事件 */}
                 <div 
                     onClick={(e) => handleLikePlace(e, p.id)} 
                     style={placeLikeBtnStyle(p.isPlaceLiked)}
@@ -852,6 +848,7 @@ const modalContentStyle = { background: 'white', width: '100%', maxWidth: '500px
 const avatarStyle = { width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover", border: "2px solid #5aa77b", cursor: 'pointer' };
 const listThumbStyle = { width: "70px", height: "70px", borderRadius: "12px", objectFit: "cover", cursor: 'zoom-in' };
 const categoryTagStyle = { fontSize: '10px', color: '#5aa77b', background: '#e8f5eb', padding: '2px 6px', borderRadius: '4px' };
+const photoTagStyle = { fontSize: '10px', color: '#ff9800', background: '#fff3e0', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', border: '1px solid #ffe0b2' };
 const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
 const btnSmallStyle = (m) => ({ padding: "8px 12px", borderRadius: "8px", border: "none", background: m ? "#df6b76" : "#e8f5eb", color: m ? "white" : "#2e6a4a", fontSize: "12px", cursor: "pointer" });
 const btnDetailStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: '#e8f5eb', color: '#2e6a4a', fontSize: "12px", cursor: "pointer" };
