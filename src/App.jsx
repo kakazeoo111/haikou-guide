@@ -42,7 +42,7 @@ function App() {
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
-  const [feedbackImage, setFeedbackImage] = useState(null);
+  const [feedbackImage, setFeedbackImage] = useState(null); // 反馈图片状态
   const [showAdminFeedback, setShowAdminFeedback] = useState(false); 
   const [allFeedbacks, setAllFeedbacks] = useState([]); 
 
@@ -187,7 +187,12 @@ function App() {
     if (feedbackImage) formData.append("image", feedbackImage);
     const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
     const data = await res.json();
-    if (data.ok) { alert(data.message); setFeedbackContent(""); setFeedbackImage(null); setShowFeedback(false); }
+    if (data.ok) { 
+        alert(data.message); 
+        setFeedbackContent(""); 
+        setFeedbackImage(null); 
+        setShowFeedback(false); 
+    }
   };
 
   const handleUpdateNotice = async () => {
@@ -524,7 +529,7 @@ function App() {
     } else if (filter === "top10") {
         return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
     } else if (filter === "photo") {
-        list = list.filter(p => p.isPhotoReady); // 新增出片过滤
+        list = list.filter(p => p.isPhotoReady);
     } else if (filter !== "all") {
         list = list.filter(p => p.type === filter);
     }
@@ -709,14 +714,42 @@ function App() {
         </div>
       )}
 
-      {/* 投诉建议 */}
+      {/* ✅ 反馈建议弹窗 (已修复图片配图功能) */}
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>反馈建议</h2>
-            <textarea placeholder="在这里写下您的建议..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
+            <textarea 
+                placeholder="在这里写下您的建议..." 
+                value={feedbackContent} 
+                onChange={e => setFeedbackContent(e.target.value)} 
+                style={textAreaStyle} 
+            />
+            {/* 图片预览 */}
+            {feedbackImage && (
+                <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
+                    <img 
+                        src={URL.createObjectURL(feedbackImage)} 
+                        style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #eee' }} 
+                        alt="preview" 
+                    />
+                    <div 
+                        onClick={() => setFeedbackImage(null)} 
+                        style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ff4d4f', color: 'white', borderRadius: '50%', width: '18px', height: '18px', textAlign: 'center', fontSize: '12px', cursor: 'pointer' }}
+                    >×</div>
+                </div>
+            )}
             <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-               <button onClick={() => setShowFeedback(false)} style={btnCancelStyle}>取消</button>
+               {/* 📸 图片选择按钮 */}
+               <button onClick={() => document.getElementById('feedback-img-input').click()} style={btnIconStyle}>🖼️</button>
+               <input 
+                    type="file" 
+                    id="feedback-img-input" 
+                    hidden 
+                    accept="image/*" 
+                    onChange={e => setFeedbackImage(e.target.files[0])} 
+                />
+               <button onClick={() => { setShowFeedback(false); setFeedbackImage(null); }} style={btnCancelStyle}>取消</button>
                <button onClick={handleFeedbackSubmit} style={btnMainStyle}>提交</button>
             </div>
           </div>
@@ -731,7 +764,6 @@ function App() {
 
       {/* 🔵 列表区域 (70vh) */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
-        
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={avatarStyle} onClick={() => document.getElementById('avatar-input').click()} />
@@ -748,13 +780,12 @@ function App() {
           <input placeholder="搜索目的地..." value={search} onChange={e => setSearch(e.target.value)} style={inputStyle} />
         </div>
 
-        {/* 吸顶导航 */}
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
           <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
             {[
                 { k: "all", l: "全部" }, 
                 { k: "top10", l: "🏆 榜单" }, 
-                { k: "photo", l: "📸 出片" }, // 新增出片按钮
+                { k: "photo", l: "📸 出片" }, 
                 { k: "favorite", l: "⭐收藏" }, 
                 { k: "food", l: "🍱美食" }, 
                 { k: "view", l: "🏞️景点" }, 
@@ -766,7 +797,6 @@ function App() {
           </div>
         </div>
 
-        {/* 列表内容 */}
         <div style={{ padding: "10px 20px 30px 20px" }}>
           {filteredPlaces.map((p, index) => (
             <div key={p.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position:'relative' }}>
@@ -784,7 +814,6 @@ function App() {
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                       <span style={categoryTagStyle}>{p.type === 'food' ? '🍱 美食' : p.type === 'view' ? '🏞️ 景点' : p.type === 'cafe' ? '☕ 咖啡' : '🛍️ 商圈'}</span>
-                      {/* ✅ 新增：可出片标签渲染 ✅ */}
                       {p.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
                       {p.hours && <span style={{ fontSize: '11px', color: '#888' }}>🕒 {p.hours}</span>}
                     </div>
@@ -793,11 +822,7 @@ function App() {
               <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{p.desc}</p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你：{p.distVal} km</div>
-                
-                <div 
-                    onClick={(e) => handleLikePlace(e, p.id)} 
-                    style={placeLikeBtnStyle(p.isPlaceLiked)}
-                >
+                <div onClick={(e) => handleLikePlace(e, p.id)} style={placeLikeBtnStyle(p.isPlaceLiked)}>
                     {p.isPlaceLiked ? "👍" : "🤍"} {p.likes}
                 </div>
               </div>
@@ -855,10 +880,11 @@ const btnDetailStyle = { padding: "8px 12px", borderRadius: "8px", border: "none
 const btnNavStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: "#5aa77b", color: "white", fontSize: "12px", cursor: "pointer" };
 const btnSendStyle = { background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '6px 16px', cursor:'pointer', fontSize: '13px', fontWeight: 'bold' };
 const btnCancelStyle = { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white' };
+const btnIconStyle = { padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '18px' }; // 图标按钮样式
 const textAreaStyle = { width: '100%', height: '120px', borderRadius: '12px', padding: '12px', border: '1px solid #eee', outline: 'none' };
 const floatBtnStyle = { position: "absolute", right: "15px", bottom: "15px", width: "45px", height: "45px", borderRadius: "50%", background: "white", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.2)", fontSize: "20px", zIndex: 20 };
 const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
-const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", padding: "0 10px" };
+const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "70px", fontSize: "12px" };
 const horizontalScrollWrapper = { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '15px' };
 const albumThumbStyle = { height: '150px', borderRadius: '12px', flexShrink: 0 };
 const linkStyle = { color: "#5aa77b", cursor: "pointer", textDecoration: "underline" };
