@@ -45,6 +45,18 @@ function App() {
   const ADMIN_PHONE = "13707584213"; 
   const authApiBase = "https://api.suzcore.top";
 
+  // 时间格式化小工具
+  const formatCommentTime = (dateStr) => {
+    if (!dateStr) return "刚刚";
+    const date = new Date(dateStr);
+    return date.toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // 1. 初始化
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
@@ -683,25 +695,53 @@ function App() {
                 <div onClick={() => { if (showCommentId === p.id) setShowCommentId(null); else { setShowCommentId(p.id); fetchComments(p.id); } }} style={commentLinkStyle}>💬 查看评论区</div>
                 {showCommentId === p.id && (
                   <div style={commentBoxStyle}>
-                    <div style={{maxHeight:'200px', overflowY:'auto', marginBottom:'10px'}}>
+                    <div style={{maxHeight:'250px', overflowY:'auto', marginBottom:'10px'}}>
                       {(activeComments[p.id] || []).map(c => (
-                        <div key={c.id} style={{ display: 'flex', gap: '8px', marginBottom: '10px', position:'relative' }}>
-                          <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '25px', height: '25px', borderRadius: '50%', objectFit:'cover' }} />
-                          <div style={{ flex: 1, fontSize: '12px' }}>
-                            <strong>{c.username}</strong>: {c.content}
-                            {c.image_url && <img src={c.image_url} style={{ width: '100%', borderRadius: '5px', marginTop: '5px', cursor:'zoom-in' }} onClick={() => setZoomedSingleImage(c.image_url)} />}
+                        <div key={c.id} style={{ display: 'flex', gap: '10px', marginBottom: '15px', position:'relative' }}>
+                          {/* 用户头像 */}
+                          <img 
+                            src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} 
+                            style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit:'cover', border:'1px solid #eee' }} 
+                            alt="avatar"
+                          />
+                          <div style={{ flex: 1 }}>
+                            {/* 第一行：名字和时间 */}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontWeight: 'bold', fontSize: '13px', color: '#333' }}>{c.username}</span>
+                                <span style={{ fontSize: '10px', color: '#bbb' }}>{formatCommentTime(c.created_at)}</span>
+                            </div>
+                            {/* 第二行：评论内容 */}
+                            <div style={{ fontSize: '12px', color: '#555', marginTop: '4px', lineHeight: '1.5' }}>
+                              {c.content}
+                            </div>
+                            {/* 第三行：图片(如果有) */}
+                            {c.image_url && (
+                              <img 
+                                src={c.image_url} 
+                                style={{ width: '120px', borderRadius: '8px', marginTop: '8px', cursor:'zoom-in', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }} 
+                                onClick={() => setZoomedSingleImage(c.image_url)} 
+                                alt="comment-img"
+                              />
+                            )}
                           </div>
-                          {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, p.id)} style={{ color: 'red', cursor:'pointer' }}>×</span>}
+                          {/* 删除按钮 */}
+                          {c.user_phone === currentUser.phone && (
+                            <span 
+                              onClick={() => handleDeleteComment(c.id, p.id)} 
+                              style={{ color: '#ff4d4f', cursor:'pointer', fontSize: '16px', padding: '0 5px' }}
+                            >×</span>
+                          )}
                         </div>
                       ))}
                     </div>
-                    <div style={{ display: 'flex', gap: '5px' }}>
-                      <input value={newComment} onChange={e => setNewComment(e.target.value)} style={commentInputStyle} placeholder="写点评..." />
-                      <div onClick={() => document.getElementById(`c-i-${p.id}`).click()} style={{cursor:'pointer'}}>🖼️</div>
+                    {/* 发送评论框 */}
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'white', padding: '8px', borderRadius: '12px', border: '1px solid #f0f0f0' }}>
+                      <input value={newComment} onChange={e => setNewComment(e.target.value)} style={commentInputStyle} placeholder="说点什么吧..." />
+                      <div onClick={() => document.getElementById(`c-i-${p.id}`).click()} style={{cursor:'pointer', fontSize:'18px'}}>🖼️</div>
                       <input type="file" id={`c-i-${p.id}`} hidden accept="image/*" onChange={e => setCommentImage(e.target.files[0])} />
-                      <button onClick={() => handleAddComment(p.id)} style={btnSendStyle}>发</button>
+                      <button onClick={() => handleAddComment(p.id)} style={btnSendStyle}>发布</button>
                     </div>
-                    {commentImage && <div style={{fontSize:'10px', color:'#5aa77b'}}>已选: {commentImage.name}</div>}
+                    {commentImage && <div style={{fontSize:'10px', color:'#5aa77b', marginTop: '5px', marginLeft: '5px'}}>已选择图片: {commentImage.name}</div>}
                   </div>
                 )}
               </div>
@@ -737,9 +777,9 @@ const btnDetailStyle = { padding: "8px 12px", borderRadius: "8px", border: "none
 const btnNavStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: "#5aa77b", color: "white", fontWeight: "bold", fontSize: "12px", cursor: "pointer" };
 const btnSmallStyle = (m) => ({ padding: "8px 12px", borderRadius: "8px", border: "none", background: m ? "#df6b76" : "#e8f5eb", color: m ? "white" : "#2e6a4a", fontWeight: "bold", fontSize: "12px", cursor: "pointer" });
 const commentLinkStyle = { color: '#5aa77b', fontSize: '12px', marginTop: '10px', cursor: 'pointer' };
-const commentBoxStyle = { marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '10px' };
-const commentInputStyle = { flex: 1, border: '1px solid #eee', borderRadius: '5px', padding: '5px', fontSize: '11px', outline:'none' };
-const btnSendStyle = { background: '#5aa77b', color: 'white', border: 'none', borderRadius: '5px', padding: '0 10px', cursor:'pointer' };
+const commentBoxStyle = { marginTop: '10px', padding: '12px', background: '#f5f7f5', borderRadius: '16px' };
+const commentInputStyle = { flex: 1, border: 'none', background:'transparent', padding: '5px', fontSize: '13px', outline:'none' };
+const btnSendStyle = { background: '#5aa77b', color: 'white', border: 'none', borderRadius: '8px', padding: '6px 14px', cursor:'pointer', fontSize:'13px', fontWeight:'bold' };
 const textAreaStyle = { width: '100%', height: '120px', borderRadius: '10px', padding: '10px', border: '1px solid #eee', background: '#f9f9f9', fontSize: '14px', outline: 'none' };
 const btnCancelStyle = { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff' };
 const btnIconStyle = { padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: '#fff', cursor: 'pointer', fontSize: '18px' };
