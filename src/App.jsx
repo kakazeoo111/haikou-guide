@@ -997,12 +997,11 @@ function App() {
                 <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}&mode=driving&region=海口&output=html`)} style={btnNavStyle}>🧭 导航</button>
               </div>
 
-              {p.type !== 'recommend' && (
-                <div onClick={() => { fetchComments(p.id); setViewingCommentsPlace(p); }} 
-                     style={{ marginTop: '15px', borderTop: '1px dashed #eee', paddingTop: '10px', color: '#5aa77b', fontSize: '12px', cursor: 'pointer' }}>
-                  💬 查看评论区
-                </div>
-              )}
+              {/* ✅ 重点修改：统一评论区入口，不论是官方地点还是用户推荐，现在都有评论区功能 */}
+              <div onClick={() => { fetchComments(p.id); setViewingCommentsPlace(p); }} 
+                   style={{ marginTop: '15px', borderTop: '1px dashed #eee', paddingTop: '10px', color: '#5aa77b', fontSize: '12px', cursor: 'pointer' }}>
+                💬 查看评论区
+              </div>
             </div>
           ))}
         </div>
