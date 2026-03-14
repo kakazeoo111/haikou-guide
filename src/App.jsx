@@ -163,6 +163,13 @@ function App() {
   // ✅ 改进后的地点输入实时搜索
   const handleRecommendInputChange = (val) => {
     setNewRec({ ...newRec, name: val, lat: null, lng: null }); // 输入变化时重置坐标
+
+    // ✅ 核心修复：检查 BMap 是否存在
+  if (!window.BMap) {
+    console.error("百度地图API尚未加载完毕");
+    return;
+  }
+
     if (val.trim().length > 1) {
       const local = new window.BMap.LocalSearch("海口市", {
         onSearchComplete: (results) => {
@@ -195,6 +202,12 @@ function App() {
   // 保留原有的点击定位按钮功能作为兜底
   const handleSearchLoc = () => {
     if (!newRec.name) return alert("请输入地点名称");
+
+    // ✅ 核心修复
+  if (!window.BMap) {
+    alert("地图插件加载中，请稍后再试...");
+    return;
+  }
     const local = new window.BMap.LocalSearch("海口市", {
         onSearchComplete: (results) => {
             if (local.getStatus() === 0 && results.getPoi(0)) {
