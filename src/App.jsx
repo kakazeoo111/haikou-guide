@@ -98,7 +98,18 @@ function App() {
                 setMyLikedPlaceIds((data.myLikedIds || []).map(id => String(id)));
             }
         });
-      // ... 其他 fetch 保持不变
+      // 3. 获取推荐列表
+      fetchRecommendations();
+
+      // 4. ✅ 获取公告（检查这里！）
+      fetch(`${authApiBase}/api/announcement`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok && data.content) { 
+            setNoticeContent(data.content); 
+            setShowNotice(true); // 👈 确保这一行在，公告才会弹出来
+          }
+        });
     }
 }, [currentUser]);
 
