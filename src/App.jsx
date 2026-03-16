@@ -86,14 +86,11 @@ function App() {
     if (currentUser) {
       // ✅ 这里的逻辑改成：只管把收藏的 ID 拿回来存着
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
-        .then(res => res.json())
-        .then(data => {
-            if(data.ok) {
-                // 强制转为字符串数组，防止 1 变成 "1" 导致匹配失败
-                const ids = data.favIds.map(id => String(id));
-                setFavorites(ids); 
-            }
-        });
+      .then(res => res.json())
+      .then(data => {
+        // ✅ 核心修复：直接存入 ID 数组，不要在这一步过滤官方景点
+        if (data.ok) setFavorites(data.favIds.map(id => String(id)));
+      });
 
       fetchRecommendations();
 
@@ -318,24 +315,32 @@ function App() {
   };
 
   const toggleFavorite = async (p) => {
-    const pId = String(p.id); // 统一转成字符串
-    const isFavorited = favorites.includes(pId);
+  const pId = String(p.id);
+  const isCurrentlyFavorited = favorites.includes(pId);
 
-    const res = await fetch(`${authApiBase}/api/favorites/toggle`, { 
-        method: "POST", 
-        headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ phone: currentUser.phone, placeId: pId }) 
-    });
-    
-    if ((await res.json()).ok) {
-        // ✅ 这里的逻辑：直接在 ID 数组里增删，实现“秒变色”且刷新不丢
-        if (isFavorited) {
-            setFavorites(favorites.filter(id => id !== pId));
-        } else {
-            setFavorites([...favorites, pId]);
-        }
-    }
-  };
+  // 立即更新本地 UI（实现秒变色）
+  if (isCurrentlyFavorited) {
+    setFavorites(prev => prev.filter(id => id !== pId));
+  } else {
+    setFavorites(prev => [...prev, pId]);
+  }
+
+  // 发送请求给后端同步
+  const res = await fetch(`${authApiBase}/api/favorites/toggle`, { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ phone: currentUser.phone, placeId: pId }) 
+  });
+  
+  const d = await res.json();
+  if (!d.ok) {
+    // 如果后端失败，把 UI 滚回到之前的状态
+    fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
+      .then(res => res.json())
+      .then(data => data.ok && setFavorites(data.favIds.map(id => String(id))));
+    alert("操作失败，请重试");
+  }
+};
   // ================================
   // ✅ 40个完整地点数据
   // ================================
@@ -624,20 +629,19 @@ function App() {
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
   };
 
- const getFilteredPlaces = () => {
-    // 1. 先把官方和推荐的数据合并成一个超大列表
+const getFilteredPlaces = () => {
+    // 1. 统一格式化所有数据源
     const allSource = [
         ...places.map(p => ({ 
             ...p, 
-            id: String(p.id), // 统一ID类型
+            id: String(p.id), // 统一ID为字符串
             distVal: getDist(userLocation, p),
             likes: placeStats[p.id] || 0,
             isPlaceLiked: myLikedPlaceIds.includes(p.id)
         })),
         ...recommendations.map(r => ({
             ...r,
-            id: `rec_${r.id}`, // 保持推荐地点的特殊前缀
-            realId: r.id,
+            id: `rec_${r.id}`, // 推荐地点的特殊ID格式
             name: r.place_name,
             desc: r.description,
             type: "recommend",
@@ -648,24 +652,23 @@ function App() {
         }))
     ];
 
-    // 2. 开始过滤
+    // 2. 根据搜索词过滤
     let list = allSource.filter(p => p.name.includes(search));
 
+    // 3. 根据分类过滤
     if (filter === "favorite") {
-        // ✅ 核心修复：直接从合并后的列表里找“ID在收藏数组里”的地点
+        // ✅ 这里的判断是关键：只要 ID 在 favorites 数组里的都显示
         return list.filter(p => favorites.includes(p.id))
                    .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
-    } else if (filter === "top10") {
-        return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
-    } else if (filter === "photo") {
-        list = list.filter(p => p.isPhotoReady);
-    } else if (filter !== "all") {
-        // 如果不是“全部”，就按类型过滤（food/view/recommend等）
-        list = list.filter(p => p.type === filter);
-    }
+    } 
     
+    // ... 其他 filter 判断（top10, photo 等）保持不变，使用上面的 list 即可
+    if (filter === "top10") return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
+    if (filter === "photo") list = list.filter(p => p.isPhotoReady);
+    else if (filter !== "all") list = list.filter(p => p.type === filter);
+
     return list.sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
-  };
+};
 
   const filteredPlaces = getFilteredPlaces();
 
@@ -988,7 +991,9 @@ function App() {
                  <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{p.name}</h3>
-                       <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>{favorites.some(f => f.id === p.id) ? "⭐" : "☆"}</span>
+                       <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>
+    {favorites.includes(String(p.id)) ? "⭐" : "☆"}
+</span>
                     </div>
                     {/* 分类、出片及电话标签行 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
