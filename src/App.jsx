@@ -84,16 +84,14 @@ function App() {
 
   useEffect(() => {
     if (currentUser) {
+      // ✅ 这里的逻辑改成：只管把收藏的 ID 拿回来存着
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
-        .then(res => res.json())
-        .then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
-      
-      fetch(`${authApiBase}/api/places/stats?phone=${currentUser.phone}`)
         .then(res => res.json())
         .then(data => {
             if(data.ok) {
-                setPlaceStats(data.stats || {});
-                setMyLikedPlaceIds(data.myLikedIds || []);
+                // 强制转为字符串数组，防止 1 变成 "1" 导致匹配失败
+                const ids = data.favIds.map(id => String(id));
+                setFavorites(ids); 
             }
         });
 
@@ -320,25 +318,21 @@ function App() {
   };
 
   const toggleFavorite = async (p) => {
-    // 1. 先判断当前这个地点是否已经在收藏列表里
-    const isCurrentlyFavorited = favorites.some(f => f.id === p.id);
+    const pId = String(p.id); // 统一转成字符串
+    const isFavorited = favorites.includes(pId);
 
     const res = await fetch(`${authApiBase}/api/favorites/toggle`, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }) 
+        body: JSON.stringify({ phone: currentUser.phone, placeId: pId }) 
     });
     
-    const d = await res.json();
-    
-    if (d.ok) {
-        // 2. 如果请求成功，直接在本地状态里增删，实现“秒开/秒灭”的效果
-        if (isCurrentlyFavorited) {
-            // 如果之前是收藏的，现在就移除
-            setFavorites(favorites.filter(f => f.id !== p.id));
+    if ((await res.json()).ok) {
+        // ✅ 这里的逻辑：直接在 ID 数组里增删，实现“秒变色”且刷新不丢
+        if (isFavorited) {
+            setFavorites(favorites.filter(id => id !== pId));
         } else {
-            // 如果之前没收藏，现在就加上
-            setFavorites([...favorites, p]);
+            setFavorites([...favorites, pId]);
         }
     }
   };
@@ -630,13 +624,20 @@ function App() {
     return (R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))).toFixed(2);
   };
 
-  const getFilteredPlaces = () => {
-    // 处理推荐分类
-    if (filter === "recommend") {
-        return recommendations.map(r => ({
+ const getFilteredPlaces = () => {
+    // 1. 先把官方和推荐的数据合并成一个超大列表
+    const allSource = [
+        ...places.map(p => ({ 
+            ...p, 
+            id: String(p.id), // 统一ID类型
+            distVal: getDist(userLocation, p),
+            likes: placeStats[p.id] || 0,
+            isPlaceLiked: myLikedPlaceIds.includes(p.id)
+        })),
+        ...recommendations.map(r => ({
             ...r,
-            id: `rec_${r.id}`, // 加前缀防冲突
-            realId: r.id,      // 后端真ID
+            id: `rec_${r.id}`, // 保持推荐地点的特殊前缀
+            realId: r.id,
             name: r.place_name,
             desc: r.description,
             type: "recommend",
@@ -644,26 +645,25 @@ function App() {
             likes: r.like_count || 0,
             isPlaceLiked: r.is_liked,
             album: r.image_url ? [r.image_url] : []
-        })).filter(p => p.name.includes(search))
-           .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
-    }
+        }))
+    ];
 
-    let list = places.map(p => ({ 
-        ...p, 
-        distVal: getDist(userLocation, p),
-        likes: placeStats[p.id] || 0,
-        isPlaceLiked: myLikedPlaceIds.includes(p.id)
-    }));
-    list = list.filter(p => p.name.includes(search));
+    // 2. 开始过滤
+    let list = allSource.filter(p => p.name.includes(search));
+
     if (filter === "favorite") {
-        list = list.filter(p => favorites.some(f => f.id === p.id));
+        // ✅ 核心修复：直接从合并后的列表里找“ID在收藏数组里”的地点
+        return list.filter(p => favorites.includes(p.id))
+                   .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
     } else if (filter === "top10") {
         return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
     } else if (filter === "photo") {
         list = list.filter(p => p.isPhotoReady);
     } else if (filter !== "all") {
+        // 如果不是“全部”，就按类型过滤（food/view/recommend等）
         list = list.filter(p => p.type === filter);
     }
+    
     return list.sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
   };
 
