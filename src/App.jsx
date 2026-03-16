@@ -5,7 +5,7 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [favoriteIds, setFavoriteIds] = useState([]);
+  const [favorites, setFavorites] = useState([]);
   const [targetPlaces, setTargetPlaces] = useState([]); 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -82,12 +82,11 @@ function App() {
     }
   }, [zoomMode, initialSlide]);
 
-   useEffect(() => {
+  useEffect(() => {
     if (currentUser) {
-      // ✅ 修正：获取收藏ID列表
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
         .then(res => res.json())
-        .then(data => data.ok && setFavoriteIds(data.favIds || []));
+        .then(data => data.ok && setFavorites(places.filter(p => data.favIds.includes(p.id))));
       
       fetch(`${authApiBase}/api/places/stats?phone=${currentUser.phone}`)
         .then(res => res.json())
@@ -633,17 +632,11 @@ function App() {
 
   const getFilteredPlaces = () => {
     // 处理推荐分类
-    const allSource = [
-        ...places.map(p => ({ 
-            ...p, 
-            distVal: getDist(userLocation, p),
-            likes: placeStats[p.id] || 0,
-            isPlaceLiked: myLikedPlaceIds.includes(p.id)
-        })),
-        ...recommendations.map(r => ({
+    if (filter === "recommend") {
+        return recommendations.map(r => ({
             ...r,
-            id: `rec_${r.id}`, // 保持 ID 前缀
-            realId: r.id,
+            id: `rec_${r.id}`, // 加前缀防冲突
+            realId: r.id,      // 后端真ID
             name: r.place_name,
             desc: r.description,
             type: "recommend",
@@ -651,30 +644,26 @@ function App() {
             likes: r.like_count || 0,
             isPlaceLiked: r.is_liked,
             album: r.image_url ? [r.image_url] : []
-        }))
-    ];
-
-     // 2. 根据搜索词过滤
-    let list = allSource.filter(p => p.name.includes(search));
-     // 3. 根据分类过滤
-    if (filter === "favorite") {
-        // ✅ 核心修复：根据 favoriteIds 过滤，确保推荐地点也能显示
-        return list.filter(p => favoriteIds.includes(p.id))
-                   .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
-    } 
-    else if (filter === "recommend") {
-        list = list.filter(p => p.type === "recommend");
-    } 
-    else if (filter === "top10") {
-        return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
-    } 
-    else if (filter === "photo") {
-        list = list.filter(p => p.isPhotoReady);
-    } 
-    else if (filter !== "all") {
-        list = list.filter(p => p.type === filter);
+        })).filter(p => p.name.includes(search))
+           .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
     }
 
+    let list = places.map(p => ({ 
+        ...p, 
+        distVal: getDist(userLocation, p),
+        likes: placeStats[p.id] || 0,
+        isPlaceLiked: myLikedPlaceIds.includes(p.id)
+    }));
+    list = list.filter(p => p.name.includes(search));
+    if (filter === "favorite") {
+        list = list.filter(p => favorites.some(f => f.id === p.id));
+    } else if (filter === "top10") {
+        return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
+    } else if (filter === "photo") {
+        list = list.filter(p => p.isPhotoReady);
+    } else if (filter !== "all") {
+        list = list.filter(p => p.type === filter);
+    }
     return list.sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
   };
 
