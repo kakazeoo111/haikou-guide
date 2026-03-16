@@ -133,16 +133,31 @@ function App() {
     }
   };
 
+  // ✅ 1. 补上漏掉的评论点赞函数
+  const handleLikeComment = async (e, commentId, placeId) => {
+    e.stopPropagation();
+    const res = await fetch(`${authApiBase}/api/comments/like`, { 
+      method: "POST", 
+      headers: { "Content-Type": "application/json" }, 
+      body: JSON.stringify({ phone: currentUser.phone, commentId }) 
+    });
+    const data = await res.json();
+    if (data.ok) fetchComments(placeId); // 重新加载该景点的评论
+  };
+
+  // ✅ 2. 修正推荐点赞函数（重点：传入真正的数字 ID）
   const handleLikeRec = async (e, recId) => {
     e.stopPropagation();
+    // 这里 recId 必须是数字（realId），否则后端 SQL 会报 500 错误
     const res = await fetch(`${authApiBase}/api/recommendations/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: currentUser.phone, recId })
+        body: JSON.stringify({ phone: currentUser.phone, recId: Number(recId) }) 
     });
-    const data = await res.json();
-    if (data.ok) fetchRecommendations();
+    if ((await res.json()).ok) fetchRecommendations(); // 刷新推荐列表数据
   };
+
+
 
   const handleDeleteRec = async (e, recId) => {
     e.stopPropagation();
@@ -642,6 +657,7 @@ const getFilteredPlaces = () => {
         ...recommendations.map(r => ({
             ...r,
             id: `rec_${r.id}`, // 推荐地点的特殊ID格式
+            realId:r.id,
             name: r.place_name,
             desc: r.description,
             type: "recommend",
