@@ -325,7 +325,7 @@ function App() {
     setFavorites(prev => [...prev, pId]);
   }
 
-  // 发送请求给后端同步
+  // 发送请求给后端同步1
   const res = await fetch(`${authApiBase}/api/favorites/toggle`, { 
       method: "POST", 
       headers: { "Content-Type": "application/json" }, 
