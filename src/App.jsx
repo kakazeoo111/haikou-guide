@@ -119,16 +119,19 @@ function App() {
 
   const handleLikePlace = async (e, placeId) => {
     e.stopPropagation();
+    const pId = String(placeId); // ✅ 统一转字符串
     const res = await fetch(`${authApiBase}/api/places/like`, { 
         method: "POST", 
         headers: { "Content-Type": "application/json" }, 
-        body: JSON.stringify({ phone: currentUser.phone, placeId }) 
+        body: JSON.stringify({ phone: currentUser.phone, placeId: pId }) 
     });
     const data = await res.json();
     if (data.ok) {
-        setPlaceStats(prev => ({ ...prev, [placeId]: data.newCount }));
+        // 更新点赞总数
+        setPlaceStats(prev => ({ ...prev, [pId]: data.newCount }));
+        // ✅ 核心修复：根据返回的 action 更新“我的点赞列表”
         setMyLikedPlaceIds(prev => 
-            data.action === 'liked' ? [...prev, placeId] : prev.filter(id => id !== placeId)
+            data.action === 'liked' ? [...prev, pId] : prev.filter(id => id !== pId)
         );
     }
   };
@@ -651,8 +654,8 @@ const getFilteredPlaces = () => {
             ...p, 
             id: String(p.id), // 统一ID为字符串
             distVal: getDist(userLocation, p),
-            likes: placeStats[p.id] || 0,
-            isPlaceLiked: myLikedPlaceIds.includes(p.id)
+            likes: placeStats[String(p.id)] || 0,
+            isPlaceLiked: myLikedPlaceIds.includes(String(p.id))
         })),
         ...recommendations.map(r => ({
             ...r,
