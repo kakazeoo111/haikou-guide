@@ -5,7 +5,7 @@ function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [favorites, setFavorites] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   const [targetPlaces, setTargetPlaces] = useState([]); 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -82,23 +82,25 @@ function App() {
     }
   }, [zoomMode, initialSlide]);
 
-  useEffect(() => {
+ useEffect(() => {
     if (currentUser) {
-      // ✅ 这里的逻辑改成：只管把收藏的 ID 拿回来存着
+      // 1. 获取收藏
       fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
-      .then(res => res.json())
-      .then(data => {
-        // ✅ 核心修复：直接存入 ID 数组，不要在这一步过滤官方景点
-        if (data.ok) setFavorites(data.favIds.map(id => String(id)));
-      });
-
-      fetchRecommendations();
-
-      fetch(`${authApiBase}/api/announcement`).then(res => res.json()).then(data => {
-        if (data.ok) { setNoticeContent(data.content); setShowNotice(true); }
-      });
+        .then(res => res.json())
+        .then(data => data.ok && setFavoriteIds((data.favIds || []).map(id => String(id))));
+      
+      // 2. 获取点赞 (把这部分也改了，解决点赞归零)
+      fetch(`${authApiBase}/api/places/stats?phone=${currentUser.phone}`)
+        .then(res => res.json())
+        .then(data => {
+            if(data.ok) {
+                setPlaceStats(data.stats || {});
+                setMyLikedPlaceIds((data.myLikedIds || []).map(id => String(id)));
+            }
+        });
+      // ... 其他 fetch 保持不变
     }
-  }, [currentUser]);
+}, [currentUser]);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -1011,7 +1013,7 @@ const getFilteredPlaces = () => {
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{p.name}</h3>
                        <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>
-    {favorites.includes(String(p.id)) ? "⭐" : "☆"}
+    {favoriteIds.includes(String(p.id)) ? "⭐" : "☆"}
 </span>
                     </div>
                     {/* 分类、出片及电话标签行 */}
