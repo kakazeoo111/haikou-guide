@@ -320,9 +320,27 @@ function App() {
   };
 
   const toggleFavorite = async (p) => {
-    const res = await fetch(`${authApiBase}/api/favorites/toggle`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }) });
+    // 1. 先判断当前这个地点是否已经在收藏列表里
+    const isCurrentlyFavorited = favorites.some(f => f.id === p.id);
+
+    const res = await fetch(`${authApiBase}/api/favorites/toggle`, { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" }, 
+        body: JSON.stringify({ phone: currentUser.phone, placeId: p.id }) 
+    });
+    
     const d = await res.json();
-    if (d.ok) d.action === "added" ? setFavorites([...favorites, p]) : setFavorites(favorites.filter(f => f.id !== p.id));
+    
+    if (d.ok) {
+        // 2. 如果请求成功，直接在本地状态里增删，实现“秒开/秒灭”的效果
+        if (isCurrentlyFavorited) {
+            // 如果之前是收藏的，现在就移除
+            setFavorites(favorites.filter(f => f.id !== p.id));
+        } else {
+            // 如果之前没收藏，现在就加上
+            setFavorites([...favorites, p]);
+        }
+    }
   };
   // ================================
   // ✅ 40个完整地点数据
@@ -970,7 +988,7 @@ function App() {
                  <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{p.name}</h3>
-                      {p.type !== 'recommend' && <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>{favorites.some(f => f.id === p.id) ? "⭐" : "☆"}</span>}
+                       <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>{favorites.some(f => f.id === p.id) ? "⭐" : "☆"}</span>
                     </div>
                     {/* 分类、出片及电话标签行 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
