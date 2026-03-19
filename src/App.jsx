@@ -347,7 +347,7 @@ function App() {
 
   const toggleFavorite = async (p) => {
   const pId = String(p.id);
-  const isCurrentlyFavorited = favorites.includes(pId);
+  const isCurrentlyFavorited = favoriteIds.includes(pId);
 
   // 立即更新本地 UI（实现秒变色）
   if (isCurrentlyFavorited) {
