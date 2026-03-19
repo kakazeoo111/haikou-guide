@@ -690,7 +690,7 @@ const getFilteredPlaces = () => {
     // 3. 根据分类过滤
     if (filter === "favorite") {
         // ✅ 这里的判断是关键：只要 ID 在 favorites 数组里的都显示
-        return list.filter(p => favorites.includes(p.id))
+        return list.filter(p => favoriteIds.includes(p.id))
                    .sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
     } 
     
