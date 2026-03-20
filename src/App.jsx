@@ -346,32 +346,44 @@ function App() {
   };
 
   const toggleFavorite = async (p) => {
-  const pId = String(p.id);
-  const isCurrentlyFavorited = favoriteIds.includes(pId);
+    const pId = String(p.id);
+    const isCurrentlyFavorited = favoriteIds.includes(pId);
 
-  // 立即更新本地 UI（实现秒变色）
-  if (isCurrentlyFavorited) {
-    setFavorites(prev => prev.filter(id => id !== pId));
-  } else {
-    setFavorites(prev => [...prev, pId]);
-  }
+    // 1. 立即更新本地 UI（实现秒变色/乐观更新）
+    // 注意：这里必须使用 setFavoriteIds 而不是 setFavorites
+    if (isCurrentlyFavorited) {
+      setFavoriteIds(prev => prev.filter(id => id !== pId));
+    } else {
+      setFavoriteIds(prev => [...prev, pId]);
+    }
 
-  // 发送请求给后端同步1
-  const res = await fetch(`${authApiBase}/api/favorites/toggle`, { 
-      method: "POST", 
-      headers: { "Content-Type": "application/json" }, 
-      body: JSON.stringify({ phone: currentUser.phone, placeId: pId }) 
-  });
-  
-  const d = await res.json();
-  if (!d.ok) {
-    // 如果后端失败，把 UI 滚回到之前的状态
-    fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
-      .then(res => res.json())
-      .then(data => data.ok && setFavorites(data.favIds.map(id => String(id))));
-    alert("操作失败，请重试");
-  }
-};
+    try {
+      // 2. 发送请求给后端同步
+      const res = await fetch(`${authApiBase}/api/favorites/toggle`, { 
+          method: "POST", 
+          headers: { "Content-Type": "application/json" }, 
+          body: JSON.stringify({ phone: currentUser.phone, placeId: pId }) 
+      });
+      
+      const d = await res.json();
+      if (!d.ok) {
+        throw new Error("后端保存失败");
+      }
+    } catch (err) {
+      // 3. 如果请求失败，回滚状态
+      console.error("操作失败:", err);
+      alert("收藏操作失败，请重试");
+      
+      // 重新从服务器获取准确列表进行覆盖
+      fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.ok) {
+            setFavoriteIds((data.favIds || []).map(id => String(id)));
+          }
+        });
+    }
+  };
   // ================================
   // ✅ 40个完整地点数据
   // ================================
