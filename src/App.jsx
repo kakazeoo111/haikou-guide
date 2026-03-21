@@ -798,14 +798,14 @@ const getFilteredPlaces = () => {
     if (all.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>;
 
     return parents.map(p => {
-      // 2. 找出当前主评论下的所有回复，并按时间“从旧到新”排序（ASC），这样对话才合逻辑
+      // 2. 找出当前主评论下的所有回复，按时间先后顺序排列（ASC）
       const myReplies = children
         .filter(c => String(c.parent_id) === String(p.id))
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
       return (
         <div key={p.id} style={{ marginBottom: '25px', borderBottom: '1px solid #f2f2f2', paddingBottom: '15px' }}>
-          {/* --- 主评论展示 (模仿抖音风格) --- */}
+          {/* --- 主评论展示 --- */}
           <div style={{ display: 'flex', gap: '10px' }}>
             <img src={p.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + p.user_phone} style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
             <div style={{ flex: 1 }}>
@@ -817,9 +817,10 @@ const getFilteredPlaces = () => {
                 <span>{formatCommentTime(p.created_at)}</span>
                 <span 
                   onClick={() => { setReplyTo(p); document.getElementById('comment-input').focus(); }} 
-                  style={{ cursor: 'pointer', fontWeight: '500' }}
+                  style={{ cursor: 'pointer', fontWeight: 'bold', color: '#5aa77b' }}
                 >回复</span>
-                <span onClick={(e) => handleLikeComment(e, p.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: p.is_liked ? '#ff4d4f' : '#999' }}>
+                {/* 主评论点赞 */}
+                <span onClick={(e) => handleLikeComment(e, p.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: p.is_liked ? '#ff4d4f' : '#999', display: 'flex', alignItems: 'center', gap: '3px' }}>
                    {p.is_liked ? "❤️" : "🤍"} {p.like_count || 0}
                 </span>
                 {p.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(p.id, viewingCommentsPlace.id)} style={{ color: '#ff4d4f', cursor: 'pointer' }}>删除</span>}
@@ -827,7 +828,7 @@ const getFilteredPlaces = () => {
             </div>
           </div>
 
-          {/* --- 回复区域 (嵌套在主评论下方，左侧留出间距) --- */}
+          {/* --- 回复区域 (嵌套在主评论下方) --- */}
           {myReplies.length > 0 && (
             <div style={{ marginLeft: '50px', marginTop: '12px' }}>
               {myReplies.map(reply => (
@@ -835,12 +836,21 @@ const getFilteredPlaces = () => {
                   <img src={reply.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + reply.user_phone} style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>{reply.username}</div>
-                    <div style={{ fontSize: '14px', color: '#333', margin: '4px 0' }}>{reply.content}</div>
+                    <div style={{ fontSize: '14px', color: '#333', margin: '4px 0' }}>
+                        {/* ✅ 自动添加回复对象标识 */}
+                        <span style={{ color: '#5aa77b', fontWeight: '500' }}>回复 @{p.username}：</span>
+                        {reply.content}
+                    </div>
                     {reply.image_url && <img src={reply.image_url} style={{ maxWidth: '120px', borderRadius: '6px', marginBottom: '4px' }} onClick={() => setZoomedSingleImage(reply.image_url)} />}
                     
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#bbb' }}>
                       <span>{formatCommentTime(reply.created_at)}</span>
-                      {/* 如果你想支持回复的回复，可以把这里也写上 setReplyTo(reply) */}
+                      {/* ✅ 子评论增加回复功能：点击也会设置 parentId 为主评论 p.id */}
+                      <span onClick={() => { setReplyTo(p); document.getElementById('comment-input').focus(); }} style={{ cursor: 'pointer', fontWeight: 'bold', color: '#5aa77b' }}>回复</span>
+                      {/* ✅ 子评论增加点赞功能 */}
+                      <span onClick={(e) => handleLikeComment(e, reply.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: reply.is_liked ? '#ff4d4f' : '#999', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        {reply.is_liked ? "❤️" : "🤍"} {reply.like_count || 0}
+                      </span>
                       {reply.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(reply.id, viewingCommentsPlace.id)} style={{ color: '#ff4d4f', cursor: 'pointer' }}>删除</span>}
                     </div>
                   </div>
