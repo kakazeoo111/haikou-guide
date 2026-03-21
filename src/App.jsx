@@ -1011,7 +1011,20 @@ const getFilteredPlaces = () => {
             flexDirection: 'column',
             boxSizing: 'border-box'
           }}>
-            <h2 style={{ color: '#2e6a4a', textAlign: 'center', marginTop: 0, fontSize: '18px' }}>✉ 在这里遇见不一样的椰城</h2>
+            <h2 style={{ 
+  color: '#2e6a4a', 
+  marginTop: 0, 
+  marginBottom: '20px',    // 增加一点下边距，让排版不拥挤
+  fontSize: '20px',        // 稍微加一点字号，更有标题感
+  fontWeight: 'bold',
+  display: 'flex',          // ✅ 开启 Flex 布局
+  alignItems: 'center',     // 垂直方向居中
+  justifyContent: 'center', // ✅ 水平方向绝对居中
+  gap: '10px',              // 图标和文字之间的间距
+  width: '100%'             // 确保占据整行宽度
+}}>
+  <span style={{ fontSize: '22px' }}>✉️</span> 在这里遇见不一样的椰城
+</h2>
             
             {/* 文字区域：内容多时会自动出现滚动条 */}
             <div style={{ 
