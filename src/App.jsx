@@ -894,43 +894,42 @@ const getFilteredPlaces = () => {
         </div>
       )}
 
-      {/* 公告弹窗 (保持不变...) */}
-      {/* 公告弹窗修改后的 JSX */}
-{showNotice && (
-  <div style={modalOverlayStyle}>
-    <div style={modalContentStyle}>
-      <h2 style={{ 
-        color: '#2e6a4a', 
-        fontSize: '18px', 
-        textAlign: 'center', 
-        marginTop: 0,
-        marginBottom: '15px' 
-      }}>📢 在这里遇见不一样的椰城</h2>
-      
-      {/* ✅ 给文字容器增加固定高度和滚动条 */}
-      <div style={{ 
-        padding: '0 5px', 
-        textAlign: 'left', 
-        color: '#555', 
-        fontSize: '14px', // 字体稍微缩小一点更适合移动端
-        lineHeight: '1.6', // 增加行高，阅读更舒适
-        whiteSpace: 'pre-wrap',
-        flex: 1,           // 自动撑开
-        overflowY: 'auto', // 内容多了就显示滚动条
-        WebkitOverflowScrolling: 'touch' // iOS 滑动优化
-      }}>
-        {noticeContent}
-      </div>
+      {/* 公告弹窗 (已优化缩小并支持滚动) */}
+      {showNotice && (
+        <div style={modalOverlayStyle}>
+          <div style={{ 
+            ...modalContentStyle, 
+            // 在这里直接判断，解决报错
+            width: isMobile ? '90%' : '420px', 
+            maxHeight: '75vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box'
+          }}>
+            <h2 style={{ color: '#2e6a4a', textAlign: 'center', marginTop: 0, fontSize: '18px' }}>📢 在这里遇见不一样的椰城</h2>
+            
+            {/* 文字区域：内容多时会自动出现滚动条 */}
+            <div style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              fontSize: '14px', 
+              color: '#555', 
+              lineHeight: '1.6',
+              padding: '0 5px',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {noticeContent}
+            </div>
 
-      <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
-        {currentUser.phone === ADMIN_PHONE && (
-          <button onClick={() => { setIsEditingNotice(true); setShowNotice(false); }} style={{ ...btnSmallStyle(false), flex: 1 }}>编辑</button>
-        )}
-        <button onClick={() => setShowNotice(false)} style={{ ...btnMainStyle, flex: 2, padding: '10px' }}>进入地图</button>
-      </div>
-    </div>
-  </div>
-)}
+            <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
+              {currentUser.phone === ADMIN_PHONE && (
+                <button onClick={() => { setIsEditingNotice(true); setShowNotice(false); }} style={{ ...btnSmallStyle(false), flex: 1 }}>编辑</button>
+              )}
+              <button onClick={() => setShowNotice(false)} style={{ ...btnMainStyle, flex: 2 }}>进入地图</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 公告编辑 (保持不变...) */}
       {isEditingNotice && (
@@ -1123,23 +1122,7 @@ const closeZoomStyle = { position: 'absolute', top: '30px', right: '30px', color
 const swipeContainerStyle = { display: 'flex', overflowX: 'auto', width: '100vw', height: '100vh', scrollSnapType: 'x mandatory' };
 const swipeItemStyle = { flexShrink: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' };
 const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' };
-const modalContentStyle = { 
-  background: 'white', 
-  // 核心修改 1：手机端宽度设为 90%，两边留出呼吸感；电脑端固定 420px
-  width: isMobile ? '90%' : '420px', 
-  maxWidth: '500px', 
-  borderRadius: '24px', 
-  padding: '24px',
-  
-  // 核心修改 2：限制最高高度为屏幕的 75%，防止变成“全屏页”
-  maxHeight: '75vh', 
-  
-  // 核心修改 3：开启弹性布局，方便内部文字滚动
-  display: 'flex',
-  flexDirection: 'column',
-  boxSizing: 'border-box',
-  boxShadow: '0 10px 40px rgba(0,0,0,0.2)' // 增加阴影，让它看起来是“浮”在地图上的
-};
+const modalContentStyle = { background: 'white', width: '100%', maxWidth: '500px', borderRadius: '24px', padding: '24px' };
 const avatarStyle = { width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover", border: "2px solid #5aa77b", cursor: 'pointer' };
 const listThumbStyle = { width: "70px", height: "70px", borderRadius: "12px", objectFit: "cover", cursor: 'zoom-in' };
 const categoryTagStyle = { fontSize: '10px', color: '#5aa77b', background: '#e8f5eb', padding: '2px 6px', borderRadius: '4px' };
