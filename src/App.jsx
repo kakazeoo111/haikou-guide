@@ -788,64 +788,72 @@ const getFilteredPlaces = () => {
 
         {/* 中间滚动内容区 */}
         <div style={scrollContentStyle}>
-          {(() => {
-            const all = getSortedComments();
-            const parents = all.filter(c => !c.parent_id); 
-            const children = all.filter(c => c.parent_id); 
+  {(() => {
+    const all = getSortedComments();
+    
+    // 1. 分离主评论和回复
+    const parents = all.filter(c => !c.parent_id); 
+    const children = all.filter(c => c.parent_id); 
 
-            if (all.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>;
+    if (all.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>;
 
-            return parents.map(p => (
-              <div key={p.id} style={{ marginBottom: '20px' }}>
-                <div style={commentCardStyle}>
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <img src={p.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + p.user_phone} style={commentAvatarStyle} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{p.username}</span>
-                        <span style={{ fontSize: '10px', color: '#bbb' }}>{formatCommentTime(p.created_at)}</span>
-                      </div>
-                      <div style={{ fontSize: '14px', color: '#444', marginTop: '5px' }}>{p.content}</div>
-                      {p.image_url && <img src={p.image_url} style={commentImgStyle} onClick={() => setZoomedSingleImage(p.image_url)} />}
-                      
-                      <div style={{ marginTop: '10px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                        <span onClick={(e) => handleLikeComment(e, p.id, viewingCommentsPlace.id)} style={likeBtnStyle(p.is_liked)}>
-                          {p.is_liked ? "❤️" : "🤍"} {p.like_count || 0}
-                        </span>
-                        
-                        <span 
-                          onClick={() => { setReplyTo(p); document.getElementById('comment-input').focus(); }} 
-                          style={{ fontSize: '12px', color: '#5aa77b', cursor: 'pointer', fontWeight: 'bold' }}
-                        >回复</span>
+    return parents.map(p => {
+      // 2. 找出当前主评论下的所有回复，并按时间“从旧到新”排序（ASC），这样对话才合逻辑
+      const myReplies = children
+        .filter(c => String(c.parent_id) === String(p.id))
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-                        {p.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(p.id, viewingCommentsPlace.id)} style={{ color: 'red', fontSize: '12px', cursor: 'pointer' }}>删除</span>}
-                      </div>
+      return (
+        <div key={p.id} style={{ marginBottom: '25px', borderBottom: '1px solid #f2f2f2', paddingBottom: '15px' }}>
+          {/* --- 主评论展示 (模仿抖音风格) --- */}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <img src={p.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + p.user_phone} style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#666' }}>{p.username}</div>
+              <div style={{ fontSize: '15px', color: '#222', margin: '6px 0', lineHeight: '1.5' }}>{p.content}</div>
+              {p.image_url && <img src={p.image_url} style={{ maxWidth: '200px', borderRadius: '8px', marginBottom: '8px' }} onClick={() => setZoomedSingleImage(p.image_url)} />}
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '12px', color: '#999' }}>
+                <span>{formatCommentTime(p.created_at)}</span>
+                <span 
+                  onClick={() => { setReplyTo(p); document.getElementById('comment-input').focus(); }} 
+                  style={{ cursor: 'pointer', fontWeight: '500' }}
+                >回复</span>
+                <span onClick={(e) => handleLikeComment(e, p.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: p.is_liked ? '#ff4d4f' : '#999' }}>
+                   {p.is_liked ? "❤️" : "🤍"} {p.like_count || 0}
+                </span>
+                {p.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(p.id, viewingCommentsPlace.id)} style={{ color: '#ff4d4f', cursor: 'pointer' }}>删除</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* --- 回复区域 (嵌套在主评论下方，左侧留出间距) --- */}
+          {myReplies.length > 0 && (
+            <div style={{ marginLeft: '50px', marginTop: '12px' }}>
+              {myReplies.map(reply => (
+                <div key={reply.id} style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                  <img src={reply.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + reply.user_phone} style={{ width: '28px', height: '28px', borderRadius: '50%' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>{reply.username}</div>
+                    <div style={{ fontSize: '14px', color: '#333', margin: '4px 0' }}>{reply.content}</div>
+                    {reply.image_url && <img src={reply.image_url} style={{ maxWidth: '120px', borderRadius: '6px', marginBottom: '4px' }} onClick={() => setZoomedSingleImage(reply.image_url)} />}
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#bbb' }}>
+                      <span>{formatCommentTime(reply.created_at)}</span>
+                      {/* 如果你想支持回复的回复，可以把这里也写上 setReplyTo(reply) */}
+                      {reply.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(reply.id, viewingCommentsPlace.id)} style={{ color: '#ff4d4f', cursor: 'pointer' }}>删除</span>}
                     </div>
                   </div>
-
-                  {/* 渲染回复内容 */}
-                  {children.filter(c => String(c.parent_id) === String(p.id)).map(reply => (
-                    <div key={reply.id} style={{ marginLeft: '40px', marginTop: '12px', paddingLeft: '12px', borderLeft: '2px solid #eee' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <img src={reply.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + reply.user_phone} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: '12px' }}>
-                            <span style={{ fontWeight: 'bold' }}>{reply.username}</span>
-                            <span style={{ color: '#999', fontSize: '10px', marginLeft: '8px' }}>{formatCommentTime(reply.created_at)}</span>
-                          </div>
-                          <div style={{ fontSize: '13px', color: '#444', marginTop: '3px' }}>{reply.content}</div>
-                          {reply.image_url && <img src={reply.image_url} style={{ width: '120px', borderRadius: '8px', marginTop: '5px', display: 'block' }} onClick={() => setZoomedSingleImage(reply.image_url)} />}
-                          {reply.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(reply.id, viewingCommentsPlace.id)} style={{ color: 'red', fontSize: '10px', cursor: 'pointer', display: 'block', marginTop: '5px' }}>删除回复</span>}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            ));
-          })()}
-          <div style={{ height: '120px' }}></div>
+              ))}
+            </div>
+          )}
         </div>
+      );
+    });
+  })()}
+  <div style={{ height: '120px' }}></div>
+</div>
 
         {/* 底部固定输入栏 */}
         <div style={fixedBottomBarStyle}>
