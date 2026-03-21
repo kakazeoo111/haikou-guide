@@ -25,6 +25,8 @@ function App() {
   const [newComment, setNewComment] = useState("");
   const [commentImage, setCommentImage] = useState(null);
   const [detailPlace, setDetailPlace] = useState(null); 
+  // 在 viewingCommentsPlace 状态附近添加
+const [replyTo, setReplyTo] = useState(null); // 存储正在回复的评论对象 {id, username}
 
   // ✅ 地点点赞数据
   const [placeStats, setPlaceStats] = useState({}); 
@@ -275,10 +277,21 @@ function App() {
     formData.append("placeId", id);
     formData.append("content", newComment);
     if (commentImage) formData.append("image", commentImage);
-    const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.ok) { setNewComment(""); setCommentImage(null); fetchComments(id); }
-  };
+    // ✅ 核心修改：如果是回复，则传给后端父评论的 ID
+  if (replyTo) {
+    formData.append("parentId", replyTo.id);
+  }
+
+  const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
+  const data = await res.json();
+  
+  if (data.ok) { 
+    setNewComment(""); 
+    setCommentImage(null); 
+    setReplyTo(null); // ✅ 发布成功后，重置回复状态
+    fetchComments(id); 
+  }
+};
 
   const handleDeleteComment = async (cid, pid) => {
     if (!window.confirm("确定删除？")) return;
@@ -755,59 +768,111 @@ const getFilteredPlaces = () => {
   };
 
   return (
-    <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
-      
-      {/* 🟢 全屏评论页 */}
-      {viewingCommentsPlace && (
-        <div style={fullPageOverlayStyle}>
-          <div style={navHeaderStyle}>
-            <span onClick={() => { setViewingCommentsPlace(null); setCommentSort("default"); }} style={{ cursor: 'pointer', fontSize: '18px' }}>← 返回</span>
-            <span style={{ fontWeight: 'bold' }}>{viewingCommentsPlace.name}的点评</span>
-            <span style={{ width: '40px' }}></span>
-          </div>
-          <div style={sortContainerStyle}>
-             <button onClick={() => setCommentSort("latest")} style={sortBtnStyle(commentSort === "latest")}>按照最新</button>
-             <button onClick={() => setCommentSort("hot")} style={sortBtnStyle(commentSort === "hot")}>按照最火</button>
-          </div>
-          <div style={scrollContentStyle}>
-             {getSortedComments().length === 0 ? (
-               <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>
-             ) : (
-               getSortedComments().map(c => (
-                 <div key={c.id} style={commentCardStyle}>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={commentAvatarStyle} />
-                        <div style={{ flex: 1 }}>
-                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{c.username}</span>
-                              <span style={{ fontSize: '10px', color: '#bbb' }}>{formatCommentTime(c.created_at)}</span>
-                           </div>
-                           <div style={{ fontSize: '14px', color: '#444', marginTop: '5px' }}>{c.content}</div>
-                           {c.image_url && <img src={c.image_url} style={commentImgStyle} onClick={() => setZoomedSingleImage(c.image_url)} />}
-                           <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <span onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} style={likeBtnStyle(c.is_liked)}>
-                                {c.is_liked ? "❤️" : "🤍"} {c.like_count || 0}
-                              </span>
-                              {c.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(c.id, viewingCommentsPlace.id)} style={{ color: 'red', fontSize: '12px', cursor: 'pointer' }}>删除</span>}
-                           </div>
-                        </div>
-                    </div>
-                 </div>
-               ))
-             )}
-             <div style={{ height: '120px' }}></div>
-          </div>
-          <div style={fixedBottomBarStyle}>
-            <div style={bottomInputContainer}>
-              <input value={newComment} onChange={e => setNewComment(e.target.value)} placeholder="写点评..." style={bottomRealInput} />
-              <div onClick={() => document.getElementById(`c-i-page`).click()} style={{ cursor: 'pointer', fontSize: '20px' }}>🖼️</div>
-              <input type="file" id={`c-i-page`} hidden accept="image/*" onChange={e => setCommentImage(e.target.files[0])} />
-              <button onClick={() => handleAddComment(viewingCommentsPlace.id)} style={btnSendStyle}>发布</button>
-            </div>
-            {commentImage && <div style={{ fontSize: '10px', color: '#5aa77b', marginTop: '5px' }}>已选图片: {commentImage.name}</div>}
-          </div>
+  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
+    
+    {/* 🟢 全屏评论页 */}
+    {viewingCommentsPlace && (
+      <div style={fullPageOverlayStyle}>
+        {/* 顶部导航栏 */}
+        <div style={navHeaderStyle}>
+          <span onClick={() => { setViewingCommentsPlace(null); setCommentSort("default"); setReplyTo(null); }} style={{ cursor: 'pointer', fontSize: '18px' }}>← 返回</span>
+          <span style={{ fontWeight: 'bold' }}>{viewingCommentsPlace.name}的点评</span>
+          <span style={{ width: '40px' }}></span>
         </div>
-      )}
+
+        {/* 排序按钮 */}
+        <div style={sortContainerStyle}>
+           <button onClick={() => setCommentSort("latest")} style={sortBtnStyle(commentSort === "latest")}>按照最新</button>
+           <button onClick={() => setCommentSort("hot")} style={sortBtnStyle(commentSort === "hot")}>按照最火</button>
+        </div>
+
+        {/* 中间滚动内容区 */}
+        <div style={scrollContentStyle}>
+          {(() => {
+            const all = getSortedComments();
+            const parents = all.filter(c => !c.parent_id); 
+            const children = all.filter(c => c.parent_id); 
+
+            if (all.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>;
+
+            return parents.map(p => (
+              <div key={p.id} style={{ marginBottom: '20px' }}>
+                <div style={commentCardStyle}>
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <img src={p.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + p.user_phone} style={commentAvatarStyle} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: 'bold', fontSize: '14px' }}>{p.username}</span>
+                        <span style={{ fontSize: '10px', color: '#bbb' }}>{formatCommentTime(p.created_at)}</span>
+                      </div>
+                      <div style={{ fontSize: '14px', color: '#444', marginTop: '5px' }}>{p.content}</div>
+                      {p.image_url && <img src={p.image_url} style={commentImgStyle} onClick={() => setZoomedSingleImage(p.image_url)} />}
+                      
+                      <div style={{ marginTop: '10px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                        <span onClick={(e) => handleLikeComment(e, p.id, viewingCommentsPlace.id)} style={likeBtnStyle(p.is_liked)}>
+                          {p.is_liked ? "❤️" : "🤍"} {p.like_count || 0}
+                        </span>
+                        
+                        <span 
+                          onClick={() => { setReplyTo(p); document.getElementById('comment-input').focus(); }} 
+                          style={{ fontSize: '12px', color: '#5aa77b', cursor: 'pointer', fontWeight: 'bold' }}
+                        >回复</span>
+
+                        {p.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(p.id, viewingCommentsPlace.id)} style={{ color: 'red', fontSize: '12px', cursor: 'pointer' }}>删除</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 渲染回复内容 */}
+                  {children.filter(c => String(c.parent_id) === String(p.id)).map(reply => (
+                    <div key={reply.id} style={{ marginLeft: '40px', marginTop: '12px', paddingLeft: '12px', borderLeft: '2px solid #eee' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <img src={reply.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + reply.user_phone} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px' }}>
+                            <span style={{ fontWeight: 'bold' }}>{reply.username}</span>
+                            <span style={{ color: '#999', fontSize: '10px', marginLeft: '8px' }}>{formatCommentTime(reply.created_at)}</span>
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#444', marginTop: '3px' }}>{reply.content}</div>
+                          {reply.image_url && <img src={reply.image_url} style={{ width: '120px', borderRadius: '8px', marginTop: '5px', display: 'block' }} onClick={() => setZoomedSingleImage(reply.image_url)} />}
+                          {reply.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(reply.id, viewingCommentsPlace.id)} style={{ color: 'red', fontSize: '10px', cursor: 'pointer', display: 'block', marginTop: '5px' }}>删除回复</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ));
+          })()}
+          <div style={{ height: '120px' }}></div>
+        </div>
+
+        {/* 底部固定输入栏 */}
+        <div style={fixedBottomBarStyle}>
+          {replyTo && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 10px 8px', fontSize: '12px', color: '#5aa77b', fontWeight: 'bold' }}>
+              <span>正在回复 @{replyTo.username}</span>
+              <span onClick={() => setReplyTo(null)} style={{ cursor: 'pointer', color: '#999', fontSize: '16px' }}>×</span>
+            </div>
+          )}
+
+          <div style={bottomInputContainer}>
+            <input 
+              id="comment-input" 
+              value={newComment} 
+              onChange={e => setNewComment(e.target.value)} 
+              placeholder={replyTo ? `回复 @${replyTo.username}...` : "写点评..."} 
+              style={bottomRealInput} 
+            />
+            <div onClick={() => document.getElementById(`c-i-page`).click()} style={{ cursor: 'pointer', fontSize: '20px' }}>🖼️</div>
+            <input type="file" id={`c-i-page`} hidden accept="image/*" onChange={e => setCommentImage(e.target.files[0])} />
+            <button onClick={() => handleAddComment(viewingCommentsPlace.id)} style={btnSendStyle}>发布</button>
+          </div>
+          {commentImage && <div style={{ fontSize: '10px', color: '#5aa77b', marginTop: '5px' }}>已选图片: {commentImage.name}</div>}
+        </div>
+      </div> // ✅ 刚才你漏掉的是这个闭合标签
+    )}
+
 
       {/* 🟢 反馈库 (管理员版) */}
       {showAdminFeedback && (
@@ -906,7 +971,7 @@ const getFilteredPlaces = () => {
             flexDirection: 'column',
             boxSizing: 'border-box'
           }}>
-            <h2 style={{ color: '#2e6a4a', textAlign: 'center', marginTop: 0, fontSize: '18px' }}>📢 在这里遇见不一样的椰城</h2>
+            <h2 style={{ color: '#2e6a4a', textAlign: 'center', marginTop: 0, fontSize: '18px' }}>✉ 在这里遇见不一样的椰城</h2>
             
             {/* 文字区域：内容多时会自动出现滚动条 */}
             <div style={{ 
