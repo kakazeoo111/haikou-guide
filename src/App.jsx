@@ -1023,7 +1023,7 @@ const getFilteredPlaces = () => {
   gap: '10px',              // 图标和文字之间的间距
   width: '100%'             // 确保占据整行宽度
 }}>
-  <span style={{ fontSize: '22px' }}>✉️</span> 在这里遇见不一样的椰城
+  <span style={{ fontSize: '22px' }}>✉️</span> 遇见不一样的椰城
 </h2>
             
             {/* 文字区域：内容多时会自动出现滚动条 */}
