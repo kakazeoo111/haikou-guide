@@ -1028,15 +1028,10 @@ const getSortedComments = () => {
                    <button onClick={handleSearchLoc} style={{...btnCodeStyle, width:'60px'}}>定位</button>
                 </div>
 
-                {/* ✅ 百度地图搜索建议列表层 */}
                 {recommendSuggestions.length > 0 && (
                   <div style={suggestionListStyle}>
                     {recommendSuggestions.map((poi, idx) => (
-                      <div 
-                        key={idx} 
-                        style={suggestionItemStyle} 
-                        onClick={() => selectPoi(poi)}
-                      >
+                      <div key={idx} style={suggestionItemStyle} onClick={() => selectPoi(poi)}>
                         <div style={{ fontWeight: 'bold', fontSize: '13px' }}>{poi.title}</div>
                         <div style={{ fontSize: '10px', color: '#999' }}>{poi.address}</div>
                       </div>
@@ -1049,59 +1044,66 @@ const getSortedComments = () => {
             
             <textarea placeholder="推荐理由..." value={newRec.desc} onChange={e => setNewRec({...newRec, desc:e.target.value})} style={textAreaStyle} />
             
-            <div style={{marginTop:'15px'}}>
-               <p style={{fontSize:'12px', color:'#666', marginBottom:'5px'}}>上传实拍图:</p>
-               <input type="file" accept="image/*" onChange={e => setRecImage(e.target.files[0])} />
+            <div style={{ marginTop: '15px' }}>
+                <p style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>上传实拍图 (最多9张):</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {/* 1. 循环显示已选图片的预览图 */}
+                    {recImages.map((file, index) => (
+                        <div key={index} style={{ position: 'relative', width: '60px', height: '60px' }}>
+                            <img 
+                                src={URL.createObjectURL(file)} 
+                                style={{ width: '100%', height: '100%', borderRadius: '8px', objectFit: 'cover', border: '1px solid #eee' }} 
+                            />
+                            <div 
+                                onClick={() => setRecImages(prev => prev.filter((_, i) => i !== index))}
+                                style={{ position: 'absolute', top: '-5px', right: '-5px', background: '#ff4d4f', color: 'white', borderRadius: '50%', width: '16px', height: '16px', fontSize: '12px', textAlign: 'center', cursor: 'pointer', lineHeight: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }}
+                            >×</div>
+                        </div>
+                    ))}
+                    {/* 2. 如果不满9张，显示“+”号追加 */}
+                    {recImages.length < 9 && (
+                        <div 
+                            onClick={() => document.getElementById('rec-img-upload').click()}
+                            style={{ width: '60px', height: '60px', border: '1px dashed #ccc', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#ccc', cursor: 'pointer', background: '#fafafa' }}
+                        >+</div>
+                    )}
+                </div>
+                <input 
+                    type="file" id="rec-img-upload" hidden multiple 
+                    accept="image/png, image/jpeg, image/jpg, image/webp" 
+                    onChange={e => {
+                        const files = Array.from(e.target.files);
+                        setRecImages(prev => [...prev, ...files].slice(0, 9));
+                        e.target.value = null; // 清空选择器，保证同图可选
+                    }} 
+                />
             </div>
 
             <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-               <button onClick={() => setShowAddRecommend(false)} style={btnCancelStyle}>取消</button>
+               <button onClick={() => { setShowAddRecommend(false); setRecImages([]); }} style={btnCancelStyle}>取消</button>
                <button onClick={handleSubmitRec} style={btnMainStyle}>立即发布</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* 公告弹窗 (已优化缩小并支持滚动) */}
+      {/* 🟢 系统公告 (优化尺寸版) */}
       {showNotice && (
         <div style={modalOverlayStyle}>
           <div style={{ 
             ...modalContentStyle, 
-            // 在这里直接判断，解决报错
             width: isMobile ? '90%' : '420px', 
             maxHeight: '75vh',
             display: 'flex',
             flexDirection: 'column',
             boxSizing: 'border-box'
           }}>
-            <h2 style={{ 
-  color: '#2e6a4a', 
-  marginTop: 0, 
-  marginBottom: '20px',    // 增加一点下边距，让排版不拥挤
-  fontSize: '20px',        // 稍微加一点字号，更有标题感
-  fontWeight: 'bold',
-  display: 'flex',          // ✅ 开启 Flex 布局
-  alignItems: 'center',     // 垂直方向居中
-  justifyContent: 'center', // ✅ 水平方向绝对居中
-  gap: '10px',              // 图标和文字之间的间距
-  width: '100%'             // 确保占据整行宽度
-}}>
-  <span style={{ fontSize: '22px' }}>✉️</span> 遇见不一样的椰城
-</h2>
-            
-            {/* 文字区域：内容多时会自动出现滚动条 */}
-            <div style={{ 
-              flex: 1, 
-              overflowY: 'auto', 
-              fontSize: '14px', 
-              color: '#555', 
-              lineHeight: '1.6',
-              padding: '0 5px',
-              whiteSpace: 'pre-wrap'
-            }}>
+            <h2 style={{ color: '#2e6a4a', textAlign: 'center', marginTop: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '20px' }}>
+              <span style={{ fontSize: '22px' }}>✉️</span> 遇见不一样的椰城
+            </h2>
+            <div style={{ flex: 1, overflowY: 'auto', fontSize: '14px', color: '#555', lineHeight: '1.6', whiteSpace: 'pre-wrap', padding: '0 5px' }}>
               {noticeContent}
             </div>
-
             <div style={{ marginTop: '20px', display: 'flex', gap: '10px' }}>
               {currentUser.phone === ADMIN_PHONE && (
                 <button onClick={() => { setIsEditingNotice(true); setShowNotice(false); }} style={{ ...btnSmallStyle(false), flex: 1 }}>编辑</button>
@@ -1112,7 +1114,7 @@ const getSortedComments = () => {
         </div>
       )}
 
-      {/* 公告编辑 (保持不变...) */}
+      {/* 🟢 公告编辑页 */}
       {isEditingNotice && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle }}>
@@ -1126,7 +1128,7 @@ const getSortedComments = () => {
         </div>
       )}
 
-      {/* 详情相册 (保持不变...) */}
+      {/* 🟢 详情相册 */}
       {detailPlace && (
         <div style={modalOverlayStyle} onClick={() => setDetailPlace(null)}>
           <div style={{ ...modalContentStyle }} onClick={e => e.stopPropagation()}>
@@ -1145,12 +1147,12 @@ const getSortedComments = () => {
         </div>
       )}
 
-      {/* 反馈建议 (保持不变...) */}
+      {/* 🟢 反馈建议 */}
       {showFeedback && (
         <div style={modalOverlayStyle}>
           <div style={{ ...modalContentStyle, maxWidth: '400px' }}>
             <h2 style={{ color: '#2e6a4a', textAlign: 'center' }}>反馈建议</h2>
-            <textarea placeholder="您的反馈是作者最大的动力（如果需要您可以留下联系方式）..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
+            <textarea placeholder="您的反馈是作者最大的动力..." value={feedbackContent} onChange={e => setFeedbackContent(e.target.value)} style={textAreaStyle} />
             {feedbackImage && (
                 <div style={{ marginTop: '10px', position: 'relative', display: 'inline-block' }}>
                     <img src={URL.createObjectURL(feedbackImage)} style={{ width: '80px', height: '80px', borderRadius: '10px', objectFit: 'cover' }} />
@@ -1233,15 +1235,16 @@ const getSortedComments = () => {
               )}
 
               <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                 <img src={p.album?.[0] || "https://api.suzcore.top/uploads/default_place.jpg"} style={listThumbStyle} onClick={() => { setInitialSlide(0); setDetailPlace(p); setZoomMode(true); }} />
+                 {/* 列表缩略图 */}
+                 <img src={(p.album && p.album[0]) || "https://api.suzcore.top/uploads/default_place.jpg"} style={listThumbStyle} onClick={() => { setInitialSlide(0); setDetailPlace(p); setZoomMode(true); }} />
                  <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{p.name}</h3>
                        <span onClick={() => toggleFavorite(p)} style={{ cursor: "pointer", fontSize: "22px" }}>
-    {favoriteIds.includes(String(p.id)) ? "⭐" : "☆"}
-</span>
+                        {favoriteIds.includes(String(p.id)) ? "⭐" : "☆"}
+                       </span>
                     </div>
-                    {/* 分类、出片及电话标签行 */}
+                    {/* 分类及标签 */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
                       <span style={categoryTagStyle}>{p.type === 'food' ? '🍱 美食' : p.type === 'view' ? '🏞️ 景点' : p.type === 'cafe' ? '☕ 咖啡' : p.type === 'recommend' ? '✨ 推荐' : '🛍️ 商圈'}</span>
                       {p.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
@@ -1266,7 +1269,7 @@ const getSortedComments = () => {
                 <button onClick={() => window.open(`https://api.map.baidu.com/direction?destination=${p.lat},${p.lng}&mode=driving&region=海口&output=html`)} style={btnNavStyle}>🧭 导航</button>
               </div>
 
-              {/* ✅ 重点修改：统一评论区入口，不论是官方地点还是用户推荐，现在都有评论区功能 */}
+              {/* 评论入口 */}
               <div onClick={() => { fetchComments(p.id); setViewingCommentsPlace(p); }} 
                    style={{ marginTop: '15px', borderTop: '1px dashed #eee', paddingTop: '10px', color: '#5aa77b', fontSize: '12px', cursor: 'pointer' }}>
                 💬 查看评论区
@@ -1278,6 +1281,7 @@ const getSortedComments = () => {
     </div>
   );
 }
+// 这里是代码的最后，后面是样式常量定义...
 
 // 💄 样式合集 (保持不变...)
 const suggestionListStyle = { position: 'absolute', top: '45px', left: 0, width: '100%', background: 'white', border: '1px solid #eee', borderRadius: '10px', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '200px', overflowY: 'auto' };
