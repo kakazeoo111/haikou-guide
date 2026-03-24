@@ -1228,12 +1228,14 @@ const suggestionListStyle = { position: 'absolute', top: '45px', left: 0, width:
 const suggestionItemStyle = { padding: '10px 15px', borderBottom: '1px solid #f9f9f9', cursor: 'pointer' };
 const rankBadgeStyle = (idx) => ({ position: 'absolute', top: '-5px', left: '-5px', width: '24px', height: '24px', background: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7dbf96', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 1, boxShadow: '0 2px 5px rgba(0,0,0,0.1)' });
 const placeLikeBtnStyle = (liked) => ({ cursor: 'pointer', fontSize: '12px', padding: '6px 14px', borderRadius: '20px', background: liked ? '#e8f5eb' : '#f0f0f0', color: liked ? '#2e6a4a' : '#888', fontWeight: 'bold', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px' });
-const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
+const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100%', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
 const navHeaderStyle = { background: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', zIndex: 2100 };
 const sortContainerStyle = { background: 'white', padding: '8px 20px', display: 'flex', gap: '15px', borderBottom: '1px solid #eee' };
 const sortBtnStyle = (active) => ({ border: 'none', background: 'transparent', fontSize: '12px', color: active ? '#5aa77b' : '#999', fontWeight: active ? 'bold' : 'normal', cursor: 'pointer', padding: '4px 0', borderBottom: active ? '2px solid #5aa77b' : '2px solid transparent' });
 const scrollContentStyle = { flex: 1, overflowY: 'auto', padding: '20px' };
-const fixedBottomBarStyle = { background: 'white', padding: '12px 20px', borderTop: '1px solid #eee' };
+const fixedBottomBarStyle = { background: 'white', padding: '12px 20px', borderTop: '1px solid #eee',zIndex: 2100, // 确保在所有元素之上
+  position: 'relative', // 配合 Flex 布局使用
+  paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' };
 const bottomInputContainer = { display: 'flex', gap: '12px', alignItems: 'center', background: '#f5f5f5', padding: '8px 16px', borderRadius: '25px' };
 const bottomRealInput = { flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px' };
 const commentCardStyle = { background: 'white', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' };
