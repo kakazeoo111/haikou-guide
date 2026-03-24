@@ -828,57 +828,26 @@ const getSortedComments = () => {
         {/* 中间滚动内容区 */}
         <div style={scrollContentStyle}>
   {(() => {
-    const all = getSortedComments();
-
-    // 如果是“仅看图片”模式，我们直接渲染一个简单的平铺列表
-    // --- 仅看图片模式的渲染逻辑 (已优化尺寸与顺序) ---
-    if (showOnlyImages) {
-      return all.map(c => (
-        <div key={c.id} style={{ ...commentCardStyle, marginBottom: '15px' }}>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            {/* 头像 */}
-            <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '30px', height: '30px', borderRadius: '50%' }} />
-            
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '12px', color: '#666', fontWeight: 'bold' }}>{c.username}</div>
-              
-              {/* ✅ 调整1：文字内容挪到图片上方 */}
-              <div style={{ fontSize: '14px', color: '#333', marginTop: '5px', marginBottom: '8px', lineHeight: '1.4' }}>
-                {c.content}
-              </div>
-
-              {/* ✅ 调整2：图片改小，并设置为固定比例的正方形（更精致） */}
-              <img 
-                src={c.image_url} 
-                style={{ 
-                  width: '130px',       // 限制宽度，不再铺满
-                  height: '130px',      // 固定高度
-                  borderRadius: '8px', 
-                  objectFit: 'cover',   // 核心：图片自动裁剪，不会拉伸变形
-                  border: '1px solid #eee',
-                  display: 'block',
-                  cursor: 'zoom-in'
-                }} 
-                onClick={() => setZoomedSingleImage(c.image_url)} 
-              />
-
-              {/* 时间与点赞 */}
-              <div style={{ marginTop: '10px', display: 'flex', gap: '15px', fontSize: '11px', color: '#999' }}>
-                <span>{formatCommentTime(c.created_at)}</span>
-                <span onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: c.is_liked ? '#ff4d4f' : '#999' }}>
-                  {c.is_liked ? "❤️" : "🤍"} {c.like_count || 0}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      ));
+    // 1. 获取排序后的原始数据（注意：确保 getSortedComments 不要在这里就把数据过滤死，后面我们要手动分 parents/children）
+    const all = [...(activeComments[viewingCommentsPlace.id] || [])];
+    
+    // 执行排序逻辑
+    if (commentSort === "latest") {
+      all.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (commentSort === "hot") {
+      all.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
     }
 
-    const parents = all.filter(c => !c.parent_id); 
+    // 2. 区分主评论和回复
+    // ✅ 关键改动：如果开启“仅看图片”，我们只筛选出【带图的主评论】作为入口
+    const parents = all.filter(c => {
+      const isParent = !c.parent_id;
+      return showOnlyImages ? (isParent && c.image_url) : isParent;
+    });
+    
     const children = all.filter(c => c.parent_id); 
 
-    if (all.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无点评...</div>;
+    if (parents.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无相关点评...</div>;
 
     return parents.map(p => {
       // 找出当前主评论下的所有回复
@@ -886,19 +855,26 @@ const getSortedComments = () => {
         .filter(c => String(c.parent_id) === String(p.id))
         .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
 
-      const isExpanded = expandedParentIds.includes(p.id); // 检查当前评论是否已展开
+      const isExpanded = expandedParentIds.includes(p.id);
 
       return (
         <div key={p.id} style={{ marginBottom: '25px', borderBottom: '1px solid #f2f2f2', paddingBottom: '15px' }}>
-          {/* --- 主评论展示 --- */}
+          {/* --- 主评论展示 (无论是普通模式还是图片模式，结构保持一致) --- */}
           <div style={{ display: 'flex', gap: '10px' }}>
-            <img src={p.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + p.user_phone} style={{ width: '40px', height: '40px', borderRadius: '50%' }} />
+            <img src={p.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + p.user_phone} style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#666' }}>{p.username}</div>
+              
+              {/* 文字在图上 */}
               <div style={{ fontSize: '15px', color: '#222', margin: '4px 0', lineHeight: '1.4' }}>{p.content}</div>
               
+              {/* 如果有图，显示精致小图 */}
               {p.image_url && (
-                <img src={p.image_url} style={{ width: '110px', height: '110px', borderRadius: '8px', objectFit: 'cover', marginBottom: '8px', border: '1px solid #eee' }} onClick={() => setZoomedSingleImage(p.image_url)} />
+                <img 
+                  src={p.image_url} 
+                  style={{ width: '130px', height: '130px', borderRadius: '8px', objectFit: 'cover', marginBottom: '8px', border: '1px solid #eee' }} 
+                  onClick={() => setZoomedSingleImage(p.image_url)} 
+                />
               )}
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '12px', color: '#999' }}>
@@ -912,54 +888,36 @@ const getSortedComments = () => {
             </div>
           </div>
 
-          {/* --- 回复区域 (折叠逻辑) --- */}
+          {/* --- 回复区域 (折叠逻辑依然有效) --- */}
           {myReplies.length > 0 && (
-            <div style={{ marginLeft: '50px', marginTop: '10px' }}>
-              
-              {/* ✅ 情况 A: 未展开状态 - 显示“展开 X 条回复” */}
-              {!isExpanded && (
-                <div 
-                  onClick={() => toggleExpand(p.id)} 
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#999', fontSize: '13px', marginTop: '5px' }}
-                >
+            <div style={{ marginLeft: '46px', marginTop: '10px' }}>
+              {!isExpanded ? (
+                <div onClick={() => toggleExpand(p.id)} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#999', fontSize: '13px' }}>
                   <div style={{ width: '20px', height: '1px', background: '#ddd' }}></div>
-                  <span style={{ fontWeight: '500' }}>展开 {myReplies.length} 条回复 </span>
-                  <span style={{ fontSize: '10px' }}>▼</span>
+                  <span>展开 {myReplies.length} 条回复 ▼</span>
                 </div>
-              )}
-
-              {/* ✅ 情况 B: 已展开状态 - 显示回复列表和收起按钮 */}
-              {isExpanded && (
+              ) : (
                 <div style={{ background: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
                   {myReplies.map(reply => (
                     <div key={reply.id} style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                      <img src={reply.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + reply.user_phone} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
+                      <img src={reply.avatar_url || "..."} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>{reply.username}</div>
                         <div style={{ fontSize: '14px', color: '#333', margin: '3px 0' }}>
-                          <span style={{ color: '#5aa77b', fontWeight: '500' }}>回复 @{p.username}：</span>
+                          <span style={{ color: '#5aa77b', fontWeight: '500' }}>回复：</span>
                           {reply.content}
                         </div>
+                        {/* 回复里的图也按小尺寸显示 */}
                         {reply.image_url && <img src={reply.image_url} style={{ width: '80px', height: '80px', borderRadius: '6px', objectFit: 'cover', marginBottom: '4px', border: '1px solid #eee' }} onClick={() => setZoomedSingleImage(reply.image_url)} />}
                         
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#bbb' }}>
                           <span>{formatCommentTime(reply.created_at)}</span>
-                          <span onClick={(e) => handleLikeComment(e, reply.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: reply.is_liked ? '#ff4d4f' : '#999' }}>
-                            {reply.is_liked ? "❤️" : "🤍"} {reply.like_count || 0}
-                          </span>
-                          {reply.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(reply.id, viewingCommentsPlace.id)} style={{ color: '#ff4d4f', cursor: 'pointer' }}>删除</span>}
+                          <span onClick={(e) => handleLikeComment(e, reply.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: reply.is_liked ? '#ff4d4f' : '#999' }}>❤️ {reply.like_count || 0}</span>
                         </div>
                       </div>
                     </div>
                   ))}
-                  
-                  {/* 收起按钮 */}
-                  <div 
-                    onClick={() => toggleExpand(p.id)} 
-                    style={{ color: '#5aa77b', fontSize: '12px', cursor: 'pointer', marginTop: '5px', fontWeight: 'bold', textAlign: 'center' }}
-                  >
-                    —— 收起回复 ▲ ——
-                  </div>
+                  <div onClick={() => toggleExpand(p.id)} style={{ color: '#5aa77b', fontSize: '12px', cursor: 'pointer', marginTop: '5px', textAlign: 'center', fontWeight: 'bold' }}>—— 收起回复 ▲ ——</div>
                 </div>
               )}
             </div>
