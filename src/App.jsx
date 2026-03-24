@@ -831,16 +831,38 @@ const getSortedComments = () => {
     const all = getSortedComments();
 
     // 如果是“仅看图片”模式，我们直接渲染一个简单的平铺列表
+    // --- 仅看图片模式的渲染逻辑 (已优化尺寸与顺序) ---
     if (showOnlyImages) {
       return all.map(c => (
         <div key={c.id} style={{ ...commentCardStyle, marginBottom: '15px' }}>
           <div style={{ display: 'flex', gap: '10px' }}>
+            {/* 头像 */}
             <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '30px', height: '30px', borderRadius: '50%' }} />
+            
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '12px', color: '#666', fontWeight: 'bold' }}>{c.username}</div>
-              {/* 这里就是用户想看的图 */}
-              <img src={c.image_url} style={{ width: '100%', borderRadius: '8px', marginTop: '8px', border: '1px solid #eee' }} onClick={() => setZoomedSingleImage(c.image_url)} />
-              <div style={{ fontSize: '14px', color: '#333', marginTop: '8px' }}>{c.content}</div>
+              
+              {/* ✅ 调整1：文字内容挪到图片上方 */}
+              <div style={{ fontSize: '14px', color: '#333', marginTop: '5px', marginBottom: '8px', lineHeight: '1.4' }}>
+                {c.content}
+              </div>
+
+              {/* ✅ 调整2：图片改小，并设置为固定比例的正方形（更精致） */}
+              <img 
+                src={c.image_url} 
+                style={{ 
+                  width: '130px',       // 限制宽度，不再铺满
+                  height: '130px',      // 固定高度
+                  borderRadius: '8px', 
+                  objectFit: 'cover',   // 核心：图片自动裁剪，不会拉伸变形
+                  border: '1px solid #eee',
+                  display: 'block',
+                  cursor: 'zoom-in'
+                }} 
+                onClick={() => setZoomedSingleImage(c.image_url)} 
+              />
+
+              {/* 时间与点赞 */}
               <div style={{ marginTop: '10px', display: 'flex', gap: '15px', fontSize: '11px', color: '#999' }}>
                 <span>{formatCommentTime(c.created_at)}</span>
                 <span onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: c.is_liked ? '#ff4d4f' : '#999' }}>
