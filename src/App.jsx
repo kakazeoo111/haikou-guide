@@ -28,6 +28,7 @@ function App() {
   // 在 viewingCommentsPlace 状态附近添加
   const [replyTo, setReplyTo] = useState(null); // 存储正在回复的评论对象 {id, username}
   const [expandedParentIds, setExpandedParentIds] = useState([]); // 记录哪些评论被展开了
+  const [showOnlyImages, setShowOnlyImages] = useState(false); // 是否开启“仅看图片”
 
   // ✅ 地点点赞数据
   const [placeStats, setPlaceStats] = useState({}); 
@@ -764,16 +765,28 @@ const getFilteredPlaces = () => {
     );
   }
 
-  const getSortedComments = () => {
+ // 修改你代码中的这个函数
+const getSortedComments = () => {
     if (!viewingCommentsPlace) return [];
+    
+    // 1. 获取该地点的所有原始评论数据
     let list = [...(activeComments[viewingCommentsPlace.id] || [])];
-    if (commentSort === "latest") {
-      list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else if (commentSort === "hot") {
-      list.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+
+    // ✅ 2. 新增：如果开启了“仅看图片”，则过滤掉没有 image_url 的评论
+    // 注意：这里我们过滤掉所有不带图的内容（包括主评论和回复）
+    if (showOnlyImages) {
+        list = list.filter(c => c.image_url);
     }
+
+    // 3. 执行原有排序逻辑
+    if (commentSort === "latest") {
+        list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (commentSort === "hot") {
+        list.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+    }
+    
     return list;
-  };
+};
 
   return (
   <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
@@ -783,21 +796,63 @@ const getFilteredPlaces = () => {
       <div style={fullPageOverlayStyle}>
         {/* 顶部导航栏 */}
         <div style={navHeaderStyle}>
-          <span onClick={() => { setViewingCommentsPlace(null); setCommentSort("default"); setReplyTo(null); }} style={{ cursor: 'pointer', fontSize: '18px' }}>← 返回</span>
+          <span onClick={() => { setViewingCommentsPlace(null); setCommentSort("default"); setReplyTo(null);setShowOnlyImages(false); }} style={{ cursor: 'pointer', fontSize: '18px' }}>← 返回</span>
           <span style={{ fontWeight: 'bold' }}>{viewingCommentsPlace.name}的点评</span>
           <span style={{ width: '40px' }}></span>
         </div>
 
         {/* 排序按钮 */}
-        <div style={sortContainerStyle}>
-           <button onClick={() => setCommentSort("latest")} style={sortBtnStyle(commentSort === "latest")}>按照最新</button>
-           <button onClick={() => setCommentSort("hot")} style={sortBtnStyle(commentSort === "hot")}>按照最火</button>
-        </div>
+        <div style={{ ...sortContainerStyle, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+   <div style={{ display: 'flex', gap: '15px' }}>
+      <button onClick={() => setCommentSort("latest")} style={sortBtnStyle(commentSort === "latest")}>按照最新</button>
+      <button onClick={() => setCommentSort("hot")} style={sortBtnStyle(commentSort === "hot")}>按照最火</button>
+   </div>
+   
+   {/* 这是新加的开关 */}
+   <div 
+     onClick={() => setShowOnlyImages(!showOnlyImages)}
+     style={{ 
+       fontSize: '12px', 
+       color: showOnlyImages ? '#5aa77b' : '#999', 
+       fontWeight: 'bold', 
+       cursor: 'pointer',
+       background: showOnlyImages ? '#e8f5eb' : '#f5f5f5',
+       padding: '4px 10px',
+       borderRadius: '15px'
+     }}
+   >
+     {showOnlyImages ? "✅ 仅看图片" : "🖼️ 仅看图片"}
+   </div>
+</div>
 
         {/* 中间滚动内容区 */}
         <div style={scrollContentStyle}>
   {(() => {
     const all = getSortedComments();
+
+    // 如果是“仅看图片”模式，我们直接渲染一个简单的平铺列表
+    if (showOnlyImages) {
+      return all.map(c => (
+        <div key={c.id} style={{ ...commentCardStyle, marginBottom: '15px' }}>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <img src={c.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + c.user_phone} style={{ width: '30px', height: '30px', borderRadius: '50%' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '12px', color: '#666', fontWeight: 'bold' }}>{c.username}</div>
+              {/* 这里就是用户想看的图 */}
+              <img src={c.image_url} style={{ width: '100%', borderRadius: '8px', marginTop: '8px', border: '1px solid #eee' }} onClick={() => setZoomedSingleImage(c.image_url)} />
+              <div style={{ fontSize: '14px', color: '#333', marginTop: '8px' }}>{c.content}</div>
+              <div style={{ marginTop: '10px', display: 'flex', gap: '15px', fontSize: '11px', color: '#999' }}>
+                <span>{formatCommentTime(c.created_at)}</span>
+                <span onClick={(e) => handleLikeComment(e, c.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: c.is_liked ? '#ff4d4f' : '#999' }}>
+                  {c.is_liked ? "❤️" : "🤍"} {c.like_count || 0}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ));
+    }
+
     const parents = all.filter(c => !c.parent_id); 
     const children = all.filter(c => c.parent_id); 
 
