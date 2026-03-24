@@ -113,13 +113,15 @@ app.get("/api/recommendations", async (req, res) => {
     } catch (e) { res.status(500).json({ ok: false }); }
 });
 
-app.post("/api/recommendations/add", upload.single('image'), async (req, res) => {
+app.post("/api/recommendations/add", upload.array('images', 9), async (req, res) => {
     const { phone, place_name, description, lat, lng } = req.body;
-    const imageUrl = req.file ? `https://api.suzcore.top/uploads/${req.file.filename}` : null;
+    // 同样，处理多张图
+    const imageUrls = req.files ? req.files.map(f => `https://api.suzcore.top/uploads/${f.filename}`) : [];
+    
     try {
         await pool.execute(
             'INSERT INTO recommendations (user_phone, place_name, description, lat, lng, image_url) VALUES (?, ?, ?, ?, ?, ?)',
-            [phone, place_name, description || "", lat, lng, imageUrl]
+            [phone, place_name, description || "", lat, lng, JSON.stringify(imageUrls)]
         );
         res.json({ ok: true, message: "推荐成功！" });
     } catch (e) { res.status(500).json({ ok: false }); }
@@ -213,20 +215,19 @@ app.post("/api/comments/like", async (req, res) => {
 });
 
 // 发布评论 - 【重点修正：增加 try-catch，防止进程崩溃】
-app.post("/api/comments/add", upload.single('image'), async (req, res) => {
+app.post("/api/comments/add", upload.array('images', 9), async (req, res) => {
   try {
-    // 增加 parentId 的解构
-    const { phone, placeId, content, parentId } = req.body; 
-    const imageUrl = req.file ? `https://api.suzcore.top/uploads/${req.file.filename}` : null;
+    const { phone, placeId, content, parentId } = req.body;
     
-    // 写入数据库，包含 parent_id
+    // ✅ 处理多图：将所有上传成功的图片路径转为完整 URL 数组
+    const imageUrls = req.files ? req.files.map(f => `https://api.suzcore.top/uploads/${f.filename}`) : [];
+    
     await pool.execute(
         'INSERT INTO comments (place_id, user_phone, content, image_url, parent_id) VALUES (?, ?, ?, ?, ?)', 
-        [placeId, phone, content || "", imageUrl, parentId || null]
+        [placeId, phone, content || "", JSON.stringify(imageUrls), parentId || null] // ✅ 存为 JSON 字符串
     );
     res.json({ ok: true });
   } catch (e) {
-    console.error("发布评论报错:", e.message);
     res.status(500).json({ ok: false });
   }
 });
