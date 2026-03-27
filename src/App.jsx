@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import BaiduMap from "./BaiduMap";
+import dollsImg from "./assets/dolls.png";
 
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -334,6 +335,11 @@ const toggleExpand = (parentId) => {
   };
 
   const handleFeedbackSubmit = async () => {
+    // ✅ 增加一个判断，防止手机号为空导致崩溃
+    if (!currentUser || !currentUser.phone) {
+        return alert("请先登录后再提交反馈");
+    }
+    
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
     formData.append("content", feedbackContent);
@@ -745,9 +751,45 @@ const getFilteredPlaces = () => {
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f4fbf6" }}>
-        <form onSubmit={handleAuthSubmit} style={{ width: "100%", maxWidth: "420px", background: "white", padding: "30px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
-          <h2 style={{ textAlign: "center", color: "#2e6a4a", marginTop:0 }}>海口之行登录</h2>
+        <form onSubmit={handleAuthSubmit} style={{ width: "100%", maxWidth: "420px", background: "white", padding: "40px 30px 30px 30px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
+          
+          {/* ✅ 标题容器：居中对齐 */}
+          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+            {/* ✅ 内部包装盒：设为 inline-block，宽度刚好包裹住四个字 */}
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              
+              {/* ✅ 玩偶图片：绝对定位到右上角 */}
+              <img 
+                src={new URL('./assets/doll.png', import.meta.url).href} // 这里的路径确保指向你的图片
+                style={{ 
+                  position: 'absolute', 
+                  top: '-25px',    // 往上挪一点
+                  right: '-30px',  // 往右边探头
+                  width: '50px',   // 玩偶大小，可以根据实际效果调整
+                  transform: 'rotate(15deg)', // 旋转 15 度，看起来更俏皮
+                  zIndex: 1,
+                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))', // 给玩偶加个软阴影
+                  animation: 'miniFloat 3s ease-in-out infinite' // 增加微动动画
+                }} 
+                alt="cute-doll"
+              />
+
+              {/* ✅ 标题文字 */}
+              <h2 style={{ 
+                margin: 0, 
+                color: "#2e6a4a", 
+                fontSize: '28px', 
+                fontWeight: 'bold',
+                position: 'relative',
+                zIndex: 2 
+              }}>
+                海口之行
+              </h2>
+            </div>
+          </div>
+
           <input placeholder="手机号" style={inputStyle} onChange={e => setLoginForm({...loginForm, phone: e.target.value})} />
+          
           {authMode !== "login" && (
             <>
               {authMode === "register" && <input placeholder="用户名" style={inputStyle} onChange={e => setLoginForm({...loginForm, username: e.target.value})} />}
@@ -757,14 +799,26 @@ const getFilteredPlaces = () => {
               </div>
             </>
           )}
+          
           <input type="password" placeholder="密码" style={inputStyle} onChange={e => setLoginForm({...loginForm, password: e.target.value})} />
           {loginError && <p style={{ color: "red", fontSize: "13px" }}>{loginError}</p>}
+          
           <button type="submit" style={btnMainStyle}>确定</button>
+          
           <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", fontSize: "14px" }}>
             <span style={linkStyle} onClick={() => setAuthMode(authMode === "login" ? "register" : "login")}>{authMode === "login" ? "注册账号" : "返回登录"}</span>
             {authMode === "login" && <span style={linkStyle} onClick={() => setAuthMode("reset")}>忘记密码？</span>}
           </div>
         </form>
+
+        {/* ✅ 添加一个轻微浮动的动画效果 */}
+        <style>{`
+          @keyframes miniFloat {
+            0% { transform: translateY(0px) rotate(15deg); }
+            50% { transform: translateY(-5px) rotate(18deg); }
+            100% { transform: translateY(0px) rotate(15deg); }
+          }
+        `}</style>
       </div>
     );
   }
