@@ -763,7 +763,7 @@ const getFilteredPlaces = () => {
                 style={{ 
                   position: 'absolute', 
                   top: '-45px',// 往上挪一点
-                  right: '-18px',  // 往右边探头
+                  right: '-22px',  // 往右边探头
                   width: '45px',   // 玩偶大小，可以根据实际效果调整
                   transform: 'rotate(8deg)', // 旋转 15 度，看起来更俏皮
                   zIndex: 1,
