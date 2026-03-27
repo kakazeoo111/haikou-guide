@@ -759,7 +759,7 @@ const getFilteredPlaces = () => {
               
               {/* ✅ 玩偶图片：绝对定位到右上角 */}
               <img 
-                src="/doll." // 这里的路径确保指向你的图片
+                src="/doll.png" // 这里的路径确保指向你的图片
                 style={{ 
                   position: 'absolute', 
                   top: '-25px',    // 往上挪一点
