@@ -750,6 +750,14 @@ const getFilteredPlaces = () => {
   if (!currentUser) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", background: "#f4fbf6" }}>
+        {/* ✅ 1. 把动画样式写在这里 */}
+        <style>{`
+          @keyframes miniFloatSimple {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0px); }
+          }
+        `}</style>
         <form onSubmit={handleAuthSubmit} style={{ width: "100%", maxWidth: "420px", background: "white", padding: "40px 30px 30px 30px", borderRadius: "20px", boxShadow: "0 10px 30px rgba(0,0,0,0.1)" }}>
           
           {/* ✅ 标题容器：居中对齐 */}
@@ -762,13 +770,13 @@ const getFilteredPlaces = () => {
                 src="/doll.png" // 这里的路径确保指向你的图片
                 style={{ 
                   position: 'absolute', 
-                  top: '-45px',// 往上挪一点
-                  right: '-22px',  // 往右边探头
-                  width: '45px',   // 玩偶大小，可以根据实际效果调整
-                  transform: 'rotate(8deg)', // 旋转 15 度，看起来更俏皮
+                  bottom: '-5px',// 往上挪一点
+                  right: '-55px',  // 往右边探头
+                  width: '50px',   // 玩偶大小，可以根据实际效果调整
+                  transform: 'rotate(0deg)', // 旋转 15 度，看起来更俏皮
                   zIndex: 1,
-                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))', // 给玩偶加个软阴影
-                  animation: 'miniFloat 3s ease-in-out infinite' // 增加微动动画
+                  filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.1))', // 给玩偶加个软阴影
+                  animation: 'miniFloatSimple 3s ease-in-out infinite' // 增加微动动画
                 }} 
                 alt="cute-doll"
               />
