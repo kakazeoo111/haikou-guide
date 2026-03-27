@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
 import BaiduMap from "./BaiduMap";
-import dollsImg from "./assets/dolls.png";
 
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -760,7 +759,7 @@ const getFilteredPlaces = () => {
               
               {/* ✅ 玩偶图片：绝对定位到右上角 */}
               <img 
-                src={new URL('./assets/doll.png', import.meta.url).href} // 这里的路径确保指向你的图片
+                src="/doll." // 这里的路径确保指向你的图片
                 style={{ 
                   position: 'absolute', 
                   top: '-25px',    // 往上挪一点

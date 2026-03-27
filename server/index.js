@@ -260,10 +260,17 @@ app.post("/api/announcement/update", async (req, res) => {
 app.post("/api/feedback/submit", upload.single('image'), async (req, res) => {
   try {
     const { phone, content } = req.body;
+    console.log("收到反馈请求:", { phone, content }); // ✅ 打印收到的数据
+    
     const imageUrl = req.file ? `https://api.suzcore.top/uploads/${req.file.filename}` : null;
+    
     await pool.execute('INSERT INTO feedback (phone, content, image_url) VALUES (?, ?, ?)', [phone, content || "", imageUrl]);
     res.json({ ok: true, message: "反馈已收到" });
-  } catch (e) { res.status(500).json({ ok: false }); }
+  } catch (e) {
+    // ✅ 这一行是关键！它会告诉你到底是数据库连不上，还是字段写错了
+    console.error("【反馈提交彻底失败】:", e.message); 
+    res.status(500).json({ ok: false, error: e.message }); 
+  }
 });
 
 app.post("/api/feedback/all", async (req, res) => {
