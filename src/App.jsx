@@ -762,8 +762,8 @@ const getFilteredPlaces = () => {
                 src="/doll.png" // 这里的路径确保指向你的图片
                 style={{ 
                   position: 'absolute', 
-                  top: '-18px', // 往上挪一点
-                  right: '-20px',  // 往右边探头
+                  top: '-35px',// 往上挪一点
+                  right: '-10px',  // 往右边探头
                   width: '45px',   // 玩偶大小，可以根据实际效果调整
                   transform: 'rotate(10deg)', // 旋转 15 度，看起来更俏皮
                   zIndex: 1,
