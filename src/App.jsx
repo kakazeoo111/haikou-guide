@@ -1337,17 +1337,11 @@ const getSortedComments = () => {
         </div>
       )}
 
-      {/* ✅ 1. 地图区域：放在前面，在电脑端就会显示在左侧 */}
-  <div style={{ 
-    width: isMobile ? "100%" : "0", // 电脑端设为 0 配合 flex:1 是关键
-    height: isMobile ? "30vh" : "100vh", 
-    flex: isMobile ? "none" : 1, 
-    position: "relative", 
-    zIndex: 10 
-  }}>
-    <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} />
-    <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
-  </div>
+      {/* 🔵 地图区域 (30vh) */}
+      <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "30vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
+        <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} />
+        <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
+      </div>
 
       {showNoticeList && (
   <div style={modalOverlayStyle}>
