@@ -318,17 +318,34 @@ const toggleExpand = (parentId) => {
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // 可以在这里加个简单的加载提示
     const formData = new FormData();
     formData.append("avatar", file);
     formData.append("phone", currentUser.phone);
-    const res = await fetch(`${authApiBase}/api/user/upload-avatar`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.ok) {
-      const updated = { ...currentUser, avatar_url: data.avatarUrl };
-      setCurrentUser(updated);
-      localStorage.setItem("haikouUser", JSON.stringify(updated));
+
+    try {
+        const res = await fetch(`${authApiBase}/api/user/upload-avatar`, { 
+            method: "POST", 
+            body: formData 
+        });
+        const data = await res.json();
+        
+        if (data.ok) {
+            // ✅ 更新当前用户状态，让页面立刻显示新头像
+            const updatedUser = { ...currentUser, avatar_url: data.avatarUrl };
+            setCurrentUser(updatedUser);
+            // ✅ 同步更新本地存储，保证刷新页面后头像还在
+            localStorage.setItem("haikouUser", JSON.stringify(updatedUser));
+            alert("头像更换成功！");
+        } else {
+            alert("上传失败：" + data.message);
+        }
+    } catch (err) {
+        console.error("头像上传出错:", err);
+        alert("网络错误，请稍后再试");
     }
-  };
+};
 
   const fetchAllFeedbacks = async () => {
     const res = await fetch(`${authApiBase}/api/feedback/all`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone }) });
@@ -871,11 +888,34 @@ const getSortedComments = () => {
 
         <div style={{ padding: '20px' }}>
           {/* 用户基础信息卡片 */}
-          <div style={profileInfoCard}>
-             <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={profileAvatarLarge} />
-             <h2 style={{ marginTop: '15px', color: '#2e6a4a', marginBottom: '5px' }}>{currentUser.username}</h2>
-             <p style={{ color: '#999', fontSize: '13px', margin: 0 }}>手机号：{currentUser.phone}</p>
-          </div>
+<div style={profileInfoCard}>
+    {/* ✅ 1. 给头像增加点击事件，触发隐藏的 input */}
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+        <img 
+            src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} 
+            style={{ ...profileAvatarLarge, cursor: 'pointer' }} 
+            onClick={() => document.getElementById('profile-avatar-input').click()} 
+            title="点击更换头像"
+        />
+        {/* 右下角加个小相机图标提示（可选，会让交互更专业） */}
+        <div style={{ position: 'absolute', bottom: '5px', right: '5px', background: '#5aa77b', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '14px', border: '2px solid white' }}>
+            📷
+        </div>
+    </div>
+
+    {/* ✅ 2. 隐藏的真实文件上传框 */}
+    <input 
+        type="file" 
+        id="profile-avatar-input" 
+        hidden 
+        accept="image/*" 
+        onChange={handleAvatarUpload} 
+    />
+
+    <h2 style={{ marginTop: '15px', color: '#2e6a4a', marginBottom: '5px' }}>{currentUser.username}</h2>
+    <p style={{ color: '#999', fontSize: '13px', margin: 0 }}>手机号：{currentUser.phone}</p>
+    <p style={{ color: '#5aa77b', fontSize: '11px', marginTop: '5px' }}>点击头像可更换</p>
+</div>
 
           {/* 功能菜单列表 */}
           <div style={{ marginTop: '20px' }}>
