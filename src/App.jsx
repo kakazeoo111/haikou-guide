@@ -32,6 +32,8 @@ function App() {
  
   // "home" 是地图首页，"profile" 是个人中心
   const [activeTab, setActiveTab] = useState("home");
+  const [notifications, setNotifications] = useState([]);
+  const [showNoticeList, setShowNoticeList] = useState(false); // 控制消息列表弹窗
 
   // ✅ 地点点赞数据
   const [placeStats, setPlaceStats] = useState({}); 
@@ -127,6 +129,11 @@ function App() {
     }
   }, [countdown]);
 
+  // 页面加载或切换到个人中心时刷新
+useEffect(() => {
+    if (activeTab === 'profile') fetchNotices();
+}, [activeTab]);
+
   // --- 业务逻辑函数 ---
 
   const fetchRecommendations = async () => {
@@ -134,6 +141,14 @@ function App() {
     const data = await res.json();
     if (data.ok) setRecommendations(data.data);
   };
+
+  // 获取消息
+const fetchNotices = async () => {
+    if (!currentUser) return;
+    const res = await fetch(`${authApiBase}/api/notifications/${currentUser.phone}`);
+    const d = await res.json();
+    if (d.ok) setNotifications(d.data);
+};
 
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
@@ -919,10 +934,14 @@ const getSortedComments = () => {
 
           {/* 功能菜单列表 */}
           <div style={{ marginTop: '20px' }}>
-             <div style={menuItemStyle} onClick={() => alert('功能开发中...')}>
+             <div style={menuItemStyle} onClick={() => setShowNoticeList(true)}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span>🔔</span> 消息回复提醒
                 </div>
+                {/* 动态显示未读数 */}
+    {notifications.filter(n => !n.is_read).length > 0 && (
+        <span style={badgeStyle}>{notifications.filter(n => !n.is_read).length}</span>
+    )}
                 <span style={badgeStyle}>0</span>
              </div>
              <div style={menuItemStyle}>
@@ -1323,6 +1342,41 @@ const getSortedComments = () => {
         <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} />
         <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
       </div>
+
+      {showNoticeList && (
+  <div style={modalOverlayStyle}>
+    <div style={{ ...modalContentStyle, maxHeight: '80vh', overflowY: 'auto' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>未读消息</h3>
+        <span style={{ cursor: 'pointer' }} onClick={() => setShowNoticeList(false)}>×</span>
+      </div>
+      
+      {notifications.length === 0 ? <p style={{ textAlign: 'center', color: '#999' }}>暂无消息</p> : 
+        notifications.map(n => (
+          <div key={n.id} style={{ padding: '12px 0', borderBottom: '1px solid #eee', opacity: n.is_read ? 0.6 : 1 }}>
+            <div style={{ fontSize: '14px' }}>
+                <b>{n.sender_name}</b> 
+                {n.type === 'like_place' && " 点赞了你的推荐"}
+                {n.type === 'like_comment' && " 点赞了你的评论"}
+                {n.type === 'reply' && ` 回复了你：${n.content}`}
+            </div>
+            <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>{formatCommentTime(n.created_at)}</div>
+          </div>
+        ))
+      }
+      
+      <button 
+        onClick={async () => {
+            await fetch(`${authApiBase}/api/notifications/read`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone: currentUser.phone}) });
+            fetchNotices();
+        }}
+        style={{ ...btnMainStyle, marginTop: '20px' }}
+      >
+        全部标记已读
+      </button>
+    </div>
+  </div>
+)}
 
       {/* 🔵 列表区域 (70vh) */}
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
