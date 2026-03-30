@@ -1271,7 +1271,6 @@ const getSortedComments = () => {
                 { k: "all", l: "全部" }, 
                 { k: "recommend", l: "✨ 推荐" },
                 { k: "top10", l: "🏆 榜单" }, 
-                { k: "photo", l: "📸 出片" }, 
                 { k: "favorite", l: "⭐收藏" }, 
                 { k: "food", l: "🍱美食" }, 
                 { k: "view", l: "🏞️景点" }, 
