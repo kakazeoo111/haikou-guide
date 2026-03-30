@@ -1375,58 +1375,41 @@ const getSortedComments = () => {
         <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
       </div>
 
-      {/* 🟢 消息列表弹窗 (修正版) */}
+      {/* 🟢 消息列表弹窗 - 修正版 */}
 {showNoticeList && (
   <div style={modalOverlayStyle}>
     <div style={{ ...modalContentStyle, maxHeight: '80vh', overflowY: 'auto' }}>
-      {/* 顶部标题栏 */}
+      {/* 1. 顶部标题栏 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
         <h3 style={{ margin: 0 }}>消息中心</h3>
         <span style={{ cursor: 'pointer', fontSize: '24px' }} onClick={() => setShowNoticeList(false)}>×</span>
       </div>
       
-      {/* 消息内容列表 */}
+      {/* 2. 消息内容列表 */}
       {notifications.length === 0 ? (
         <p style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>暂无消息</p>
       ) : (
         notifications.map(n => (
           <div 
             key={n.id} 
-            onClick={() => handleNoticeClick(n)} // 点击跳转
+            onClick={() => handleNoticeClick(n)} 
             style={{ 
                 padding: '15px 10px', 
                 borderBottom: '1px solid #f0f0f0', 
                 cursor: 'pointer', 
                 background: n.is_read ? 'transparent' : '#f4fbf6', 
                 borderRadius: '10px',
-                marginBottom: '5px',
-                transition: '0.2s'
+                marginBottom: '5px'
             }}
           >
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <img 
-  /* ✅ 1. 处理 HTTPS 兼容性：如果是 http 则强制换成 https，防止手机浏览器拦截 */
-  src={ (n.sender_avatar && n.sender_avatar !== 'null') 
-    ? n.sender_avatar.replace('http://', 'https://') 
-    : `https://api.dicebear.com/7.x/avataaars/svg?seed=${n.sender_phone || 'haikou'}` 
-  } 
-  style={{ 
-    width: '40px',        // 稍微调大一点更清晰
-    height: '40px', 
-    /* ✅ 2. 核心修复：增加 minWidth 和 minHeight，防止图片加载失败时在手机上塌陷成一条线（看起来像乱码） */
-    minWidth: '40px', 
-    minHeight: '40px',
-    borderRadius: '50%', 
-    objectFit: 'cover',   // ✅ 3. 防止图片被拉伸变形
-    border: '1px solid #eee',
-    backgroundColor: '#f5f5f5' // 即使图没出来，也有个灰底色
-  }} 
-  alt="user"
-  /* ✅ 4. 最后一道防线：如果图片彻底 404，换成一个稳定的默认图 */
-  onError={(e) => { e.target.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=error" }}
-/>
+                  src={(n.sender_avatar && n.sender_avatar !== 'null') ? n.sender_avatar.replace('http://', 'https://') : `https://api.dicebear.com/7.x/avataaars/svg?seed=${n.sender_phone}`} 
+                  style={{ width: '32px', height: '32px', minWidth: '32px', borderRadius: '50%', objectFit: 'cover' }} 
+                  alt="avatar"
+                />
                 <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', color: '#333', lineHeight: '1.4' }}>
+                    <div style={{ fontSize: '14px', color: '#333' }}>
                         <span style={{ fontWeight: 'bold' }}>{n.sender_name}</span> 
                         {n.type === 'like_place' && " 点赞了你的分享"}
                         {n.type === 'like_comment' && " 点赞了你的评论"}
@@ -1434,7 +1417,7 @@ const getSortedComments = () => {
                     </div>
                     <div style={{ fontSize: '11px', color: '#bbb', marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
                         <span>{formatCommentTime(n.created_at)}</span>
-                        <span style={{ color: '#5aa77b' }}>点击查看详情 ❯</span>
+                        <span style={{ color: '#5aa77b' }}>点击查看 ❯</span>
                     </div>
                 </div>
             </div>
@@ -1442,22 +1425,44 @@ const getSortedComments = () => {
         ))
       )}
       
-      {/* 底部已读按钮 */}
-      <button 
-        onClick={async () => {
+      {/* 3. 底部按钮区域 (并排两个按钮) */}
+      <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+        <button 
+          onClick={async () => {
             await fetch(`${authApiBase}/api/notifications/read`, { 
-                method: 'POST', 
-                headers: {'Content-Type':'application/json'}, 
-                body: JSON.stringify({phone: currentUser.phone}) 
+              method: 'POST', 
+              headers: {'Content-Type':'application/json'}, 
+              body: JSON.stringify({phone: currentUser.phone}) 
             });
-            fetchNotices(); // 刷新列表
-        }}
-        style={{ ...btnMainStyle, marginTop: '20px' }}
-      >
-        全部标记已读
-      </button>
-    </div>
-  </div>
+            fetchNotices();
+          }}
+          style={{ ...btnMainStyle, flex: 1, marginTop: 0 }}
+        >
+          全部已读
+        </button>
+
+        <button 
+          onClick={async () => {
+            if (!window.confirm("确定要清空所有消息记录吗？")) return;
+            const res = await fetch(`${authApiBase}/api/notifications/clear`, { 
+              method: 'POST', 
+              headers: {'Content-Type':'application/json'}, 
+              body: JSON.stringify({phone: currentUser.phone}) 
+            });
+            const d = await res.json();
+            if (d.ok) {
+              fetchNotices();
+              alert("消息已全部清空");
+            }
+          }}
+          style={{ ...btnMainStyle, flex: 1, marginTop: 0, background: '#ff4d4f' }}
+        >
+          清空全部
+        </button>
+      </div>
+
+    </div> 
+  </div> 
 )}
 
       {/* 🔵 列表区域 (70vh) */}
