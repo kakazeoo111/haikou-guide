@@ -1025,111 +1025,117 @@ const getSortedComments = () => {
 
         {/* 3. 中间滚动内容区 */}
         <div style={scrollContentStyle}>
-          {(() => {
-            const allRaw = [...(activeComments[viewingCommentsPlace.id] || [])];
-            
-            if (commentSort === "latest") {
-              allRaw.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            } else if (commentSort === "hot") {
-              allRaw.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
-            }
+  {(() => {
+    // 1. 获取基础数据并排序
+    const allRaw = [...(activeComments[viewingCommentsPlace.id] || [])];
+    if (commentSort === "latest") {
+      allRaw.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    } else if (commentSort === "hot") {
+      allRaw.sort((a, b) => (b.like_count || 0) - (a.like_count || 0));
+    }
 
-            const parents = allRaw.filter(c => {
-              const isParent = !c.parent_id;
-              if (!showOnlyImages) return isParent;
-              // 仅看图片模式：筛选带图的主评论
-              return isParent && c.image_url && c.image_url !== "[]";
-            });
-            
-            const children = allRaw.filter(c => c.parent_id); 
+    // 2. 区分主评论和回复
+    const parents = allRaw.filter(c => !c.parent_id); 
+    const children = allRaw.filter(c => c.parent_id); 
 
-            if (parents.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无相关点评...</div>;
+    // ✅ 定义统一的图片渲染小组件 (解决九宫格报错的关键)
+    const renderCommentImages = (imgData) => {
+      if (!imgData || imgData === "[]" || imgData === "null") return null;
+      try {
+        // 尝试解析 JSON 数组
+        let urls = [];
+        if (imgData.startsWith('[')) {
+          urls = JSON.parse(imgData);
+        } else {
+          urls = [imgData]; // 兼容以前的老单图数据
+        }
+        
+        if (urls.length === 0) return null;
+        
+        return (
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: urls.length === 1 ? '1fr' : (urls.length === 2 || urls.length === 4 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)'), 
+            gap: '4px', marginTop: '8px', maxWidth: '240px' 
+          }}>
+            {urls.map((url, i) => (
+              <img key={i} src={url.replace('http://', 'https://')} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '6px', border: '1px solid #eee' }} onClick={() => setZoomedSingleImage(url)} />
+            ))}
+          </div>
+        );
+      } catch (e) { return null; }
+    };
 
-            // 多图渲染函数
-            const renderMultiImages = (imgData, size = '130px') => {
-              if (!imgData || imgData === "[]") return null;
-              try {
-                const urls = JSON.parse(imgData);
-                if (Array.isArray(urls) && urls.length > 0) {
-                  return (
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: urls.length === 1 ? '1fr' : (urls.length === 2 || urls.length === 4 ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)'), 
-                        gap: '5px', marginTop: '8px', width: '100%', maxWidth: urls.length === 1 ? '200px' : '280px' 
-                    }}>
-                      {urls.map((url, i) => (
-                        <img key={i} src={url} style={{ width: '100%', aspectRatio: '1/1', objectFit: 'cover', borderRadius: '8px', border: '1px solid #eee' }} onClick={() => setZoomedSingleImage(url)} />
-                      ))}
-                    </div>
-                  );
-                }
-              } catch (e) {
-                return <img src={imgData} style={{ width: size, height: size, borderRadius: '8px', objectFit: 'cover', marginTop: '8px', border: '1px solid #eee' }} onClick={() => setZoomedSingleImage(imgData)} />;
-              }
-              return null;
-            };
+    // ✅ 定义统一的头像渲染组件 (解决手机乱码的关键)
+    const renderAvatar = (url, phone, size) => {
+      const avatarSrc = (url && url !== 'null') 
+        ? url.replace('http://', 'https://') 
+        : `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || 'haikou'}`;
+      return (
+        <img src={avatarSrc} style={{ width: size, height: size, minWidth: size, minHeight: size, borderRadius: '50%', objectFit: 'cover', border: '1px solid #eee', backgroundColor: '#f5f5f5' }} alt="u" onError={(e) => { e.target.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=error" }} />
+      );
+    };
 
-            return parents.map(p => {
-              const myReplies = children
-                .filter(c => String(c.parent_id) === String(p.id))
-                .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-              const isExpanded = expandedParentIds.includes(p.id);
+    if (parents.length === 0) return <div style={{ textAlign: 'center', marginTop: '100px', color: '#bbb' }}>💬 暂无相关点评...</div>;
 
-              return (
-                <div key={p.id} style={{ marginBottom: '25px', borderBottom: '1px solid #f2f2f2', paddingBottom: '15px' }}>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <img src={p.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + p.user_phone} style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#666' }}>{p.username}</div>
-                      <div style={{ fontSize: '15px', color: '#222', margin: '4px 0', lineHeight: '1.4' }}>{p.content}</div>
-                      {renderMultiImages(p.image_url, '130px')}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '12px', color: '#999', marginTop: '10px' }}>
-                        <span>{formatCommentTime(p.created_at)}</span>
-                        <span onClick={() => { setReplyTo(p); document.getElementById('comment-input').focus(); }} style={{ cursor: 'pointer', fontWeight: 'bold', color: '#5aa77b' }}>回复</span>
-                        <span onClick={(e) => handleLikeComment(e, p.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: p.is_liked ? '#ff4d4f' : '#999' }}>
-                           {p.is_liked ? "❤️" : "🤍"} {p.like_count || 0}
-                        </span>
-                        {p.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(p.id, viewingCommentsPlace.id)} style={{ color: '#ff4d4f', cursor: 'pointer' }}>删除</span>}
+    return parents.map(p => {
+      const myReplies = children
+        .filter(c => String(c.parent_id) === String(p.id))
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+      const isExpanded = expandedParentIds.includes(p.id);
+
+      return (
+        <div key={p.id} style={{ marginBottom: '25px', borderBottom: '1px solid #f2f2f2', paddingBottom: '15px' }}>
+          {/* 主评论 */}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {renderAvatar(p.avatar_url, p.user_phone, '36px')}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 'bold', color: '#666' }}>{p.username}</div>
+              <div style={{ fontSize: '15px', color: '#222', margin: '4px 0' }}>{p.content}</div>
+              {renderCommentImages(p.image_url)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '12px', color: '#999', marginTop: '10px' }}>
+                <span>{formatCommentTime(p.created_at)}</span>
+                <span onClick={() => { setReplyTo(p); document.getElementById('comment-input').focus(); }} style={{ cursor: 'pointer', fontWeight: 'bold', color: '#5aa77b' }}>回复</span>
+                <span onClick={(e) => handleLikeComment(e, p.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: p.is_liked ? '#ff4d4f' : '#999' }}> {p.is_liked ? "❤️" : "🤍"} {p.like_count || 0}</span>
+                {p.user_phone === currentUser.phone && <span onClick={() => handleDeleteComment(p.id, viewingCommentsPlace.id)} style={{ color: '#ff4d4f', cursor: 'pointer' }}>删除</span>}
+              </div>
+            </div>
+          </div>
+
+          {/* 回复区域 */}
+          {myReplies.length > 0 && (
+            <div style={{ marginLeft: '46px', marginTop: '10px' }}>
+              {!isExpanded ? (
+                <div onClick={() => toggleExpand(p.id)} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#999', fontSize: '12px' }}>
+                  <div style={{ width: '20px', height: '1px', background: '#ddd' }}></div> 展开 {myReplies.length} 条回复 ▼
+                </div>
+              ) : (
+                <div style={{ background: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
+                  {myReplies.map(reply => (
+                    <div key={reply.id} style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                      {renderAvatar(reply.avatar_url, reply.user_phone, '24px')}
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>{reply.username}</div>
+                        <div style={{ fontSize: '14px', color: '#333' }}><span style={{ color: '#5aa77b' }}>回复：</span>{reply.content}</div>
+                        {renderCommentImages(reply.image_url)}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#bbb', marginTop: '5px' }}>
+                          <span>{formatCommentTime(reply.created_at)}</span>
+                          <span onClick={(e) => handleLikeComment(e, reply.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: reply.is_liked ? '#ff4d4f' : '#999' }}>❤️ {reply.like_count || 0}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  {myReplies.length > 0 && (
-                    <div style={{ marginLeft: '46px', marginTop: '10px' }}>
-                      {!isExpanded ? (
-                        <div onClick={() => toggleExpand(p.id)} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#999', fontSize: '12px' }}>
-                          <div style={{ width: '20px', height: '1px', background: '#ddd' }}></div>
-                          <span>展开 {myReplies.length} 条回复 ▼</span>
-                        </div>
-                      ) : (
-                        <div style={{ background: '#f9f9f9', padding: '10px', borderRadius: '8px' }}>
-                          {myReplies.map(reply => (
-                            <div key={reply.id} style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                              <img src={reply.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + reply.user_phone} style={{ width: '24px', height: '24px', borderRadius: '50%' }} />
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: '12px', fontWeight: 'bold', color: '#666' }}>{reply.username}</div>
-                                <div style={{ fontSize: '14px', color: '#333' }}>
-                                  <span style={{ color: '#5aa77b', fontWeight: '500' }}>回复：</span>{reply.content}
-                                </div>
-                                {renderMultiImages(reply.image_url, '80px')}
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#bbb', marginTop: '5px' }}>
-                                  <span>{formatCommentTime(reply.created_at)}</span>
-                                  <span onClick={(e) => handleLikeComment(e, reply.id, viewingCommentsPlace.id)} style={{ cursor: 'pointer', color: reply.is_liked ? '#ff4d4f' : '#999' }}>❤️ {reply.like_count || 0}</span>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                          <div onClick={() => toggleExpand(p.id)} style={{ color: '#5aa77b', fontSize: '12px', cursor: 'pointer', textAlign: 'center', fontWeight: 'bold', marginTop: '5px' }}>—— 收起回复 ▲ ——</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  ))}
+                  <div onClick={() => toggleExpand(p.id)} style={{ color: '#5aa77b', fontSize: '12px', cursor: 'pointer', textAlign: 'center', fontWeight: 'bold' }}>—— 收起回复 ▲ ——</div>
                 </div>
-              );
-            });
-          })()}
-          <div style={{ height: '120px' }}></div>
+              )}
+            </div>
+          )}
         </div>
+      );
+    });
+  })()}
+  <div style={{ height: '120px' }}></div>
+</div>
 
         {/* 4. 底部固定输入栏 */}
         <div style={fixedBottomBarStyle}>
