@@ -29,6 +29,9 @@ function App() {
   const [replyTo, setReplyTo] = useState(null); // 存储正在回复的评论对象 {id, username}
   const [expandedParentIds, setExpandedParentIds] = useState([]); // 记录哪些评论被展开了
   const [showOnlyImages, setShowOnlyImages] = useState(false); // 是否开启“仅看图片”
+ 
+  // "home" 是地图首页，"profile" 是个人中心
+  const [activeTab, setActiveTab] = useState("home");
 
   // ✅ 地点点赞数据
   const [placeStats, setPlaceStats] = useState({}); 
@@ -854,7 +857,52 @@ const getSortedComments = () => {
 };
 
   return (
-  <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", height: "100vh", overflow: "hidden", background: "#f4fbf6" }}>
+  <div style={{ minHeight: "100vh", background: "#f4fbf6", position: 'relative' }}>
+    
+    {/* 🟢 1. 个人中心页面层 (activeTab 为 profile 时显示) */}
+    {activeTab === "profile" && (
+      <div style={profilePageStyle}>
+        {/* 顶部导航栏 */}
+        <div style={navHeaderStyle}>
+          <span onClick={() => setActiveTab("home")} style={{ cursor: 'pointer', fontSize: '18px' }}>← 返回</span>
+          <span style={{ fontWeight: 'bold' }}>个人中心</span>
+          <span style={{ width: '40px' }}></span>
+        </div>
+
+        <div style={{ padding: '20px' }}>
+          {/* 用户基础信息卡片 */}
+          <div style={profileInfoCard}>
+             <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={profileAvatarLarge} />
+             <h2 style={{ marginTop: '15px', color: '#2e6a4a', marginBottom: '5px' }}>{currentUser.username}</h2>
+             <p style={{ color: '#999', fontSize: '13px', margin: 0 }}>手机号：{currentUser.phone}</p>
+          </div>
+
+          {/* 功能菜单列表 */}
+          <div style={{ marginTop: '20px' }}>
+             <div style={menuItemStyle} onClick={() => alert('功能开发中...')}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span>🔔</span> 消息回复提醒
+                </div>
+                <span style={badgeStyle}>0</span>
+             </div>
+             <div style={menuItemStyle}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span>🏆</span> 荣誉称号获得
+                </div>
+                <div style={{ fontSize: '12px', color: '#5aa77b', fontWeight: 'bold' }}>椰城探路者</div>
+             </div>
+             <div style={menuItemStyle} onClick={() => { setActiveTab('home'); setFilter('recommend'); }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span>✨</span> 我的分享记录
+                </div>
+                <span>❯</span>
+             </div>
+          </div>
+
+          <button onClick={handleLogout} style={btnLogOutStyle}>退出当前账号</button>
+        </div>
+      </div>
+    )}
     
     {/* 🟢 全屏评论页 */}
     {viewingCommentsPlace && (
@@ -1244,7 +1292,13 @@ const getSortedComments = () => {
             <img src={currentUser.avatar_url || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + currentUser.phone} style={avatarStyle} onClick={() => document.getElementById('avatar-input').click()} />
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={handleAvatarUpload} />
             <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{currentUser.username}</h3>
+                {/* ✅ 给名字加上点击事件和手型光标 */}
+<h3 
+    onClick={() => setActiveTab("profile")} 
+    style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer" }}
+>
+    {currentUser.username} <span style={{fontSize: '12px', color: '#ccc'}}>❯</span>
+</h3>
                 <div style={{ display: 'flex', gap: '8px', fontSize: '12px', marginTop: '2px' }}>
                     <span onClick={handleLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>退出</span>
                     <span onClick={() => setShowFeedback(true)} style={{ color: "#5aa77b", cursor: "pointer" }}>反馈建议</span>
@@ -1394,5 +1448,11 @@ const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", bo
 const horizontalScrollWrapper = { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '15px' };
 const albumThumbStyle = { height: '150px', borderRadius: '12px', flexShrink: 0 };
 const linkStyle = { color: "#5aa77b", cursor: "pointer", textDecoration: "underline" };
+const profilePageStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100%', background: '#f8fbf9', zIndex: 3000, overflowY: 'auto' };
+const profileInfoCard = { background: 'white', borderRadius: '24px', padding: '40px 20px', textAlign: 'center' };
+const profileAvatarLarge = { width: '80px', height: '80px', borderRadius: '50%', border: '3px solid #5aa77b' };
+const menuItemStyle = { background: 'white', padding: '18px 20px', borderRadius: '16px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+const badgeStyle = { background: '#ff4d4f', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' };
+const btnLogOutStyle = { width: '100%', marginTop: '20px', padding: '15px', borderRadius: '15px', border: '1px solid #ff4d4f', color: '#ff4d4f', background: 'none', fontWeight: 'bold' };
 
 export default App;
