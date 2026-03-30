@@ -1399,10 +1399,26 @@ const getSortedComments = () => {
           >
             <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
                 <img 
-                  src={n.sender_avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + n.sender_phone} 
-                  style={{ width: '32px', height: '32px', borderRadius: '50%' }} 
-                  alt="avatar"
-                />
+  /* ✅ 1. 处理 HTTPS 兼容性：如果是 http 则强制换成 https，防止手机浏览器拦截 */
+  src={ (n.sender_avatar && n.sender_avatar !== 'null') 
+    ? n.sender_avatar.replace('http://', 'https://') 
+    : `https://api.dicebear.com/7.x/avataaars/svg?seed=${n.sender_phone || 'haikou'}` 
+  } 
+  style={{ 
+    width: '40px',        // 稍微调大一点更清晰
+    height: '40px', 
+    /* ✅ 2. 核心修复：增加 minWidth 和 minHeight，防止图片加载失败时在手机上塌陷成一条线（看起来像乱码） */
+    minWidth: '40px', 
+    minHeight: '40px',
+    borderRadius: '50%', 
+    objectFit: 'cover',   // ✅ 3. 防止图片被拉伸变形
+    border: '1px solid #eee',
+    backgroundColor: '#f5f5f5' // 即使图没出来，也有个灰底色
+  }} 
+  alt="user"
+  /* ✅ 4. 最后一道防线：如果图片彻底 404，换成一个稳定的默认图 */
+  onError={(e) => { e.target.src = "https://api.dicebear.com/7.x/avataaars/svg?seed=error" }}
+/>
                 <div style={{ flex: 1 }}>
                     <div style={{ fontSize: '14px', color: '#333', lineHeight: '1.4' }}>
                         <span style={{ fontWeight: 'bold' }}>{n.sender_name}</span> 
