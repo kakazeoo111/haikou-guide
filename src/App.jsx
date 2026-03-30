@@ -152,6 +152,32 @@ const fetchNotices = async () => {
 
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
+  // ✅ 处理通知点击跳转
+const handleNoticeClick = (n) => {
+    // 1. 在所有数据源中寻找对应的地点对象
+    // 合并固定地点和推荐地点进行查找
+    const allSource = [
+        ...places.map(p => ({ ...p, id: String(p.id) })),
+        ...recommendations.map(r => ({
+            ...r,
+            id: `rec_${r.id}`,
+            name: r.place_name,
+            album: r.image_url ? [r.image_url] : []
+        }))
+    ];
+
+    const targetPlace = allSource.find(p => String(p.id) === String(n.place_id));
+
+    if (targetPlace) {
+        setShowNoticeList(false);      // 关闭消息列表弹窗
+        setActiveTab("home");          // 切换回地图首页
+        fetchComments(targetPlace.id); // 立即抓取该地点的评论
+        setViewingCommentsPlace(targetPlace); // 弹出该地点的全屏评论页
+    } else {
+        alert("该地点或推荐已被分享者删除");
+    }
+};
+
   // --- 添加下面这个函数 ---
 const toggleExpand = (parentId) => {
   setExpandedParentIds(prev => 
@@ -1343,32 +1369,66 @@ const getSortedComments = () => {
         <button onClick={() => window.location.reload()} style={floatBtnStyle}>🎯</button>
       </div>
 
-      {showNoticeList && (
+      {/* 🟢 消息列表弹窗 (修正版) */}
+{showNoticeList && (
   <div style={modalOverlayStyle}>
     <div style={{ ...modalContentStyle, maxHeight: '80vh', overflowY: 'auto' }}>
+      {/* 顶部标题栏 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h3 style={{ margin: 0 }}>未读消息</h3>
-        <span style={{ cursor: 'pointer' }} onClick={() => setShowNoticeList(false)}>×</span>
+        <h3 style={{ margin: 0 }}>消息中心</h3>
+        <span style={{ cursor: 'pointer', fontSize: '24px' }} onClick={() => setShowNoticeList(false)}>×</span>
       </div>
       
-      {notifications.length === 0 ? <p style={{ textAlign: 'center', color: '#999' }}>暂无消息</p> : 
+      {/* 消息内容列表 */}
+      {notifications.length === 0 ? (
+        <p style={{ textAlign: 'center', color: '#999', padding: '20px 0' }}>暂无消息</p>
+      ) : (
         notifications.map(n => (
-          <div key={n.id} style={{ padding: '12px 0', borderBottom: '1px solid #eee', opacity: n.is_read ? 0.6 : 1 }}>
-            <div style={{ fontSize: '14px' }}>
-                <b>{n.sender_name}</b> 
-                {n.type === 'like_place' && " 点赞了你的推荐"}
-                {n.type === 'like_comment' && " 点赞了你的评论"}
-                {n.type === 'reply' && ` 回复了你：${n.content}`}
+          <div 
+            key={n.id} 
+            onClick={() => handleNoticeClick(n)} // 点击跳转
+            style={{ 
+                padding: '15px 10px', 
+                borderBottom: '1px solid #f0f0f0', 
+                cursor: 'pointer', 
+                background: n.is_read ? 'transparent' : '#f4fbf6', 
+                borderRadius: '10px',
+                marginBottom: '5px',
+                transition: '0.2s'
+            }}
+          >
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                <img 
+                  src={n.sender_avatar || "https://api.dicebear.com/7.x/avataaars/svg?seed=" + n.sender_phone} 
+                  style={{ width: '32px', height: '32px', borderRadius: '50%' }} 
+                  alt="avatar"
+                />
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '14px', color: '#333', lineHeight: '1.4' }}>
+                        <span style={{ fontWeight: 'bold' }}>{n.sender_name}</span> 
+                        {n.type === 'like_place' && " 点赞了你的分享"}
+                        {n.type === 'like_comment' && " 点赞了你的评论"}
+                        {n.type === 'reply' && <span style={{color:'#666'}}> 回复了你：{n.content}</span>}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#bbb', marginTop: '6px', display: 'flex', justifyContent: 'space-between' }}>
+                        <span>{formatCommentTime(n.created_at)}</span>
+                        <span style={{ color: '#5aa77b' }}>点击查看详情 ❯</span>
+                    </div>
+                </div>
             </div>
-            <div style={{ fontSize: '11px', color: '#bbb', marginTop: '4px' }}>{formatCommentTime(n.created_at)}</div>
           </div>
         ))
-      }
+      )}
       
+      {/* 底部已读按钮 */}
       <button 
         onClick={async () => {
-            await fetch(`${authApiBase}/api/notifications/read`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({phone: currentUser.phone}) });
-            fetchNotices();
+            await fetch(`${authApiBase}/api/notifications/read`, { 
+                method: 'POST', 
+                headers: {'Content-Type':'application/json'}, 
+                body: JSON.stringify({phone: currentUser.phone}) 
+            });
+            fetchNotices(); // 刷新列表
         }}
         style={{ ...btnMainStyle, marginTop: '20px' }}
       >
