@@ -1260,7 +1260,13 @@ const getSortedComments = () => {
         </div>
 
         <div style={{ position: "sticky", top: 0, background: "white", zIndex: 100, padding: "10px 20px", borderBottom: "1px solid #f0f0f0" }}>
-          <div style={{ display: "flex", gap: "8px", overflowX: "auto" }}>
+          {/* ✅ 去掉 overflowX，增加 flexWrap: "wrap" 让它自动换行 */}
+<div style={{ 
+  display: "flex", 
+  gap: "8px", 
+  flexWrap: "wrap",      // 核心修改：允许换行
+  justifyContent: "flex-start" // 按钮靠左对齐
+}}>
             {[
                 { k: "all", l: "全部" }, 
                 { k: "recommend", l: "✨ 推荐" },
