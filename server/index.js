@@ -52,6 +52,17 @@ const client = new DypnsapiClient.default(config);
 const otpStore = new Map();
 const ADMIN_PHONE = "13707584213";
 
+// ✅ 辅助函数：添加通知
+async function addNotice(receiver, sender, type, placeId, content = "") {
+    if (receiver === sender) return; // 自己操作不通知自己
+    try {
+        await pool.execute(
+            'INSERT INTO notifications (receiver_phone, sender_phone, type, place_id, content) VALUES (?, ?, ?, ?, ?)',
+            [receiver, sender, type, placeId, content]
+        );
+    } catch (e) { console.error("发送通知失败:", e.message); }
+}
+
 app.get("/api/health", (req, res) => res.json({ ok: true, db: "connected" }));
 
 // --- 认证接口 ---
@@ -115,9 +126,7 @@ app.get("/api/recommendations", async (req, res) => {
 
 app.post("/api/recommendations/add", upload.array('images', 9), async (req, res) => {
     const { phone, place_name, description, lat, lng } = req.body;
-    // 同样，处理多张图
     const imageUrls = req.files ? req.files.map(f => `https://api.suzcore.top/uploads/${f.filename}`) : [];
-    
     try {
         await pool.execute(
             'INSERT INTO recommendations (user_phone, place_name, description, lat, lng, image_url) VALUES (?, ?, ?, ?, ?, ?)',
@@ -127,37 +136,27 @@ app.post("/api/recommendations/add", upload.array('images', 9), async (req, res)
     } catch (e) { res.status(500).json({ ok: false }); }
 });
 
-// 在 index.js 中找到此接口并替换
+// ✅ 推荐点赞接口（已集成通知）
 app.post("/api/recommendations/like", async (req, res) => {
     const { phone, recId } = req.body;
     try {
-        // 确保 recId 是数字
         const id = parseInt(recId);
-        const [rows] = await pool.execute(
-            'SELECT id FROM recommendation_likes WHERE phone = ? AND recommendation_id = ?', 
-            [phone, id]
-        );
+        const [rows] = await pool.execute('SELECT id FROM recommendation_likes WHERE phone = ? AND recommendation_id = ?', [phone, id]);
         
         if (rows.length > 0) {
-            await pool.execute(
-                'DELETE FROM recommendation_likes WHERE phone = ? AND recommendation_id = ?', 
-                [phone, id]
-            );
+            await pool.execute('DELETE FROM recommendation_likes WHERE phone = ? AND recommendation_id = ?', [phone, id]);
             res.json({ ok: true, action: "unliked" });
         } else {
-            await pool.execute(
-                'INSERT INTO recommendation_likes (phone, recommendation_id) VALUES (?, ?)', 
-                [phone, id]
-            );
+            await pool.execute('INSERT INTO recommendation_likes (phone, recommendation_id) VALUES (?, ?)', [phone, id]);
+            // 💡 发送通知给推荐者
+            const [owner] = await pool.execute('SELECT user_phone FROM recommendations WHERE id = ?', [id]);
+            if (owner.length > 0) await addNotice(owner[0].user_phone, phone, 'like_place', `rec_${id}`);
             res.json({ ok: true, action: "liked" });
         }
-    } catch (e) {
-        console.error("推荐点赞失败:", e.message);
-        res.status(500).json({ ok: false, message: e.message });
-    }
+    } catch (e) { res.status(500).json({ ok: false, message: e.message }); }
 });
 
-// --- 原有点赞与评论接口（已加入安全防护） ---
+// --- 原有点赞与评论接口 ---
 app.get("/api/places/stats", async (req, res) => {
     const { phone } = req.query;
     try {
@@ -173,14 +172,21 @@ app.post("/api/places/like", async (req, res) => {
     const { phone, placeId } = req.body;
     try {
         const [rows] = await pool.execute('SELECT id FROM place_likes WHERE phone = ? AND place_id = ?', [phone, placeId]);
-        if (rows.length > 0) await pool.execute('DELETE FROM place_likes WHERE phone = ? AND place_id = ?', [phone, placeId]);
-        else await pool.execute('INSERT INTO place_likes (phone, place_id) VALUES (?, ?)', [phone, placeId]);
+        if (rows.length > 0) {
+            await pool.execute('DELETE FROM place_likes WHERE phone = ? AND place_id = ?', [phone, placeId]);
+        } else {
+            await pool.execute('INSERT INTO place_likes (phone, place_id) VALUES (?, ?)', [phone, placeId]);
+            // 如果是推荐地点(rec_xx)，通知推荐者
+            if (String(placeId).startsWith('rec_')) {
+                const [owner] = await pool.execute('SELECT user_phone FROM recommendations WHERE id = ?', [placeId.replace('rec_', '')]);
+                if (owner.length > 0) await addNotice(owner[0].user_phone, phone, 'like_place', placeId);
+            }
+        }
         const [countRow] = await pool.execute('SELECT COUNT(*) as count FROM place_likes WHERE place_id = ?', [placeId]);
         res.json({ ok: true, newCount: countRow[0].count });
     } catch (e) { res.status(500).json({ ok: false }); }
 });
 
-// 获取评论 - 增加 try-catch 保护
 app.get("/api/comments/:placeId", async (req, res) => {
     const { phone } = req.query;
     const placeId = req.params.placeId;
@@ -194,42 +200,45 @@ app.get("/api/comments/:placeId", async (req, res) => {
                     ORDER BY c.created_at ASC`;
         const [rows] = await pool.execute(sql, [phone || '', placeId]);
         res.json({ ok: true, comments: rows.map(r => ({ ...r, is_liked: r.is_liked > 0 })) });
-    } catch (e) { 
-        console.error("获取评论失败:", e);
-        res.status(500).json({ ok: false, message: "获取评论失败" }); 
-    }
+    } catch (e) { res.status(500).json({ ok: false, message: "获取评论失败" }); }
 });
 
-// 点赞评论 - 增加 try-catch 保护
+// ✅ 评论点赞接口（已集成通知）
 app.post("/api/comments/like", async (req, res) => {
     try {
         const { phone, commentId } = req.body;
         const [rows] = await pool.execute('SELECT id FROM comment_likes WHERE phone = ? AND comment_id = ?', [phone, commentId]);
-        if (rows.length > 0) await pool.execute('DELETE FROM comment_likes WHERE phone = ? AND comment_id = ?', [phone, commentId]);
-        else await pool.execute('INSERT INTO comment_likes (phone, comment_id) VALUES (?, ?)', [phone, commentId]);
+        if (rows.length > 0) {
+            await pool.execute('DELETE FROM comment_likes WHERE phone = ? AND comment_id = ?', [phone, commentId]);
+        } else {
+            await pool.execute('INSERT INTO comment_likes (phone, comment_id) VALUES (?, ?)', [phone, commentId]);
+            // 💡 发送通知给评论作者
+            const [author] = await pool.execute('SELECT user_phone, place_id FROM comments WHERE id = ?', [commentId]);
+            if (author.length > 0) await addNotice(author[0].user_phone, phone, 'like_comment', author[0].place_id);
+        }
         res.json({ ok: true });
-    } catch (e) {
-        console.error("点赞评论失败:", e);
-        res.status(500).json({ ok: false });
-    }
+    } catch (e) { res.status(500).json({ ok: false }); }
 });
 
-// 发布评论 - 【重点修正：增加 try-catch，防止进程崩溃】
+// ✅ 发布评论接口（已集成回复通知）
 app.post("/api/comments/add", upload.array('images', 9), async (req, res) => {
   try {
     const { phone, placeId, content, parentId } = req.body;
-    
-    // ✅ 处理多图：将所有上传成功的图片路径转为完整 URL 数组
     const imageUrls = req.files ? req.files.map(f => `https://api.suzcore.top/uploads/${f.filename}`) : [];
     
-    await pool.execute(
+    const [result] = await pool.execute(
         'INSERT INTO comments (place_id, user_phone, content, image_url, parent_id) VALUES (?, ?, ?, ?, ?)', 
-        [placeId, phone, content || "", JSON.stringify(imageUrls), parentId || null] // ✅ 存为 JSON 字符串
+        [placeId, phone, content || "", JSON.stringify(imageUrls), parentId || null]
     );
+
+    // 💡 如果是回复，发送通知给父评论作者
+    if (parentId) {
+        const [parent] = await pool.execute('SELECT user_phone FROM comments WHERE id = ?', [parentId]);
+        if (parent.length > 0) await addNotice(parent[0].user_phone, phone, 'reply', placeId, content);
+    }
+    
     res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false });
-  }
+  } catch (e) { res.status(500).json({ ok: false }); }
 });
 
 app.post("/api/comments/delete", async (req, res) => {
@@ -240,7 +249,41 @@ app.post("/api/comments/delete", async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false }); }
 });
 
-// --- 其他接口 (保持不变但建议也加上 try-catch) ---
+// ✅ 新增：获取通知中心内容
+app.get("/api/notifications/:phone", async (req, res) => {
+    try {
+        const sql = `SELECT n.*, u.username as sender_name, u.avatar_url as sender_avatar 
+                     FROM notifications n 
+                     JOIN users u ON n.sender_phone = u.phone 
+                     WHERE n.receiver_phone = ? 
+                     ORDER BY n.created_at DESC LIMIT 50`;
+        const [rows] = await pool.execute(sql, [req.params.phone]);
+        res.json({ ok: true, data: rows });
+    } catch (e) { res.status(500).json({ ok: false }); }
+});
+
+// ✅ 新增：标记已读
+app.post("/api/notifications/read", async (req, res) => {
+    try {
+        await pool.execute('UPDATE notifications SET is_read = 1 WHERE receiver_phone = ?', [req.body.phone]);
+        res.json({ ok: true });
+    } catch (e) { res.status(500).json({ ok: false }); }
+});
+
+// ✅ 新增：清空所有通知接口
+app.post("/api/notifications/clear", async (req, res) => {
+    try {
+        const { phone } = req.body;
+        // 直接从数据库删除该用户的所有接收通知
+        await pool.execute('DELETE FROM notifications WHERE receiver_phone = ?', [phone]);
+        res.json({ ok: true, message: "通知已清空" });
+    } catch (e) { 
+        console.error("清空通知失败:", e.message);
+        res.status(500).json({ ok: false }); 
+    }
+});
+
+// --- 其他后台管理与用户接口 ---
 app.get("/api/announcement", async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT content FROM announcements WHERE id = 1');
@@ -260,14 +303,10 @@ app.post("/api/announcement/update", async (req, res) => {
 app.post("/api/feedback/submit", upload.single('image'), async (req, res) => {
   try {
     const { phone, content } = req.body;
-    console.log("收到反馈请求:", { phone, content }); // ✅ 打印收到的数据
-    
     const imageUrl = req.file ? `https://api.suzcore.top/uploads/${req.file.filename}` : null;
-    
     await pool.execute('INSERT INTO feedback (phone, content, image_url) VALUES (?, ?, ?)', [phone, content || "", imageUrl]);
     res.json({ ok: true, message: "反馈已收到" });
   } catch (e) {
-    // ✅ 这一行是关键！它会告诉你到底是数据库连不上，还是字段写错了
     console.error("【反馈提交彻底失败】:", e.message); 
     res.status(500).json({ ok: false, error: e.message }); 
   }
@@ -301,33 +340,16 @@ app.get("/api/favorites/:phone", async (req, res) => {
 app.post("/api/favorites/toggle", async (req, res) => {
     try {
         const { phone, placeId } = req.body;
-        const pId = String(placeId); // ✅ 强制转为字符串，防止混合类型导致SQL崩溃
-
-        // 1. 先查有没有
-        const [rows] = await pool.execute(
-            'SELECT id FROM favorites WHERE user_phone = ? AND place_id = ?', 
-            [phone, pId]
-        );
-
+        const pId = String(placeId);
+        const [rows] = await pool.execute('SELECT id FROM favorites WHERE user_phone = ? AND place_id = ?', [phone, pId]);
         if (rows.length > 0) {
-            // 2. 有就删掉
-            await pool.execute(
-                'DELETE FROM favorites WHERE user_phone = ? AND place_id = ?', 
-                [phone, pId]
-            );
+            await pool.execute('DELETE FROM favorites WHERE user_phone = ? AND place_id = ?', [phone, pId]);
             res.json({ ok: true, action: 'removed' });
         } else {
-            // 3. 没有就存入
-            await pool.execute(
-                'INSERT INTO favorites (user_phone, place_id) VALUES (?, ?)', 
-                [phone, pId]
-            );
+            await pool.execute('INSERT INTO favorites (user_phone, place_id) VALUES (?, ?)', [phone, pId]);
             res.json({ ok: true, action: 'added' });
         }
-    } catch (e) {
-        console.error("收藏切换失败:", e.message);
-        res.status(500).json({ ok: false, error: e.message });
-    }
+    } catch (e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 app.post("/api/recommendations/delete", async (req, res) => {

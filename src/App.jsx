@@ -1,5 +1,52 @@
-import React, { useEffect, useState, useRef } from "react";
+﻿import React, { useEffect, useState, useRef } from "react";
 import BaiduMap from "./BaiduMap";
+import { places as placesData } from "./data/places";
+import {
+  suggestionListStyle,
+  suggestionItemStyle,
+  rankBadgeStyle,
+  placeLikeBtnStyle,
+  fullPageOverlayStyle,
+  navHeaderStyle,
+  sortContainerStyle,
+  sortBtnStyle,
+  scrollContentStyle,
+  fixedBottomBarStyle,
+  bottomInputContainer,
+  bottomRealInput,
+  feedbackItemStyle,
+  zoomOverlayStyle,
+  zoomedImgStyle,
+  closeZoomStyle,
+  swipeContainerStyle,
+  swipeItemStyle,
+  modalOverlayStyle,
+  modalContentStyle,
+  avatarStyle,
+  listThumbStyle,
+  categoryTagStyle,
+  photoTagStyle,
+  btnMainStyle,
+  btnSmallStyle,
+  btnDetailStyle,
+  btnNavStyle,
+  btnSendStyle,
+  btnCancelStyle,
+  btnIconStyle,
+  textAreaStyle,
+  floatBtnStyle,
+  inputStyle,
+  btnCodeStyle,
+  horizontalScrollWrapper,
+  albumThumbStyle,
+  linkStyle,
+  profilePageStyle,
+  profileInfoCard,
+  profileAvatarLarge,
+  menuItemStyle,
+  badgeStyle,
+  btnLogOutStyle,
+} from "./styles/appStyles";
 
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -476,284 +523,8 @@ const toggleExpand = (parentId) => {
         });
     }
   };
-  // ================================
-  // ✅ 40个完整地点数据
-  // ================================
-  const places = [
-        { id: 1, type: "view", isPhotoReady:true,name: "云洞图书馆", desc: "现代艺术与阅读的天堂，设计感拉满，大概率刷新绝美日落，还有文艺感十足的楼梯和角落，每一处都是拍照和沉浸阅读的绝佳场景，进去图书馆需要提前几天预约", lat: 20.091026, lng: 110.262594,hours:"10:00-22:00",phone:"19907616926",
-      album:[
-        "https://api.suzcore.top/uploads/places/1_1.jpg",
-        "https://api.suzcore.top/uploads/places/1_2.jpg",
-        "https://api.suzcore.top/uploads/places/1_3.jpg"
-      ]
-    },
-    { id: 2, type: "view", name: "世纪大桥", desc: "横跨碧海，可以在桥头远眺，灯光璀璨，夜景唯美，是个出片的好地方", lat: 20.055302, lng: 110.326392,hours:"全天开放",phone:"无",
-      album:[
-        "https://api.suzcore.top/uploads/places/2_1.jpg",
-        "https://api.suzcore.top/uploads/places/2_2.jpg"
-      ]
-    },
-    { id: 3, type: "view", name: "假日海滩", desc: "沙细水清，可以在阳光下晒太阳，感受惬意的海风和悠闲度假氛围", lat: 20.038396, lng: 110.250973,hours:"全天开放",phone:"0898-68719988",
-      album:[
-        "https://api.suzcore.top/uploads/places/3_1.jpg",
-        "https://api.suzcore.top/uploads/places/3_2.jpg"
-      ]
-    },
-    { id: 4, type: "view",isPhotoReady:true, name: "万绿园", desc: "绿意盎然，湖边风景和林荫小道的宁静与清新是散步者的天堂", lat: 20.039770, lng: 110.320249,hours:"全天开放",phone:"0898-68511069",
-      album:[
-        "https://api.suzcore.top/uploads/places/4_1.jpg",
-        "https://api.suzcore.top/uploads/places/4_2.jpg",
-        "https://api.suzcore.top/uploads/places/4_3.jpg",
-        "https://api.suzcore.top/uploads/places/4_4.jpg"
-      ]
-    },
-    { id: 5, type: "street",isPhotoReady:true, name: "骑楼老街", desc: "充满历史韵味的街巷和南洋建筑，色彩斑斓。有很多的伴手礼销售点，还有许多地道小吃可供选择。", lat: 20.046030, lng: 110.350885,hours:"全天开放",phone:"无",
-      album:[
-        "https://api.suzcore.top/uploads/places/5_1.jpg",
-        "https://api.suzcore.top/uploads/places/5_2.jpg",
-        "https://api.suzcore.top/uploads/places/5_3.jpg"
-      ]
-    },
-    { id: 6, type: "street", name: "日月广场免税店", desc: "购物天堂般的现代商圈，琳琅满目的免税商品，时尚亮眼的店铺与广场。", lat: 20.022236, lng: 110.353345,hours:"10:00-22:00",phone:"400-110-0100",
-      album:[
-        "https://api.suzcore.top/uploads/places/6_1.jpg",
-        "https://api.suzcore.top/uploads/places/6_2.jpg"
-      ]
-    },
-    { id: 7, type: "view",isPhotoReady:true, name: "天空之山", desc: "漂浮在云端的秘境，可以登顶远眺全景，旁边靠海，是个休闲打卡的理想点", lat: 20.064052, lng: 110.313215,hours:"全天开放",phone:"无",
-      album:[
-        "https://api.suzcore.top/uploads/places/7_1.jpg",
-        "https://api.suzcore.top/uploads/places/7_2.jpg",
-        "https://api.suzcore.top/uploads/places/7_3.jpg"
-      ]
-    },
-    { id: 8, type: "view",isPhotoReady:true, name: "西秀海滩", desc: "海口目前打卡最多的海滩，蔚蓝秘境一般，好似童话的海边", lat: 20.029237, lng: 110.270513,hours:"全天开放",phone:"0898-68654616",
-      album:[
-        "https://api.suzcore.top/uploads/places/8_1.jpg",
-        "https://api.suzcore.top/uploads/places/8_2.jpg"
-      ]
-    },
-    { id: 9, type: "view",isPhotoReady:true, name: "观海台", desc: "临海而建，近西秀海滩，有人说像是误入了宫崎骏的童话世界。是很有名的打卡点", lat: 20.037925, lng: 110.304154,hours:"全天开放",phone:"无",
-      album:[
-        "https://api.suzcore.top/uploads/places/9_1.jpg",
-        "https://api.suzcore.top/uploads/places/9_2.jpg"
-      ]
-    },
-    { id: 10, type: "view",isPhotoReady:true, name: "拾贝公园", desc: "小众高级感海边，北欧风的电影感，像是被遗忘的孤独之地", lat: 20.094954, lng: 110.375914,hours:"全天开放",phone:"0898-66555888",
-      album:[
-        "https://api.suzcore.top/uploads/places/10_1.jpg",
-        "https://api.suzcore.top/uploads/places/10_2.jpg",
-        "https://api.suzcore.top/uploads/places/10_3.jpg",
-        "https://api.suzcore.top/uploads/places/10_4.jpg"
-      ]
-    },
-    { id: 11, type: "street", name: "友谊阳光城", desc: "现代商业与休闲完美融合的城市空间，阳光洒满的广场，绿意的角落和街区的时尚装置，感受都市惬意生活", lat: 20.029385, lng: 110.330482,hours:"10:00-22:30",phone:"0898-66710606",
-      album:[
-        "https://api.suzcore.top/uploads/places/11_1.jpg",
-        "https://api.suzcore.top/uploads/places/11_2.jpg"
-      ]
-    },
-    { id: 12, type: "street", name: "龙湖天街", desc: "海口新商场，集购物美食与娱乐于一体的潮流地标，是逛街党的天堂", lat: 20.002361, lng: 110.336522,hours:"10:00-22:00",phone:"0898-31070808",
-      album:[
-        "https://api.suzcore.top/uploads/places/12_1.jpg",
-        "https://api.suzcore.top/uploads/places/12_2.jpg"
-      ]
-    },
-    { id: 13, type: "street", name: "吾悦广场", desc: "曾经的辉煌商场，但依然还是城市休闲中心，感受热闹轻松的都市生活氛围", lat: 19.982740, lng: 110.345532,hours:"10:00-22:00",phone:"0898-36302333",
-      album:[
-        "https://api.suzcore.top/uploads/places/13_1.jpg"
-      ]
-    },
-    { id: 14, type: "street",isPhotoReady:true, name: "自在湾", desc: "唯美临海步行街，面朝大海坐在咖啡厅拍照打卡吃饭，海风轻拂感受自在生活。", lat: 20.042410, lng: 110.314577,hours:"全天开放",phone:"无",
-      album:[
-        "https://api.suzcore.top/uploads/places/14_1.jpg",
-        "https://api.suzcore.top/uploads/places/14_2.jpg",
-        "https://api.suzcore.top/uploads/places/14_3.jpg"
-      ]
-    },
-    { id: 15, type: "food", name: "正方华(明珠广场店)", desc: "海南特色老爸茶，每天都会有许多人包括本地居民都会来吃老爸茶，非常受欢迎的一家店。", lat: 20.035661, lng: 110.349434,hours:"06:00-21:00",phone:"18976528934",
-      album:[
-        "https://api.suzcore.top/uploads/places/15_1.jpg",
-        "https://api.suzcore.top/uploads/places/15_2.jpg",
-        "https://api.suzcore.top/uploads/places/15_3.jpg"
-      ]
-    },
-    { id: 16, type: "food", name: "芸鹏休闲茶坊", desc: "在高登街旁，靠招牌烙饼红火，每一桌必点的烙饼，切记烙饼只有下午三点后才开放", lat: 20.00, lng: 110.35,hours:"07:00-18:30",phone:"13876049049",
-      album:[
-        "https://api.suzcore.top/uploads/places/16_1.jpg",
-        "https://api.suzcore.top/uploads/places/16_2.jpg",
-        "https://api.suzcore.top/uploads/places/16_3.jpg"
-      ]
-    },
-    { id: 17, type: "food", name: "九记甜品(华海店)", desc: "甜品爱好者的打卡圣地，美味的甜品和精致的摆摊吸引了无数游客", lat: 20.028871, lng: 110.335004,hours:"11:00-24:00",phone:"18976258385",
-      album:[
-        "https://api.suzcore.top/uploads/places/17_1.jpg",
-        "https://api.suzcore.top/uploads/places/17_2.jpg",
-        "https://api.suzcore.top/uploads/places/17_3.jpg",
-        "https://api.suzcore.top/uploads/places/17_4.jpg"
-      ]
-    },
-    { id: 18, type: "food", name: "柿里糖水铺(世贸直营店)", desc: "地道港式糖水的温暖小天地，店内氛围十分温馨，有甜品有晚餐，可以与朋友分享甜蜜的悠闲地", lat: 20.027454, lng: 110.311212,hours:"10:30-24:00",phone:"15500985987",
-      album:[
-        "https://api.suzcore.top/uploads/places/18_1.jpg",
-        "https://api.suzcore.top/uploads/places/18_2.jpg",
-        "https://api.suzcore.top/uploads/places/18_3.jpg"
-      ]
-    },
-    { id: 19, type: "food", name: "萝冰冰", desc: "人气甜品店，五彩缤纷的冰品加上可供小孩玩耍的一方空间，带娃与享受清凉口感两不误", lat: 20.025954, lng: 110.339806,hours:"12:00-22:30",phone:"0898-68960822",
-      album:[
-        "https://api.suzcore.top/uploads/places/19_1.jpg",
-        "https://api.suzcore.top/uploads/places/19_2.jpg",
-        "https://api.suzcore.top/uploads/places/19_3.jpg"
-      ]
-    },
-    { id: 20, type: "food", name: "海大南门夜市", desc: "夜色下的市井烟火地，摊位琳琅目，品尝地道小吃，感受海口最地道的夜生活氛围", lat: 20.056054, lng: 110.343200,hours:"09:00-23:00",phone:"13637540649",
-      album:[
-        "https://api.suzcore.top/uploads/places/20_1.jpg",
-        "https://api.suzcore.top/uploads/places/20_2.jpg",
-        "https://api.suzcore.top/uploads/places/20_3.jpg"
-      ]
-    },
-    { id: 21, type: "food", name: "阿娥餐饮店", desc: "老字号炸炸店，是站主最喜欢的炸炸店，物美价廉还有清爽的冰绿豆（有冬瓜意）", lat: 20.044653, lng: 110.351382,hours:"14:00-19:30",phone:"15348848123",
-      album:[
-        "https://api.suzcore.top/uploads/places/21_1.jpg",
-        "https://api.suzcore.top/uploads/places/21_2.jpg",
-        "https://api.suzcore.top/uploads/places/21_3.jpg",
-        "https://api.suzcore.top/uploads/places/21_4.jpg"
-      ]
-    },
-    { id: 22, type: "food", name: "姚记辣汤饭", desc: "海南特色街头小吃，香辣浓郁，热气腾腾，感受地道海口味道带来的烟火气息", lat: 20.049292, lng: 110.352991,hours:"06:00-21:00",phone:"13208970659",
-      album:[
-        "https://api.suzcore.top/uploads/places/22_1.jpg",
-        "https://api.suzcore.top/uploads/places/22_2.jpg"
-      ]
-    },
-    { id: 23, type: "food", name: "文昌邓记清补凉", desc: "清甜解暑清补凉老字号，好吃又好看，料很多，在炎热的夏天来一碗绝对是一个不错的选择", lat: 20.026083, lng: 110.080660,hours:"10:00-01:00",phone:"13337647133",
-      album:[
-        "https://api.suzcore.top/uploads/places/23_1.jpg",
-        "https://api.suzcore.top/uploads/places/23_2.jpg"
-      ]
-    },
-    { id: 24, type: "food", name: "美元味饮食店", desc: "市井气息浓厚，有甲子海南粉，伊面汤，粉汤，味道真的是让站主难以忘怀，是站主高中夜宵的常客，非常值得推荐的一个地方", lat: 20.010878, lng: 110.360648,hours:"05:00-24:00",phone:"13627558394",
-      album:[
-        "https://api.suzcore.top/uploads/places/24_1.jpg",
-        "https://api.suzcore.top/uploads/places/24_2.jpg",
-        "https://api.suzcore.top/uploads/places/24_3.jpg"
-      ]
-    },
-    { id: 25, type: "food", name: "老机场陈记粉条王", desc: "正宗后安粉，肉给的很多，是在海口其他地方吃不到的正宗后安粉", lat: 20.008954, lng: 110.320581,hours:"06:30-22:00",phone:"18976057656",
-      album:[
-        "https://api.suzcore.top/uploads/places/25_1.jpg",
-        "https://api.suzcore.top/uploads/places/25_2.jpg"
-      ]
-    },
-    { id: 26, type: "food", name: "三爷糟粕醋", desc: "海南特色糟粕醋，独具风味的酸香开胃的糟粕醋美味，喜欢海鲜的游客可以选择，旁边还有同家的糟粕醋火锅", lat: 20.045964, lng: 110.349623,hours:"11:00-02:00",phone:"13807673135",
-      album:[
-        "https://api.suzcore.top/uploads/places/26_1.jpg",
-        "https://api.suzcore.top/uploads/places/26_2.jpg"
-      ]
-    },
-    { id: 27, type: "food", name: "老机场陈记粉条王(西沙店)", desc: "也是正宗后安粉，是分店，除了后安粉还有美味的肉粽，值得一试", lat: 20.025471, lng: 110.341446,hours:"06:30-22:00",phhone:"13379891077",
-      album:[
-        "https://api.suzcore.top/uploads/places/27_1.jpg",
-        "https://api.suzcore.top/uploads/places/27_2.jpg",
-        "https://api.suzcore.top/uploads/places/27_3.jpg"
-      ]
-    },
-    { id: 28, type: "food", name: "韩汪记糟粕醋", desc: "藏在街边小巷的黄金店家，独特的糟粕醋让人感受海南的独特魅力。此外还销售糟粕醋", lat: 20.006376, lng: 110.366164,hours:"12:00-21:00",phone:"13876069866",
-      album:[
-        "https://api.suzcore.top/uploads/places/28_1.jpg",
-        "https://api.suzcore.top/uploads/places/28_2.jpg",
-        "https://api.suzcore.top/uploads/places/28_3.jpg"
-      ]
-    },
-    { id: 29, type: "food", name: "贞姐十三小鱼煲", desc: "位于角落巷子里的美味特色鱼煲，是站主从小吃到大的东西。空心菜，竹笋和芋头梗配上美味的酱料真的让人忍不住夸赞。", lat: 20.044265, lng: 110.353645,hours:"17:00-21:30",phone:"13876011900",
-      album:[
-        "https://api.suzcore.top/uploads/places/29_1.jpg",
-        "https://api.suzcore.top/uploads/places/29_2.jpg",
-        "https://api.suzcore.top/uploads/places/29_3.jpg",
-        "https://api.suzcore.top/uploads/places/29_4.jpg"
-      ]
-    },
-    { id: 30, type: "food", name: "无名鸡饭", desc: "低调却口碑炸裂的文昌鸡店，鲜嫩多汁的鸡肉配上诱人的鸡饭产生了无数回头客", lat: 20.031529, lng: 110.340119,hours:"11:00-14:30,17:00-20:00",phone:"18876623215",
-      album:[
-        "https://api.suzcore.top/uploads/places/30_1.jpg"
-      ]
-    },
-    { id: 31, type: "food", name: "肥婆兰鸡饭", desc: "香嫩的鸡肉配上醇香米饭和招牌地瓜叶，每一口都充满浓郁的本地风味", lat: 20.045125, lng: 110.350187,hours:"10:30-14:00,16:30-21:00",phone:"13518078600",
-      album:[
-        "https://api.suzcore.top/uploads/places/31_1.jpg",
-        "https://api.suzcore.top/uploads/places/31_2.jpg"
-      ]
-    },
-    { id: 32, type: "food", name: "白明泉椰子鸡", desc: "特色椰子鸡火锅，冒着热气的汤锅与晶莹椰子肉轻轻一勺能品出海南阳光与海风的味道，汤的味道也很让人着迷", lat: 20.032235, lng: 110.338479,hours:"12:00-02:00",phone:"无",
-      album:[
-        "https://api.suzcore.top/uploads/places/32_1.jpg",
-        "https://api.suzcore.top/uploads/places/32_2.jpg",
-        "https://api.suzcore.top/uploads/places/32_3.jpg"
-      ]
-    },
-    { id: 33, type: "food", name: "文昌鸡椰子汤", desc: "将海南椰香与现杀的文昌鸡的鲜美融为一体，加上十分清甜的汤，不难成为游客的心之所想", lat: 20.073184, lng: 110.336362,hours:"09:00-14:00,17:00-21:30",phone:"18389883798",
-      album:[
-        "https://api.suzcore.top/uploads/places/33_1.jpg",
-        "https://api.suzcore.top/uploads/places/33_2.jpg",
-        "https://api.suzcore.top/uploads/places/33_3.jpg"
-      ]
-    },
-    { id: 34, type: "food", name: "西天庙", desc: "热闹非凡的地道美食天堂（几乎所有的特色美食都囊括在内），可以边逛街边打卡品尝美食，", lat: 20.047292, lng: 110.346373,hours:"08:00-19:00",phone:"无",
-      album:[
-        "https://api.suzcore.top/uploads/places/34_1.jpg",
-        "https://api.suzcore.top/uploads/places/34_2.jpg",
-        "https://api.suzcore.top/uploads/places/34_3.jpg"
-      ]
-    },
-    { id: 35, type: "cafe",isPhotoReady:true, name: "小夜盲", desc: "极具氛围的小咖啡馆，老板人很好，详情的照片是站主对象亲自拍摄，强力推荐喜欢温馨的游客前去一试", lat: 20.034977, lng: 110.346373,hours:"12:00-02:00",phone:"18976264285",
-      album:[
-        "https://api.suzcore.top/uploads/places/35_1.jpg",
-        "https://api.suzcore.top/uploads/places/35_2.jpg",
-        "https://api.suzcore.top/uploads/places/35_3.jpg",
-        "https://api.suzcore.top/uploads/places/35_4.jpg"
-      ]
-    },
-    { id: 36, type: "cafe",isPhotoReady:true, name: "工芸咖啡", desc: "海景咖啡馆。绝美海景与温暖阳光让它成为海口最难约的海景下午茶", lat: 20.061229, lng: 110.317416,hours:"10:00-24:00",phone:"18086897848",
-      album:[
-        "https://api.suzcore.top/uploads/places/36_1.jpg",
-        "https://api.suzcore.top/uploads/places/36_2.jpg",
-        "https://api.suzcore.top/uploads/places/36_3.jpg"
-      ]
-    },
-    { id: 37, type: "cafe",isPhotoReady:true, name: "斑马院子", desc: "藏在小巷子深处的可爱小店，店里可约拍立得，还有懒人沙发，非常出片", lat: 20.031764, lng: 110.332199,hours:"14:30-19:00",phone:"187896755607",
-      album:[
-        "https://api.suzcore.top/uploads/places/37_1.jpg",
-        "https://api.suzcore.top/uploads/places/37_2.jpg",
-        "https://api.suzcore.top/uploads/places/37_3.jpg"
-      ]
-    },
-    { id: 38, type: "cafe",isPhotoReady:true, name: "青庭咖啡", desc: "日系窗景咖啡店，在万绿园里面，一扇窗让它成为了著名的打卡点", lat: 20.041134, lng: 110.325469,hours:"10:00-21:00",phone:"0868-68553237",
-      album:[
-        "https://api.suzcore.top/uploads/places/38_1.jpg",
-        "https://api.suzcore.top/uploads/places/38_2.jpg",
-        "https://api.suzcore.top/uploads/places/38_3.jpg",
-        "https://api.suzcore.top/uploads/places/38_4.jpg",
-        "https://api.suzcore.top/uploads/places/38_5.jpg"
-      ]
-    },
-    { id: 39, type: "cafe", name: "肆意茶聊", desc: "彷佛像闯进了闹市里的小森林，木质桌椅，中式茶馆，无不透露着松弛感", lat: 20.033555, lng: 110.334263,hours:"12:00-24:00",phone:"18876047119",
-      album:[
-        "https://api.suzcore.top/uploads/places/39_1.jpg",
-        "https://api.suzcore.top/uploads/places/39_2.jpg",
-        "https://api.suzcore.top/uploads/places/39_3.jpg"
-      ]
-    },
-    { id: 40, type: "cafe", name: "盐巴saltea", desc: "城市喧嚣中的一方宁静，绿植和阳光洒落让人感到很舒服惬意。", lat: 20.027084, lng: 110.307733,hours:"11:00-19:00",phone:"18084688512",
-      album:[
-        "https://api.suzcore.top/uploads/places/40_1.jpg",
-        "https://api.suzcore.top/uploads/places/40_2.jpg",
-        "https://api.suzcore.top/uploads/places/40_3.jpg",
-        "https://api.suzcore.top/uploads/places/40_4.jpg"
-      ]
-    },
-  ];
+  const places = placesData;
+
 
     const getDist = (l1, l2) => {
     if (!l1 || !l2 || !l2.lat) return 999;
@@ -1582,58 +1353,4 @@ const getSortedComments = () => {
     </div>
   );
 }
-// 这里是代码的最后，后面是样式常量定义...
-
-// 💄 样式合集 (保持不变...)
-const suggestionListStyle = { position: 'absolute', top: '45px', left: 0, width: '100%', background: 'white', border: '1px solid #eee', borderRadius: '10px', boxShadow: '0 10px 20px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '200px', overflowY: 'auto' };
-const suggestionItemStyle = { padding: '10px 15px', borderBottom: '1px solid #f9f9f9', cursor: 'pointer' };
-const rankBadgeStyle = (idx) => ({ position: 'absolute', top: '-5px', left: '-5px', width: '24px', height: '24px', background: idx === 0 ? '#FFD700' : idx === 1 ? '#C0C0C0' : idx === 2 ? '#CD7F32' : '#7dbf96', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 'bold', zIndex: 1, boxShadow: '0 2px 5px rgba(0,0,0,0.1)' });
-const placeLikeBtnStyle = (liked) => ({ cursor: 'pointer', fontSize: '12px', padding: '6px 14px', borderRadius: '20px', background: liked ? '#e8f5eb' : '#f0f0f0', color: liked ? '#2e6a4a' : '#888', fontWeight: 'bold', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '4px' });
-const fullPageOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100%', background: '#f8fbf9', zIndex: 2000, display: 'flex', flexDirection: 'column' };
-const navHeaderStyle = { background: 'white', padding: '15px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', zIndex: 2100 };
-const sortContainerStyle = { background: 'white', padding: '8px 20px', display: 'flex', gap: '15px', borderBottom: '1px solid #eee' };
-const sortBtnStyle = (active) => ({ border: 'none', background: 'transparent', fontSize: '12px', color: active ? '#5aa77b' : '#999', fontWeight: active ? 'bold' : 'normal', cursor: 'pointer', padding: '4px 0', borderBottom: active ? '2px solid #5aa77b' : '2px solid transparent' });
-const scrollContentStyle = { flex: 1, overflowY: 'auto', padding: '20px' };
-const fixedBottomBarStyle = { background: 'white', padding: '12px 20px', borderTop: '1px solid #eee',zIndex: 2100, // 确保在所有元素之上
-  position: 'relative', // 配合 Flex 布局使用
-  paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' };
-const bottomInputContainer = { display: 'flex', gap: '12px', alignItems: 'center', background: '#f5f5f5', padding: '8px 16px', borderRadius: '25px' };
-const bottomRealInput = { flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '14px' };
-const commentCardStyle = { background: 'white', padding: '16px', borderRadius: '16px', marginBottom: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' };
-const commentAvatarStyle = { width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' };
-const commentImgStyle = { width: '160px', borderRadius: '10px', marginTop: '10px', display: 'block', cursor: 'zoom-in' };
-const likeBtnStyle = (liked) => ({ cursor: 'pointer', padding: '4px 12px', borderRadius: '15px', background: liked ? '#ffecec' : '#f0f0f0', color: liked ? '#ff4d4f' : '#888', fontSize: '12px' });
-const feedbackItemStyle = { padding: '10px', borderBottom: '1px solid #eee', background: '#f9fcf9', borderRadius: '10px', marginBottom: '10px' };
-const zoomOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'black', zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center' };
-const zoomedImgStyle = { maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' };
-const closeZoomStyle = { position: 'absolute', top: '30px', right: '30px', color: 'white', fontSize: '50px', zIndex: 3100, cursor: 'pointer' };
-const swipeContainerStyle = { display: 'flex', overflowX: 'auto', width: '100vw', height: '100vh', scrollSnapType: 'x mandatory' };
-const swipeItemStyle = { flexShrink: 0, width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', scrollSnapAlign: 'start' };
-const modalOverlayStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' };
-const modalContentStyle = { background: 'white', width: '100%', maxWidth: '500px', borderRadius: '24px', padding: '24px' };
-const avatarStyle = { width: "50px", height: "50px", borderRadius: "50%", objectFit: "cover", border: "2px solid #5aa77b", cursor: 'pointer' };
-const listThumbStyle = { width: "70px", height: "70px", borderRadius: "12px", objectFit: "cover", cursor: 'zoom-in' };
-const categoryTagStyle = { fontSize: '10px', color: '#5aa77b', background: '#e8f5eb', padding: '2px 6px', borderRadius: '4px' };
-const photoTagStyle = { fontSize: '10px', color: '#ff9800', background: '#fff3e0', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold', border: '1px solid #ffe0b2' };
-const btnMainStyle = { width: "100%", padding: "14px", background: "#5aa77b", color: "white", border: "none", borderRadius: "10px", fontWeight: "bold", cursor: "pointer" };
-const btnSmallStyle = (m) => ({ padding: "8px 12px", borderRadius: "8px", border: "none", background: m ? "#df6b76" : "#e8f5eb", color: m ? "white" : "#2e6a4a", fontSize: "12px", cursor: "pointer" });
-const btnDetailStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: '#e8f5eb', color: '#2e6a4a', fontSize: "12px", cursor: "pointer" };
-const btnNavStyle = { padding: "8px 12px", borderRadius: "8px", border: "none", background: "#5aa77b", color: "white", fontSize: "12px", cursor: "pointer" };
-const btnSendStyle = { background: '#5aa77b', color: 'white', border: 'none', borderRadius: '20px', padding: '6px 16px', cursor:'pointer', fontSize: '13px', fontWeight: 'bold' };
-const btnCancelStyle = { flex: 1, padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white' };
-const btnIconStyle = { padding: '12px', borderRadius: '12px', border: '1px solid #ddd', background: 'white', cursor: 'pointer', fontSize: '18px' }; 
-const textAreaStyle = { width: '100%', height: '120px', borderRadius: '12px', padding: '12px', border: '1px solid #eee', outline: 'none' };
-const floatBtnStyle = { position: "absolute", right: "15px", bottom: "15px", width: "45px", height: "45px", borderRadius: "50%", background: "white", border: "none", boxShadow: "0 2px 10px rgba(0,0,0,0.2)", fontSize: "20px", zIndex: 20 };
-const inputStyle = { width: "100%", padding: "12px", marginBottom: "15px", borderRadius: "10px", border: "1px solid #ddd", boxSizing: "border-box" };
-const btnCodeStyle = { background: "#7dbf96", color: "white", border: "none", borderRadius: "10px", width: "70px", fontSize: "12px" };
-const horizontalScrollWrapper = { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '15px' };
-const albumThumbStyle = { height: '150px', borderRadius: '12px', flexShrink: 0 };
-const linkStyle = { color: "#5aa77b", cursor: "pointer", textDecoration: "underline" };
-const profilePageStyle = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100%', background: '#f8fbf9', zIndex: 3000, overflowY: 'auto' };
-const profileInfoCard = { background: 'white', borderRadius: '24px', padding: '40px 20px', textAlign: 'center' };
-const profileAvatarLarge = { width: '80px', height: '80px', borderRadius: '50%', border: '3px solid #5aa77b' };
-const menuItemStyle = { background: 'white', padding: '18px 20px', borderRadius: '16px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
-const badgeStyle = { background: '#ff4d4f', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '10px' };
-const btnLogOutStyle = { width: '100%', marginTop: '20px', padding: '15px', borderRadius: '15px', border: '1px solid #ff4d4f', color: '#ff4d4f', background: 'none', fontWeight: 'bold' };
-
 export default App;
