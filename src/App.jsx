@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useRef, useState } from "react";
 import AuthPanel from "./components/AuthPanel";
 import AppLayout from "./components/AppLayout";
 import { places as placesData } from "./data/places";
@@ -93,6 +93,7 @@ function App() {
     setShowOnlyImages,
     setInitialSlide,
     setZoomMode,
+    setZoomedSingleImage,
     setDetailPlace,
     setAuthMode,
   });

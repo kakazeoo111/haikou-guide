@@ -167,9 +167,10 @@ function AppLayout({
       />
 
       <DetailModal
-        place={detailPlace}
+        place={zoomMode ? null : detailPlace}
         onClose={() => setDetailPlace(null)}
         onPreviewAlbum={(index) => {
+          setZoomedSingleImage(null);
           setInitialSlide(index);
           setZoomMode(true);
         }}

@@ -33,6 +33,7 @@ export function createGeneralHandlers(ctx) {
     setShowOnlyImages,
     setInitialSlide,
     setZoomMode,
+    setZoomedSingleImage,
     setDetailPlace,
     setAuthMode,
   } = ctx;
@@ -197,10 +198,20 @@ export function createGeneralHandlers(ctx) {
   };
 
   const handleOpenDetail = (place, index = 0, openZoom = false) => {
-    setDetailPlace(place);
-    if (!openZoom) return;
-    setInitialSlide(index);
-    setZoomMode(true);
+    if (!openZoom) {
+      setDetailPlace(place);
+      return;
+    }
+    const album = Array.isArray(place?.album) ? place.album : [];
+    const pickedImage = album[index] || album[0] || "";
+    if (!pickedImage) {
+      console.error("Cover preview failed: image not found", { placeId: place?.id, index });
+      return;
+    }
+    setDetailPlace(null);
+    setZoomMode(false);
+    setInitialSlide(0);
+    setZoomedSingleImage(pickedImage);
   };
 
   const handleNavigate = (place) => window.open(`https://api.map.baidu.com/direction?destination=${place.lat},${place.lng}&mode=driving&region=海口&output=html`);
