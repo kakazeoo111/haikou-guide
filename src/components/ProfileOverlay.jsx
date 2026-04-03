@@ -11,6 +11,7 @@ import {
 function ProfileOverlay({
   currentUser,
   notifications,
+  activeBadgeTitle,
   onBackHome,
   onShowNoticeList,
   onGoRecommend,
@@ -37,6 +38,7 @@ function ProfileOverlay({
               style={{ ...profileAvatarLarge, cursor: "pointer" }}
               onClick={() => document.getElementById("profile-avatar-input").click()}
               title="点击更换头像"
+              alt="profile-avatar"
             />
             <div
               style={{
@@ -78,7 +80,7 @@ function ProfileOverlay({
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span>🏆</span> 荣誉称号获得
             </div>
-            <div style={{ fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>椰城探路者</div>
+            <div style={{ fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>{activeBadgeTitle || "未解锁称号"}</div>
           </div>
 
           <div style={menuItemStyle} onClick={onGoRecommend}>

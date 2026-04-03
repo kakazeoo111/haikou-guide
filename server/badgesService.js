@@ -1,0 +1,172 @@
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_BADGE_TITLE = "未解锁称号";
+const BADGE_PRIORITY = [
+  "无私奉献",
+  "快乐种草机",
+  "人气椰",
+  "小夜猫",
+  "评论小椰",
+  "探店小椰",
+  "佛系椰",
+  "椰岛新兵",
+];
+const QUANT_BADGE_RULES = [
+  { name: "椰岛新兵", isEarned: (metrics) => metrics.accountAgeDays >= 3 },
+  { name: "探店小椰", isEarned: (metrics) => metrics.recommendationCount >= 3 },
+  { name: "评论小椰", isEarned: (metrics) => metrics.commentCount >= 15 },
+  { name: "人气椰", isEarned: (metrics) => metrics.receivedLikesTotal >= 50 },
+  { name: "快乐种草机", isEarned: (metrics) => metrics.receivedLikesTotal >= 100 },
+  { name: "佛系椰", isEarned: (metrics) => metrics.accountAgeDays >= 7 && metrics.postCountLast7Days === 0 },
+  { name: "小夜猫", isEarned: (metrics) => metrics.nightActiveCount >= 15 },
+];
+
+function toCount(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
+}
+
+async function queryCount(pool, sql, params) {
+  const [rows] = await pool.execute(sql, params);
+  return toCount(rows?.[0]?.count);
+}
+
+async function getUserCreatedAt(pool, phone) {
+  const [rows] = await pool.execute("SELECT created_at FROM users WHERE phone = ? LIMIT 1", [phone]);
+  if (!rows.length || !rows[0].created_at) {
+    throw new Error("users.created_at 缺失，无法计算称号");
+  }
+  return new Date(rows[0].created_at);
+}
+
+async function getManualBadgeNames(pool, phone) {
+  const [rows] = await pool.execute(
+    "SELECT badge_name FROM user_badge_grants WHERE user_phone = ? AND is_active = 1 ORDER BY granted_at DESC",
+    [phone]
+  );
+  return rows.map((row) => row.badge_name).filter(Boolean);
+}
+
+function getQuantBadgeNames(metrics) {
+  return QUANT_BADGE_RULES.filter((rule) => rule.isEarned(metrics)).map((rule) => rule.name);
+}
+
+function pickActiveBadgeName(allBadges) {
+  for (const badgeName of BADGE_PRIORITY) {
+    if (allBadges.includes(badgeName)) return badgeName;
+  }
+  return allBadges[0] || DEFAULT_BADGE_TITLE;
+}
+
+async function collectBaseMetrics(pool, phone) {
+  const createdAt = await getUserCreatedAt(pool, phone);
+  const accountAgeDays = Math.floor((Date.now() - createdAt.getTime()) / DAY_MS);
+  const recommendationCount = await queryCount(pool, "SELECT COUNT(*) AS count FROM recommendations WHERE user_phone = ?", [phone]);
+  const commentCount = await queryCount(pool, "SELECT COUNT(*) AS count FROM comments WHERE user_phone = ?", [phone]);
+  return { accountAgeDays, recommendationCount, commentCount };
+}
+
+async function collectLikeMetrics(pool, phone) {
+  const recommendationLikesReceived = await queryCount(
+    pool,
+    `
+      SELECT COUNT(*) AS count
+      FROM recommendation_likes rl
+      JOIN recommendations r ON rl.recommendation_id = r.id
+      WHERE r.user_phone = ?
+    `,
+    [phone]
+  );
+  const commentLikesReceived = await queryCount(
+    pool,
+    `
+      SELECT COUNT(*) AS count
+      FROM comment_likes cl
+      JOIN comments c ON cl.comment_id = c.id
+      WHERE c.user_phone = ?
+    `,
+    [phone]
+  );
+  return {
+    recommendationLikesReceived,
+    commentLikesReceived,
+    receivedLikesTotal: recommendationLikesReceived + commentLikesReceived,
+  };
+}
+
+async function collectActivityMetrics(pool, phone) {
+  const postCountLast7Days = await queryCount(
+    pool,
+    `
+      SELECT COUNT(*) AS count FROM (
+        SELECT created_at FROM recommendations WHERE user_phone = ?
+        UNION ALL
+        SELECT created_at FROM comments WHERE user_phone = ?
+      ) t
+      WHERE t.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    `,
+    [phone, phone]
+  );
+  const nightActiveCount = await queryCount(
+    pool,
+    `
+      SELECT COUNT(*) AS count FROM (
+        SELECT created_at FROM recommendations WHERE user_phone = ?
+        UNION ALL
+        SELECT created_at FROM comments WHERE user_phone = ?
+      ) t
+      WHERE HOUR(t.created_at) >= 22 OR HOUR(t.created_at) < 2
+    `,
+    [phone, phone]
+  );
+  return { postCountLast7Days, nightActiveCount };
+}
+
+export async function ensureBadgeGrantTable(pool) {
+  await pool.execute(`
+    CREATE TABLE IF NOT EXISTS user_badge_grants (
+      id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      user_phone VARCHAR(32) NOT NULL,
+      badge_name VARCHAR(64) NOT NULL,
+      granted_by VARCHAR(32) NOT NULL,
+      is_active TINYINT(1) NOT NULL DEFAULT 1,
+      note VARCHAR(255) DEFAULT '',
+      granted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_user_badge (user_phone, badge_name)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+  `);
+}
+
+export async function buildUserBadgeData(pool, phone) {
+  const [baseMetrics, likeMetrics, activityMetrics, manualBadges] = await Promise.all([
+    collectBaseMetrics(pool, phone),
+    collectLikeMetrics(pool, phone),
+    collectActivityMetrics(pool, phone),
+    getManualBadgeNames(pool, phone),
+  ]);
+  const metrics = { ...baseMetrics, ...likeMetrics, ...activityMetrics };
+  const quantifiedBadges = getQuantBadgeNames(metrics);
+  const allBadges = [...new Set([...manualBadges, ...quantifiedBadges])];
+  return {
+    activeTitle: pickActiveBadgeName(allBadges),
+    allBadges,
+    quantifiedBadges,
+    manualBadges,
+    metrics,
+  };
+}
+
+export async function updateManualBadgeGrant(pool, { targetPhone, badgeName, adminPhone, isActive, note }) {
+  await pool.execute(
+    `
+      INSERT INTO user_badge_grants (user_phone, badge_name, granted_by, is_active, note, granted_at)
+      VALUES (?, ?, ?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        granted_by = VALUES(granted_by),
+        is_active = VALUES(is_active),
+        note = VALUES(note),
+        granted_at = NOW()
+    `,
+    [targetPhone, badgeName, adminPhone, isActive ? 1 : 0, note || ""]
+  );
+}

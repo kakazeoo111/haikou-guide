@@ -15,6 +15,7 @@ function AppLayout({
   setActiveTab,
   currentUser,
   notifications,
+  activeBadgeTitle,
   setShowNoticeList,
   setFilter,
   viewingCommentsPlace,
@@ -74,6 +75,7 @@ function AppLayout({
   favoriteIds,
   filteredPlaces,
   setTargetPlaces,
+  onManageBadge,
 }) {
   const unreadCount = notifications.filter((notice) => !notice.is_read).length;
 
@@ -83,6 +85,7 @@ function AppLayout({
         <ProfileOverlay
           currentUser={currentUser}
           notifications={notifications}
+          activeBadgeTitle={activeBadgeTitle}
           onBackHome={() => setActiveTab("home")}
           onShowNoticeList={() => setShowNoticeList(true)}
           onGoRecommend={() => {
@@ -219,6 +222,7 @@ function AppLayout({
         onLogout={generalHandlers.handleLogout}
         onShowFeedback={() => setShowFeedback(true)}
         onShowAnnouncement={onOpenAnnouncement}
+        onManageBadge={onManageBadge}
         onFetchAllFeedbacks={generalHandlers.fetchAllFeedbacks}
         onSearchChange={setSearch}
         onShowRecommendModal={() => setShowAddRecommend(true)}

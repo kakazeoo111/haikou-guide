@@ -9,6 +9,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from "multer";
 import fs from "fs";
+import { ensureBadgeGrantTable } from "./badgesService.js";
+import { registerBadgeRoutes } from "./badgesRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,6 +59,13 @@ const config = new OpenApiClient.Config({
 const client = new DypnsapiClient.default(config);
 const otpStore = new Map();
 const ADMIN_PHONE = "13707584213";
+
+try {
+  await ensureBadgeGrantTable(pool);
+} catch (error) {
+  console.error("称号授权表初始化失败:", error.message);
+}
+registerBadgeRoutes(app, { pool, ADMIN_PHONE });
 
 // ✅ 辅助函数：添加通知
 async function addNotice(receiver, sender, type, placeId, content = "") {

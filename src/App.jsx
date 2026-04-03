@@ -5,6 +5,7 @@ import { places as placesData } from "./data/places";
 import { createGeneralHandlers } from "./logic/createGeneralHandlers";
 import { createInteractionHandlers } from "./logic/createInteractionHandlers";
 import { getFilteredPlaces } from "./logic/placeUtils";
+import { useBadgeCenter } from "./logic/useBadgeCenter";
 
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -13,13 +14,11 @@ function App() {
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [targetPlaces, setTargetPlaces] = useState([]);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
   const [currentUser, setCurrentUser] = useState(null);
   const [authMode, setAuthMode] = useState("login");
   const [loginForm, setLoginForm] = useState({ username: "", phone: "", code: "", password: "" });
   const [loginError, setLoginError] = useState("");
   const [countdown, setCountdown] = useState(0);
-
   const [viewingCommentsPlace, setViewingCommentsPlace] = useState(null);
   const [activeComments, setActiveComments] = useState({});
   const [commentSort, setCommentSort] = useState("default");
@@ -28,26 +27,21 @@ function App() {
   const [replyTo, setReplyTo] = useState(null);
   const [expandedParentIds, setExpandedParentIds] = useState([]);
   const [showOnlyImages, setShowOnlyImages] = useState(false);
-
   const [activeTab, setActiveTab] = useState("home");
   const [notifications, setNotifications] = useState([]);
   const [showNoticeList, setShowNoticeList] = useState(false);
-
   const [placeStats, setPlaceStats] = useState({});
   const [myLikedPlaceIds, setMyLikedPlaceIds] = useState([]);
-
   const [recommendations, setRecommendations] = useState([]);
   const [showAddRecommend, setShowAddRecommend] = useState(false);
   const [newRec, setNewRec] = useState({ name: "", desc: "", lat: null, lng: null });
   const [recImages, setRecImages] = useState([]);
   const [recommendSuggestions, setRecommendSuggestions] = useState([]);
-
   const [detailPlace, setDetailPlace] = useState(null);
   const [zoomMode, setZoomMode] = useState(false);
   const [initialSlide, setInitialSlide] = useState(0);
   const [zoomedSingleImage, setZoomedSingleImage] = useState(null);
   const scrollContainerRef = useRef(null);
-
   const [showNotice, setShowNotice] = useState(false);
   const [noticeContent, setNoticeContent] = useState("");
   const [isEditingNotice, setIsEditingNotice] = useState(false);
@@ -61,6 +55,11 @@ function App() {
   const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
   const places = placesData;
   const getNoticeDismissKey = (phone) => `haikou_notice_dismissed_${phone}`;
+  const { activeBadgeTitle, handleManageBadge } = useBadgeCenter({
+    authApiBase,
+    currentUser,
+    adminPhone: ADMIN_PHONE,
+  });
 
   const generalHandlers = createGeneralHandlers({
     authApiBase,
@@ -231,6 +230,7 @@ function App() {
       setActiveTab={setActiveTab}
       currentUser={currentUser}
       notifications={notifications}
+      activeBadgeTitle={activeBadgeTitle}
       setShowNoticeList={setShowNoticeList}
       setFilter={setFilter}
       viewingCommentsPlace={viewingCommentsPlace}
@@ -271,6 +271,7 @@ function App() {
       setIsEditingNotice={setIsEditingNotice}
       onOpenAnnouncement={handleOpenAnnouncement}
       onDismissAnnouncement={handleDismissAnnouncement}
+      onManageBadge={handleManageBadge}
       isEditingNotice={isEditingNotice}
       setNoticeContent={setNoticeContent}
       setInitialSlide={setInitialSlide}

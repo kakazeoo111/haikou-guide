@@ -18,12 +18,13 @@ const FILTER_ITEMS = [
   { key: "all", label: "全部" },
   { key: "recommend", label: "✨ 推荐" },
   { key: "top10", label: "🏆 榜单" },
-  { key: "favorite", label: "⭐收藏" },
-  { key: "food", label: "🍱美食" },
-  { key: "view", label: "🏞️景点" },
-  { key: "street", label: "🛍️商圈" },
-  { key: "cafe", label: "☕咖啡" },
+  { key: "favorite", label: "⭐ 收藏" },
+  { key: "food", label: "🍱 美食" },
+  { key: "view", label: "🏞️ 景点" },
+  { key: "street", label: "🛍️ 商圈" },
+  { key: "cafe", label: "☕ 咖啡" },
 ];
+
 const UNREAD_BADGE_LIMIT = 99;
 const unreadBadgeStyle = {
   minWidth: "16px",
@@ -65,6 +66,7 @@ function HomePanels({
   onLogout,
   onShowFeedback,
   onShowAnnouncement,
+  onManageBadge,
   onFetchAllFeedbacks,
   onSearchChange,
   onShowRecommendModal,
@@ -116,6 +118,11 @@ function HomePanels({
                 <span onClick={onShowAnnouncement} style={{ color: "#5aa77b", cursor: "pointer" }}>
                   公告
                 </span>
+                {currentUser.phone === adminPhone && (
+                  <span onClick={onManageBadge} style={{ color: "#5aa77b", cursor: "pointer" }}>
+                    称号授权
+                  </span>
+                )}
                 {currentUser.phone === adminPhone && (
                   <span onClick={onFetchAllFeedbacks} style={{ color: "#333", cursor: "pointer" }}>
                     反馈库
@@ -187,13 +194,13 @@ function HomePanels({
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{place.name}</h3>
                     <span onClick={() => onToggleFavorite(place)} style={{ cursor: "pointer", fontSize: "22px" }}>
-                      {favoriteIds.includes(String(place.id)) ? "⭐" : "☆"}
+                      {favoriteIds.includes(String(place.id)) ? "★" : "☆"}
                     </span>
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
                     <span style={categoryTagStyle}>{formatPlaceTypeTag(place.type)}</span>
                     {place.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
-                    {place.hours && <span style={{ fontSize: "11px", color: "#888" }}>🕒 {place.hours}</span>}
+                    {place.hours && <span style={{ fontSize: "11px", color: "#888" }}>🕘 {place.hours}</span>}
                     {place.phone && place.phone !== "无" && (
                       <a href={`tel:${place.phone}`} style={{ fontSize: "11px", color: "#5aa77b", textDecoration: "none", display: "flex", alignItems: "center", gap: "2px" }}>
                         📞 {place.phone}
