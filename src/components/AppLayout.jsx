@@ -38,6 +38,7 @@ function AppLayout({
   zoomMode,
   zoomedSingleImage,
   detailPlace,
+  setDetailPlace,
   scrollContainerRef,
   setZoomMode,
   showAddRecommend,

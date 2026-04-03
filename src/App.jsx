@@ -245,6 +245,7 @@ function App() {
       zoomMode={zoomMode}
       zoomedSingleImage={zoomedSingleImage}
       detailPlace={detailPlace}
+      setDetailPlace={setDetailPlace}
       scrollContainerRef={scrollContainerRef}
       setZoomMode={setZoomMode}
       showAddRecommend={showAddRecommend}
