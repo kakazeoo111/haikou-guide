@@ -10,6 +10,9 @@ import {
   sortContainerStyle,
 } from "../styles/appStyles";
 
+const PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH = "168px";
+const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "144px";
+
 function parseCommentImageUrls(imgData) {
   if (!imgData || imgData === "[]" || imgData === "null") return [];
   if (typeof imgData !== "string") return [];
@@ -139,13 +142,15 @@ function CommentsOverlay({
                               : "repeat(3, 1fr)",
                         gap: "4px",
                         marginTop: "8px",
-                        maxWidth: "240px",
+                        maxWidth: PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH,
                       }}
                     >
                       {parentImages.map((url, idx) => (
                         <img
                           key={idx}
                           src={url}
+                          loading="lazy"
+                          decoding="async"
                           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                           onClick={() => onZoomImage(url)}
                           alt="comment-img"
@@ -198,11 +203,13 @@ function CommentsOverlay({
                                 {reply.content}
                               </div>
                               {replyImages.length > 0 && (
-                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px", marginTop: "8px", maxWidth: "240px" }}>
+                                <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px", marginTop: "8px", maxWidth: REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH }}>
                                   {replyImages.map((url, idx) => (
                                     <img
                                       key={idx}
                                       src={url}
+                                      loading="lazy"
+                                      decoding="async"
                                       style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                                       onClick={() => onZoomImage(url)}
                                       alt="reply-img"
