@@ -1,11 +1,24 @@
 const DEFAULT_BADGE_TITLE = "未解锁称号";
 const MANUAL_BADGE_PROMPT = "请输入称号名称（示例：无私奉献）";
 
+async function parseJson(res) {
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.message || "称号请求失败");
+  return data.data;
+}
+
 export async function fetchBadgeSummary(authApiBase, phone) {
   const res = await fetch(`${authApiBase}/api/badges/${phone}`);
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.message || "获取称号失败");
-  return data.data;
+  return parseJson(res);
+}
+
+export async function selectActiveBadge(authApiBase, phone, badgeName) {
+  const res = await fetch(`${authApiBase}/api/badges/select`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone, badgeName }),
+  });
+  return parseJson(res);
 }
 
 function askManualBadgePayload() {
@@ -16,12 +29,7 @@ function askManualBadgePayload() {
   const isActiveInput = window.prompt("授权请输入 1，取消授权请输入 0", "1");
   if (isActiveInput === null) return null;
   const note = window.prompt("备注（可选）", "") || "";
-  return {
-    targetPhone: targetPhone.trim(),
-    badgeName: badgeName.trim(),
-    isActive: isActiveInput !== "0",
-    note,
-  };
+  return { targetPhone: targetPhone.trim(), badgeName: badgeName.trim(), isActive: isActiveInput !== "0", note };
 }
 
 export async function promptAndUpdateManualBadge({ authApiBase, adminPhone }) {
@@ -32,9 +40,7 @@ export async function promptAndUpdateManualBadge({ authApiBase, adminPhone }) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ adminPhone, ...payload }),
   });
-  const data = await res.json();
-  if (!data.ok) throw new Error(data.message || "称号授权失败");
-  return data;
+  return parseJson(res);
 }
 
 export function getBadgeTitleOrDefault(summary) {

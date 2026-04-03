@@ -1,24 +1,39 @@
-import {
-  badgeStyle,
-  btnLogOutStyle,
-  menuItemStyle,
-  navHeaderStyle,
-  profileAvatarLarge,
-  profileInfoCard,
-  profilePageStyle,
-} from "../styles/appStyles";
+import BadgePickerModal from "./BadgePickerModal";
+import { badgeStyle, btnLogOutStyle, menuItemStyle, navHeaderStyle, profileAvatarLarge, profileInfoCard, profilePageStyle } from "../styles/appStyles";
+
+const activeBadgePillStyle = {
+  marginTop: "8px",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  padding: "6px 12px",
+  borderRadius: "999px",
+  background: "linear-gradient(135deg, #eafff1, #e9f7ff)",
+  border: "1px solid #d9f0e4",
+  boxShadow: "0 8px 18px rgba(90,167,123,0.18)",
+  color: "#1f5f45",
+  fontWeight: 700,
+  fontSize: "12px",
+};
 
 function ProfileOverlay({
   currentUser,
   notifications,
   activeBadgeTitle,
+  activeBadgeMeta,
+  badgeSummary,
+  showBadgePicker,
   onBackHome,
   onShowNoticeList,
+  onOpenBadgePicker,
+  onCloseBadgePicker,
+  onSelectBadge,
   onGoRecommend,
   onAvatarUpload,
   onLogout,
 }) {
   const unreadCount = notifications.filter((notice) => !notice.is_read).length;
+  const badgeIcon = activeBadgeMeta?.icon || "🏅";
 
   return (
     <div style={profilePageStyle}>
@@ -64,7 +79,11 @@ function ProfileOverlay({
           <input type="file" id="profile-avatar-input" hidden accept="image/*" onChange={onAvatarUpload} />
 
           <h2 style={{ marginTop: "15px", color: "#2e6a4a", marginBottom: "5px" }}>{currentUser.username}</h2>
-          <p style={{ color: "#999", fontSize: "13px", margin: 0 }}>手机号：{currentUser.phone}</p>
+          <div style={activeBadgePillStyle}>
+            <span>{badgeIcon}</span>
+            <span>{activeBadgeTitle || "未解锁称号"}</span>
+          </div>
+          <p style={{ color: "#999", fontSize: "13px", margin: "10px 0 0" }}>手机号：{currentUser.phone}</p>
           <p style={{ color: "#5aa77b", fontSize: "11px", marginTop: "5px" }}>点击头像可更换</p>
         </div>
 
@@ -76,7 +95,7 @@ function ProfileOverlay({
             {unreadCount > 0 && <span style={badgeStyle}>{unreadCount}</span>}
           </div>
 
-          <div style={menuItemStyle}>
+          <div style={menuItemStyle} onClick={onOpenBadgePicker}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span>🏆</span> 荣誉称号获得
             </div>
@@ -87,7 +106,7 @@ function ProfileOverlay({
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span>✨</span> 我的分享记录
             </div>
-            <span>❯</span>
+            <span>›</span>
           </div>
         </div>
 
@@ -95,6 +114,14 @@ function ProfileOverlay({
           退出当前账号
         </button>
       </div>
+
+      <BadgePickerModal
+        visible={showBadgePicker}
+        badgeSummary={badgeSummary}
+        activeBadgeTitle={activeBadgeTitle}
+        onClose={onCloseBadgePicker}
+        onSelect={onSelectBadge}
+      />
     </div>
   );
 }

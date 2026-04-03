@@ -16,6 +16,9 @@ function AppLayout({
   currentUser,
   notifications,
   activeBadgeTitle,
+  activeBadgeMeta,
+  badgeSummary,
+  showBadgePicker,
   setShowNoticeList,
   setFilter,
   viewingCommentsPlace,
@@ -76,6 +79,9 @@ function AppLayout({
   filteredPlaces,
   setTargetPlaces,
   onManageBadge,
+  onOpenBadgePicker,
+  onCloseBadgePicker,
+  onSelectBadge,
 }) {
   const unreadCount = notifications.filter((notice) => !notice.is_read).length;
 
@@ -86,8 +92,14 @@ function AppLayout({
           currentUser={currentUser}
           notifications={notifications}
           activeBadgeTitle={activeBadgeTitle}
+          activeBadgeMeta={activeBadgeMeta}
+          badgeSummary={badgeSummary}
+          showBadgePicker={showBadgePicker}
           onBackHome={() => setActiveTab("home")}
           onShowNoticeList={() => setShowNoticeList(true)}
+          onOpenBadgePicker={onOpenBadgePicker}
+          onCloseBadgePicker={onCloseBadgePicker}
+          onSelectBadge={onSelectBadge}
           onGoRecommend={() => {
             setActiveTab("home");
             setFilter("recommend");
@@ -211,6 +223,8 @@ function AppLayout({
         targetPlaces={targetPlaces}
         currentUser={currentUser}
         adminPhone={ADMIN_PHONE}
+        activeBadgeTitle={activeBadgeTitle}
+        activeBadgeMeta={activeBadgeMeta}
         unreadCount={unreadCount}
         search={search}
         filter={filter}

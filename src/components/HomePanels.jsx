@@ -41,6 +41,18 @@ const unreadBadgeStyle = {
   boxShadow: "0 2px 6px rgba(255,77,109,0.35)",
 };
 
+const userBadgeStyle = {
+  marginTop: "6px",
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  padding: "4px 10px",
+  borderRadius: "999px",
+  background: "linear-gradient(135deg, #e8fff1, #edf7ff)",
+  border: "1px solid #d6eee2",
+  boxShadow: "0 8px 16px rgba(90,167,123,0.16)",
+};
+
 function formatPlaceTypeTag(type) {
   if (type === "food") return "🍱 美食";
   if (type === "view") return "🏞️ 景点";
@@ -55,6 +67,8 @@ function HomePanels({
   targetPlaces,
   currentUser,
   adminPhone,
+  activeBadgeTitle,
+  activeBadgeMeta,
   unreadCount,
   search,
   filter,
@@ -82,6 +96,8 @@ function HomePanels({
   formatCommentTime,
 }) {
   const unreadBadgeText = unreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : unreadCount;
+  const badgeIcon = activeBadgeMeta?.icon || "🏅";
+  const badgeMood = activeBadgeMeta?.mood || "继续探索";
 
   return (
     <>
@@ -92,7 +108,7 @@ function HomePanels({
         </button>
       </div>
 
-      <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: "0", boxSizing: "border-box" }}>
+      <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: 0, boxSizing: "border-box" }}>
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
             <img
@@ -106,9 +122,14 @@ function HomePanels({
               <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}>
                 <span>{currentUser.username}</span>
                 {unreadCount > 0 && <span style={unreadBadgeStyle}>{unreadBadgeText}</span>}
-                <span style={{ fontSize: "12px", color: "#ccc" }}>❯</span>
+                <span style={{ fontSize: "12px", color: "#ccc" }}>▶</span>
               </h3>
-              <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginTop: "2px" }}>
+              <div style={userBadgeStyle}>
+                <span style={{ fontSize: "13px" }}>{badgeIcon}</span>
+                <span style={{ fontSize: "12px", color: "#1f5f45", fontWeight: 700 }}>{activeBadgeTitle || "未解锁称号"}</span>
+                <span style={{ fontSize: "10px", color: "#6b8578" }}>{badgeMood}</span>
+              </div>
+              <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginTop: "3px" }}>
                 <span onClick={onLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>
                   退出
                 </span>
@@ -163,79 +184,76 @@ function HomePanels({
         </div>
 
         <div style={{ padding: "10px 20px 30px 20px" }}>
-          {filteredPlaces.map((place, index) => (
-            <div key={place.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
-              {filter === "top10" && <div style={rankBadgeStyle(index)}>{index + 1}</div>}
+          {filteredPlaces.map((place, index) => {
+            const isMarked = targetPlaces.some((target) => target.id === place.id);
+            const isFav = favoriteIds.includes(String(place.id));
+            const coverImage = (place.album && place.album[0]) || "https://api.suzcore.top/uploads/default_place.jpg";
+            return (
+              <div key={place.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
+                {filter === "top10" && <div style={rankBadgeStyle(index)}>{index + 1}</div>}
 
-              {place.type === "recommend" && (
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                  <img src={place.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${place.user_phone}`} style={{ width: "24px", height: "24px", borderRadius: "50%" }} alt="user-avatar" />
-                  <span style={{ fontSize: "12px", fontWeight: "bold" }}>{place.username} 分享</span>
-                  <span style={{ fontSize: "10px", color: "#999" }}>{formatCommentTime(place.created_at)}</span>
-                  {place.user_phone === currentUser.phone && (
-                    <span onClick={(e) => onDeleteRec(e, place.realId)} style={{ fontSize: "10px", color: "red", marginLeft: "auto", cursor: "pointer" }}>
-                      删除
-                    </span>
-                  )}
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                <img
-                  src={(place.album && place.album[0]) || "https://api.suzcore.top/uploads/default_place.jpg"}
-                  style={listThumbStyle}
-                  loading="lazy"
-                  decoding="async"
-                  fetchPriority="low"
-                  onClick={() => onOpenDetail(place, 0, true)}
-                  alt="place-cover"
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{place.name}</h3>
-                    <span onClick={() => onToggleFavorite(place)} style={{ cursor: "pointer", fontSize: "22px" }}>
-                      {favoriteIds.includes(String(place.id)) ? "★" : "☆"}
-                    </span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
-                    <span style={categoryTagStyle}>{formatPlaceTypeTag(place.type)}</span>
-                    {place.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
-                    {place.hours && <span style={{ fontSize: "11px", color: "#888" }}>🕘 {place.hours}</span>}
-                    {place.phone && place.phone !== "无" && (
-                      <a href={`tel:${place.phone}`} style={{ fontSize: "11px", color: "#5aa77b", textDecoration: "none", display: "flex", alignItems: "center", gap: "2px" }}>
-                        📞 {place.phone}
-                      </a>
+                {place.type === "recommend" && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
+                    <img src={place.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${place.user_phone}`} style={{ width: "24px", height: "24px", borderRadius: "50%" }} alt="user-avatar" />
+                    <span style={{ fontSize: "12px", fontWeight: "bold" }}>{place.username} 分享</span>
+                    <span style={{ fontSize: "10px", color: "#999" }}>{formatCommentTime(place.created_at)}</span>
+                    {place.user_phone === currentUser.phone && (
+                      <span onClick={(e) => onDeleteRec(e, place.realId)} style={{ fontSize: "10px", color: "red", marginLeft: "auto", cursor: "pointer" }}>
+                        删除
+                      </span>
                     )}
                   </div>
+                )}
+
+                <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
+                  <img src={coverImage} style={listThumbStyle} loading="lazy" decoding="async" fetchPriority="low" onClick={() => onOpenDetail(place, 0, true)} alt="place-cover" />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{place.name}</h3>
+                      <span onClick={() => onToggleFavorite(place)} style={{ cursor: "pointer", fontSize: "22px" }}>
+                        {isFav ? "★" : "☆"}
+                      </span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
+                      <span style={categoryTagStyle}>{formatPlaceTypeTag(place.type)}</span>
+                      {place.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
+                      {place.hours && <span style={{ fontSize: "11px", color: "#888" }}>🕘 {place.hours}</span>}
+                      {place.phone && place.phone !== "无" && (
+                        <a href={`tel:${place.phone}`} style={{ fontSize: "11px", color: "#5aa77b", textDecoration: "none", display: "flex", alignItems: "center", gap: "2px" }}>
+                          📞 {place.phone}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{place.desc}</p>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                  <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你: {place.distVal} km</div>
+                  <div onClick={(e) => (place.type === "recommend" ? onLikeRec(e, place.realId) : onLikePlace(e, place.id))} style={placeLikeBtnStyle(place.isPlaceLiked)}>
+                    <span style={{ fontSize: "13px" }}>{place.isPlaceLiked ? "❤" : "♡"}</span>
+                    <span>{place.likes}</span>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", gap: "8px" }}>
+                  <button onClick={() => onOpenDetail(place, 0, false)} style={btnDetailStyle}>
+                    🖼️ 详情
+                  </button>
+                  <button onClick={() => onToggleTarget(place)} style={btnSmallStyle(isMarked)}>
+                    {isMarked ? "取消" : "标记"}
+                  </button>
+                  <button onClick={() => onNavigate(place)} style={btnNavStyle}>
+                    🧭 导航
+                  </button>
+                </div>
+
+                <div onClick={() => onOpenComments(place)} style={{ marginTop: "15px", borderTop: "1px dashed #eee", paddingTop: "10px", color: "#5aa77b", fontSize: "12px", cursor: "pointer" }}>
+                  💬 查看评论区
                 </div>
               </div>
-
-              <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{place.desc}</p>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你：{place.distVal} km</div>
-                <div onClick={(e) => (place.type === "recommend" ? onLikeRec(e, place.realId) : onLikePlace(e, place.id))} style={placeLikeBtnStyle(place.isPlaceLiked)}>
-                  <span style={{ fontSize: "13px" }}>{place.isPlaceLiked ? "♥" : "♡"}</span>
-                  <span>{place.likes}</span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "8px" }}>
-                <button onClick={() => onOpenDetail(place, 0, false)} style={btnDetailStyle}>
-                  🖼️ 详情
-                </button>
-                <button onClick={() => onToggleTarget(place)} style={btnSmallStyle(targetPlaces.some((target) => target.id === place.id))}>
-                  {targetPlaces.some((target) => target.id === place.id) ? "取消" : "标记"}
-                </button>
-                <button onClick={() => onNavigate(place)} style={btnNavStyle}>
-                  🧭 导航
-                </button>
-              </div>
-
-              <div onClick={() => onOpenComments(place)} style={{ marginTop: "15px", borderTop: "1px dashed #eee", paddingTop: "10px", color: "#5aa77b", fontSize: "12px", cursor: "pointer" }}>
-                💬 查看评论区
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </>
