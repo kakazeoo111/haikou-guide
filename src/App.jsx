@@ -187,6 +187,7 @@ function App() {
       })
       .catch((error) => console.error("获取点赞统计失败:", error));
     generalHandlers.fetchRecommendations();
+    generalHandlers.fetchNotices();
     fetch(`${authApiBase}/api/announcement`)
       .then((res) => res.json())
       .then((data) => {

@@ -24,6 +24,21 @@ const FILTER_ITEMS = [
   { key: "street", label: "🛍️商圈" },
   { key: "cafe", label: "☕咖啡" },
 ];
+const UNREAD_BADGE_LIMIT = 99;
+const unreadBadgeStyle = {
+  minWidth: "16px",
+  height: "16px",
+  padding: "0 4px",
+  borderRadius: "999px",
+  background: "#ff4d6d",
+  color: "white",
+  fontSize: "10px",
+  fontWeight: "bold",
+  lineHeight: "16px",
+  textAlign: "center",
+  boxSizing: "border-box",
+  boxShadow: "0 2px 6px rgba(255,77,109,0.35)",
+};
 
 function formatPlaceTypeTag(type) {
   if (type === "food") return "🍱 美食";
@@ -39,6 +54,7 @@ function HomePanels({
   targetPlaces,
   currentUser,
   adminPhone,
+  unreadCount,
   search,
   filter,
   favoriteIds,
@@ -63,6 +79,8 @@ function HomePanels({
   onNavigate,
   formatCommentTime,
 }) {
+  const unreadBadgeText = unreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : unreadCount;
+
   return (
     <>
       <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "30vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
@@ -83,8 +101,10 @@ function HomePanels({
             />
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={onAvatarUpload} />
             <div style={{ flex: 1 }}>
-              <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer" }}>
-                {currentUser.username} <span style={{ fontSize: "12px", color: "#ccc" }}>❯</span>
+              <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                <span>{currentUser.username}</span>
+                {unreadCount > 0 && <span style={unreadBadgeStyle}>{unreadBadgeText}</span>}
+                <span style={{ fontSize: "12px", color: "#ccc" }}>❯</span>
               </h3>
               <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginTop: "2px" }}>
                 <span onClick={onLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>

@@ -75,6 +75,8 @@ function AppLayout({
   filteredPlaces,
   setTargetPlaces,
 }) {
+  const unreadCount = notifications.filter((notice) => !notice.is_read).length;
+
   return (
     <div style={{ minHeight: "100vh", background: "#f4fbf6", position: "relative" }}>
       {activeTab === "profile" && (
@@ -206,6 +208,7 @@ function AppLayout({
         targetPlaces={targetPlaces}
         currentUser={currentUser}
         adminPhone={ADMIN_PHONE}
+        unreadCount={unreadCount}
         search={search}
         filter={filter}
         favoriteIds={favoriteIds}
