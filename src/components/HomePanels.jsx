@@ -153,6 +153,9 @@ function HomePanels({
                 <img
                   src={(place.album && place.album[0]) || "https://api.suzcore.top/uploads/default_place.jpg"}
                   style={listThumbStyle}
+                  loading="lazy"
+                  decoding="async"
+                  fetchPriority="low"
                   onClick={() => onOpenDetail(place, 0, true)}
                   alt="place-cover"
                 />

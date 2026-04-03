@@ -15,7 +15,16 @@ function DetailModal({ place, onClose, onPreviewAlbum }) {
         <p style={{ color: "#666", fontSize: "14px", margin: "10px 0" }}>{place.desc}</p>
         <div style={horizontalScrollWrapper}>
           {place.album?.map((img, idx) => (
-            <img key={`${img}-${idx}`} src={img} style={albumThumbStyle} onClick={() => onPreviewAlbum(idx)} alt="detail-album" />
+            <img
+              key={`${img}-${idx}`}
+              src={img}
+              style={albumThumbStyle}
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              onClick={() => onPreviewAlbum(idx)}
+              alt="detail-album"
+            />
           ))}
         </div>
         <button onClick={onClose} style={{ ...btnMainStyle, marginTop: "15px" }}>
