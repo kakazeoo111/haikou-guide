@@ -25,6 +25,5 @@ dist-ssr
 # Environment files
 .env
 .env.*
-.env.local.env.production
-**/.envserver/.env
 !.env.example
+!**/.env.example

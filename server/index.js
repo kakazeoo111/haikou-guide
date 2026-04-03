@@ -71,6 +71,7 @@ app.post("/api/sms/send", async (req, res) => {
   try {
     const [rows] = await pool.execute('SELECT id FROM users WHERE phone = ?', [phone]);
     if (type === 'register' && rows.length > 0) return res.status(400).json({ ok: false, message: "该手机号已注册" });
+    if (type === 'reset' && rows.length === 0) return res.status(400).json({ ok: false, message: "用户未注册" });
     const code = Math.floor(100000 + Math.random() * 899999).toString();
     const sendRequest = new DypnsapiClient.SendSmsVerifyCodeRequest({
       phoneNumber: phone, signName: process.env.ALIBABA_CLOUD_SMS_SIGN_NAME,
@@ -105,6 +106,24 @@ app.post("/api/auth/login", async (req, res) => {
     if (!(await bcrypt.compare(password, rows[0].password_hash))) return res.status(401).json({ ok: false, message: "密码错误" });
     res.json({ ok: true, user: { username: rows[0].username, phone: rows[0].phone, avatar_url: rows[0].avatar_url } });
   } catch (error) { res.status(500).json({ ok: false }); }
+});
+
+app.post("/api/auth/reset-password", async (req, res) => {
+  const { phone, password, code } = req.body;
+  const record = otpStore.get(phone);
+  if (!record || record.code !== code || Date.now() > record.expiresAt) {
+    return res.status(401).json({ ok: false, message: "验证码错误" });
+  }
+  try {
+    const [rows] = await pool.execute('SELECT id FROM users WHERE phone = ?', [phone]);
+    if (rows.length === 0) return res.status(404).json({ ok: false, message: "用户未注册" });
+    const passwordHash = await bcrypt.hash(password, 10);
+    await pool.execute('UPDATE users SET password_hash = ? WHERE phone = ?', [passwordHash, phone]);
+    otpStore.delete(phone);
+    res.json({ ok: true, message: "密码重置成功" });
+  } catch (error) {
+    res.status(500).json({ ok: false, message: "密码重置失败" });
+  }
 });
 
 // --- 用户推荐功能接口 ---
