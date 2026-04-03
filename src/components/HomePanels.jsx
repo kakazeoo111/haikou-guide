@@ -187,7 +187,8 @@ function HomePanels({
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                 <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你：{place.distVal} km</div>
                 <div onClick={(e) => (place.type === "recommend" ? onLikeRec(e, place.realId) : onLikePlace(e, place.id))} style={placeLikeBtnStyle(place.isPlaceLiked)}>
-                  {place.isPlaceLiked ? "👍" : "🤍"} {place.likes}
+                  <span style={{ fontSize: "13px" }}>{place.isPlaceLiked ? "♥" : "♡"}</span>
+                  <span>{place.likes}</span>
                 </div>
               </div>
 
