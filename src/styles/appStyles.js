@@ -13,7 +13,7 @@ export const bottomRealInput = { flex: 1, border: "none", background: "transpare
 export const commentCardStyle = { background: "white", padding: "16px", borderRadius: "16px", marginBottom: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" };
 export const commentAvatarStyle = { width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover" };
 export const commentImgStyle = { width: "160px", borderRadius: "10px", marginTop: "10px", display: "block", cursor: "zoom-in" };
-export const likeBtnStyle = (liked) => ({ cursor: "pointer", padding: "4px 12px", borderRadius: "15px", background: liked ? "#ffecec" : "#f0f0f0", color: liked ? "#ff4d4f" : "#888", fontSize: "12px" });
+export const likeBtnStyle = (liked) => ({ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 10px", borderRadius: "999px", border: liked ? "1px solid #ffbfd2" : "1px solid #e4e9e6", background: liked ? "linear-gradient(135deg, #ffe8f0, #ffdce8)" : "#f5f7f6", color: liked ? "#ff4f87" : "#7f8d87", fontSize: "12px", fontWeight: 600, lineHeight: 1, transition: "all 0.2s ease", boxShadow: liked ? "0 4px 10px rgba(255,79,135,0.18)" : "none", userSelect: "none" });
 export const feedbackItemStyle = { padding: "10px", borderBottom: "1px solid #eee", background: "#f9fcf9", borderRadius: "10px", marginBottom: "10px" };
 export const zoomOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "black", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center" };
 export const zoomedImgStyle = { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" };

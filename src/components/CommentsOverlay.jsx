@@ -4,14 +4,33 @@ import {
   btnSendStyle,
   fixedBottomBarStyle,
   fullPageOverlayStyle,
+  likeBtnStyle,
   navHeaderStyle,
   scrollContentStyle,
   sortBtnStyle,
   sortContainerStyle,
 } from "../styles/appStyles";
 
-const PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH = "168px";
-const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "144px";
+const PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH = "152px";
+const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "128px";
+const CARTOON_AVATAR_STYLES = ["adventurer", "bottts", "fun-emoji", "personas"];
+const CARTOON_AVATAR_API_BASE = "https://api.dicebear.com/7.x";
+
+function hashString(value) {
+  let hash = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getCartoonAvatar(phone, username) {
+  const seedBase = `${phone || "guest"}-${username || "user"}`;
+  const hash = hashString(seedBase);
+  const style = CARTOON_AVATAR_STYLES[hash % CARTOON_AVATAR_STYLES.length];
+  return `${CARTOON_AVATAR_API_BASE}/${style}/svg?seed=${encodeURIComponent(seedBase)}`;
+}
 
 function parseCommentImageUrls(imgData) {
   if (!imgData || imgData === "[]" || imgData === "null") return [];
@@ -31,9 +50,20 @@ function hasCommentImages(comment) {
   return parseCommentImageUrls(comment.image_url).length > 0;
 }
 
-function getAvatarSrc(url, phone) {
-  if (url && url !== "null") return String(url).replace("http://", "https://");
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || "haikou"}`;
+function getAvatarSrc(url, phone, username) {
+  const normalized = String(url || "").trim();
+  if (!normalized || normalized === "null" || normalized === "undefined") return getCartoonAvatar(phone, username);
+  if (normalized.startsWith("http://") || normalized.startsWith("https://")) return normalized.replace("http://", "https://");
+  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
+  console.error("Invalid avatar url, fallback to cartoon avatar:", normalized);
+  return getCartoonAvatar(phone, username);
+}
+
+function handleAvatarLoadError(event, phone, username) {
+  const fallback = getCartoonAvatar(phone, username);
+  if (event.currentTarget.src === fallback) return;
+  console.error("Avatar load failed, fallback to cartoon avatar:", event.currentTarget.src);
+  event.currentTarget.src = fallback;
 }
 
 function sortAndFilterComments(comments, sortMode, showOnlyImages) {
@@ -123,7 +153,8 @@ function CommentsOverlay({
             <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
               <div style={{ display: "flex", gap: "10px" }}>
                 <img
-                  src={getAvatarSrc(parent.avatar_url, parent.user_phone)}
+                  src={getAvatarSrc(parent.avatar_url, parent.user_phone, parent.username)}
+                  onError={(event) => handleAvatarLoadError(event, parent.user_phone, parent.username)}
                   style={{ width: "36px", height: "36px", minWidth: "36px", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
                   alt="avatar"
                 />
@@ -163,8 +194,9 @@ function CommentsOverlay({
                     <span onClick={() => onSetReplyTo(parent)} style={{ cursor: "pointer", fontWeight: "bold", color: "#5aa77b" }}>
                       回复
                     </span>
-                    <span onClick={() => onLikeComment(parent.id)} style={{ cursor: "pointer", color: parent.is_liked ? "#ff4d4f" : "#999" }}>
-                      {parent.is_liked ? "❤️" : "🤍"} {parent.like_count || 0}
+                    <span onClick={() => onLikeComment(parent.id)} style={likeBtnStyle(parent.is_liked)}>
+                      <span style={{ fontSize: "13px" }}>{parent.is_liked ? "♥" : "♡"}</span>
+                      <span>{parent.like_count || 0}</span>
                     </span>
                     {parent.user_phone === currentUser.phone && (
                       <span onClick={() => onDeleteComment(parent.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
@@ -192,7 +224,8 @@ function CommentsOverlay({
                         return (
                           <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
                             <img
-                              src={getAvatarSrc(reply.avatar_url, reply.user_phone)}
+                              src={getAvatarSrc(reply.avatar_url, reply.user_phone, reply.username)}
+                              onError={(event) => handleAvatarLoadError(event, reply.user_phone, reply.username)}
                               style={{ width: "24px", height: "24px", minWidth: "24px", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
                               alt="avatar"
                             />
@@ -219,8 +252,9 @@ function CommentsOverlay({
                               )}
                               <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "11px", color: "#bbb", marginTop: "5px" }}>
                                 <span>{formatCommentTime(reply.created_at)}</span>
-                                <span onClick={() => onLikeComment(reply.id)} style={{ cursor: "pointer", color: reply.is_liked ? "#ff4d4f" : "#999" }}>
-                                  ❤️ {reply.like_count || 0}
+                                <span onClick={() => onLikeComment(reply.id)} style={likeBtnStyle(reply.is_liked)}>
+                                  <span style={{ fontSize: "13px" }}>{reply.is_liked ? "♥" : "♡"}</span>
+                                  <span>{reply.like_count || 0}</span>
                                 </span>
                               </div>
                             </div>
