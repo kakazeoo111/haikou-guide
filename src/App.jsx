@@ -60,6 +60,7 @@ function App() {
   const ADMIN_PHONE = import.meta.env.VITE_ADMIN_PHONE;
   const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
   const places = placesData;
+  const getNoticeDismissKey = (phone) => `haikou_notice_dismissed_${phone}`;
 
   const generalHandlers = createGeneralHandlers({
     authApiBase,
@@ -133,6 +134,12 @@ function App() {
     favoriteIds,
   });
   const currentPlaceComments = viewingCommentsPlace ? activeComments[viewingCommentsPlace.id] || [] : [];
+  const handleDismissAnnouncement = () => {
+    if (!currentUser?.phone) return setShowNotice(false);
+    localStorage.setItem(getNoticeDismissKey(currentUser.phone), "1");
+    setShowNotice(false);
+  };
+  const handleOpenAnnouncement = () => setShowNotice(true);
 
   useEffect(() => {
     if (!ADMIN_PHONE || !authApiBase) {
@@ -185,7 +192,8 @@ function App() {
       .then((data) => {
         if (!data.ok || !data.content) return;
         setNoticeContent(data.content);
-        setShowNotice(true);
+        const dismissed = localStorage.getItem(getNoticeDismissKey(currentUser.phone)) === "1";
+        setShowNotice(!dismissed);
       })
       .catch((error) => console.error("获取公告失败:", error));
   }, [currentUser, authApiBase]);
@@ -260,7 +268,8 @@ function App() {
       isMobile={isMobile}
       ADMIN_PHONE={ADMIN_PHONE}
       setIsEditingNotice={setIsEditingNotice}
-      setShowNotice={setShowNotice}
+      onOpenAnnouncement={handleOpenAnnouncement}
+      onDismissAnnouncement={handleDismissAnnouncement}
       isEditingNotice={isEditingNotice}
       setNoticeContent={setNoticeContent}
       setInitialSlide={setInitialSlide}

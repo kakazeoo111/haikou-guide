@@ -53,7 +53,8 @@ function AppLayout({
   isMobile,
   ADMIN_PHONE,
   setIsEditingNotice,
-  setShowNotice,
+  onOpenAnnouncement,
+  onDismissAnnouncement,
   isEditingNotice,
   setNoticeContent,
   setInitialSlide,
@@ -154,9 +155,9 @@ function AppLayout({
         isAdmin={currentUser.phone === ADMIN_PHONE}
         onEdit={() => {
           setIsEditingNotice(true);
-          setShowNotice(false);
+          onDismissAnnouncement();
         }}
-        onEnterMap={() => setShowNotice(false)}
+        onEnterMap={onDismissAnnouncement}
       />
 
       <AnnouncementEditorModal
@@ -214,6 +215,7 @@ function AppLayout({
         onOpenProfile={() => setActiveTab("profile")}
         onLogout={generalHandlers.handleLogout}
         onShowFeedback={() => setShowFeedback(true)}
+        onShowAnnouncement={onOpenAnnouncement}
         onFetchAllFeedbacks={generalHandlers.fetchAllFeedbacks}
         onSearchChange={setSearch}
         onShowRecommendModal={() => setShowAddRecommend(true)}

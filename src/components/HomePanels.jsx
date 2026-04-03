@@ -48,6 +48,7 @@ function HomePanels({
   onOpenProfile,
   onLogout,
   onShowFeedback,
+  onShowAnnouncement,
   onFetchAllFeedbacks,
   onSearchChange,
   onShowRecommendModal,
@@ -91,6 +92,9 @@ function HomePanels({
                 </span>
                 <span onClick={onShowFeedback} style={{ color: "#5aa77b", cursor: "pointer" }}>
                   反馈建议
+                </span>
+                <span onClick={onShowAnnouncement} style={{ color: "#5aa77b", cursor: "pointer" }}>
+                  公告
                 </span>
                 {currentUser.phone === adminPhone && (
                   <span onClick={onFetchAllFeedbacks} style={{ color: "#333", cursor: "pointer" }}>
