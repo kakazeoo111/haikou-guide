@@ -26,9 +26,15 @@ const FILTER_ITEMS = [
 ];
 
 const UNREAD_BADGE_LIMIT = 99;
-const FAVORITE_ICON_ACTIVE_COLOR = "#ffb000";
-const FAVORITE_ICON_INACTIVE_COLOR = "#d89a00";
-const FAVORITE_ICON_SHADOW = "0 1px 2px rgba(120, 77, 0, 0.35)";
+const FAVORITE_ICON_SIZE = "32px";
+const FAVORITE_ICON_FONT_SIZE = "18px";
+const FAVORITE_ICON_ACTIVE_COLOR = "#ffffff";
+const FAVORITE_ICON_ACTIVE_BACKGROUND = "linear-gradient(135deg, #ff86b6, #ffb347)";
+const FAVORITE_ICON_ACTIVE_SHADOW = "0 6px 14px rgba(255, 150, 105, 0.28)";
+const FAVORITE_ICON_INACTIVE_COLOR = "#ffae42";
+const FAVORITE_ICON_INACTIVE_BACKGROUND = "#fff7ea";
+const FAVORITE_ICON_INACTIVE_BORDER = "1px solid #ffe2b8";
+const FAVORITE_ICON_INACTIVE_SHADOW = "0 2px 8px rgba(255, 174, 66, 0.2)";
 const unreadBadgeStyle = {
   minWidth: "16px",
   height: "16px",
@@ -217,11 +223,20 @@ function HomePanels({
                         onClick={() => onToggleFavorite(place)}
                         style={{
                           cursor: "pointer",
-                          fontSize: "24px",
-                          fontWeight: 700,
+                          width: FAVORITE_ICON_SIZE,
+                          height: FAVORITE_ICON_SIZE,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: FAVORITE_ICON_FONT_SIZE,
+                          fontWeight: 600,
                           lineHeight: 1,
+                          borderRadius: "12px",
+                          background: isFav ? FAVORITE_ICON_ACTIVE_BACKGROUND : FAVORITE_ICON_INACTIVE_BACKGROUND,
                           color: isFav ? FAVORITE_ICON_ACTIVE_COLOR : FAVORITE_ICON_INACTIVE_COLOR,
-                          textShadow: FAVORITE_ICON_SHADOW,
+                          border: isFav ? "none" : FAVORITE_ICON_INACTIVE_BORDER,
+                          boxShadow: isFav ? FAVORITE_ICON_ACTIVE_SHADOW : FAVORITE_ICON_INACTIVE_SHADOW,
+                          transition: "all 0.2s ease",
                         }}
                       >
                         {isFav ? "★" : "☆"}
