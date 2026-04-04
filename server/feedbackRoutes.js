@@ -4,6 +4,7 @@ const FEEDBACK_ADMIN_COLUMNS = [
   { name: "resolved_at", ddl: "ALTER TABLE feedback ADD COLUMN resolved_at DATETIME NULL" },
   { name: "admin_reply", ddl: "ALTER TABLE feedback ADD COLUMN admin_reply TEXT NULL" },
   { name: "replied_at", ddl: "ALTER TABLE feedback ADD COLUMN replied_at DATETIME NULL" },
+  { name: "parent_feedback_id", ddl: "ALTER TABLE feedback ADD COLUMN parent_feedback_id INT NULL" },
 ];
 
 function isAdminPhone(phone, adminPhone) {
@@ -15,6 +16,40 @@ function parseOptionalBoolean(value) {
   if (value === 1 || value === "1" || value === "true") return true;
   if (value === 0 || value === "0" || value === "false") return false;
   return null;
+}
+
+function parseFeedbackId(value) {
+  const normalized = Number(value);
+  if (!Number.isInteger(normalized) || normalized <= 0) return null;
+  return normalized;
+}
+
+async function fetchFeedbackRoot(pool, feedbackId) {
+  const [rows] = await pool.execute("SELECT id, parent_feedback_id, phone FROM feedback WHERE id = ? LIMIT 1", [feedbackId]);
+  if (!rows.length) return null;
+  const target = rows[0];
+  const rootId = target.parent_feedback_id ? Number(target.parent_feedback_id) : Number(target.id);
+  const [roots] = await pool.execute(
+    "SELECT id, phone FROM feedback WHERE id = ? LIMIT 1",
+    [rootId]
+  );
+  if (!roots.length) return null;
+  return {
+    rootId,
+    ownerPhone: String(roots[0].phone || ""),
+  };
+}
+
+async function fetchFeedbackThreadRows(pool, rootId) {
+  const [rows] = await pool.execute(
+    `SELECT id, parent_feedback_id, phone, content, image_url, created_at,
+            is_read, is_resolved, resolved_at, admin_reply, replied_at
+     FROM feedback
+     WHERE id = ? OR parent_feedback_id = ?
+     ORDER BY created_at ASC`,
+    [rootId, rootId]
+  );
+  return formatFeedbackRows(rows);
 }
 
 async function ensureFeedbackAdminColumns(pool) {
@@ -38,7 +73,7 @@ function formatFeedbackRows(rows) {
 async function fetchAllFeedbackRows(pool) {
   const [rows] = await pool.execute(
     `SELECT id, phone, phone AS user_phone, content, image_url, created_at, 
-            is_read, is_resolved, resolved_at, admin_reply, replied_at 
+            is_read, is_resolved, resolved_at, admin_reply, replied_at, parent_feedback_id
      FROM feedback 
      ORDER BY created_at DESC`
   );
@@ -159,6 +194,49 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
     } catch (error) {
       console.error("反馈回信失败:", error.message);
       res.status(500).json({ ok: false, message: `反馈回信失败: ${error.message}` });
+    }
+  });
+
+  app.post("/api/feedback/thread", async (req, res) => {
+    const { phone, feedbackId } = req.body;
+    const normalizedId = parseFeedbackId(feedbackId);
+    if (!normalizedId) return res.status(400).json({ ok: false, message: "反馈ID无效" });
+    try {
+      const rootInfo = await fetchFeedbackRoot(pool, normalizedId);
+      if (!rootInfo) return res.status(404).json({ ok: false, message: "反馈不存在或已删除" });
+      const isAdmin = isAdminPhone(phone, ADMIN_PHONE);
+      if (!isAdmin && String(phone || "") !== rootInfo.ownerPhone) {
+        return res.status(403).json({ ok: false, message: "无权限查看该反馈会话" });
+      }
+      const items = await fetchFeedbackThreadRows(pool, rootInfo.rootId);
+      res.json({ ok: true, rootId: rootInfo.rootId, items });
+    } catch (error) {
+      console.error("反馈会话获取失败:", error.message);
+      res.status(500).json({ ok: false, message: `反馈会话获取失败: ${error.message}` });
+    }
+  });
+
+  app.post("/api/feedback/followup", async (req, res) => {
+    const { phone, feedbackId, content } = req.body;
+    const normalizedId = parseFeedbackId(feedbackId);
+    if (!normalizedId) return res.status(400).json({ ok: false, message: "反馈ID无效" });
+    const message = String(content || "").trim();
+    if (!message) return res.status(400).json({ ok: false, message: "补充回信不能为空" });
+    try {
+      const rootInfo = await fetchFeedbackRoot(pool, normalizedId);
+      if (!rootInfo) return res.status(404).json({ ok: false, message: "反馈不存在或已删除" });
+      if (String(phone || "") !== rootInfo.ownerPhone) {
+        return res.status(403).json({ ok: false, message: "只能由该反馈提交者继续回信" });
+      }
+      await pool.execute(
+        "INSERT INTO feedback (phone, content, image_url, parent_feedback_id, is_read, is_resolved) VALUES (?, ?, ?, ?, 0, 0)",
+        [rootInfo.ownerPhone, message, null, rootInfo.rootId]
+      );
+      await pool.execute("UPDATE feedback SET is_resolved = 0, resolved_at = NULL WHERE id = ?", [rootInfo.rootId]);
+      res.json({ ok: true, message: "补充回信已发送给站长" });
+    } catch (error) {
+      console.error("补充回信失败:", error.message);
+      res.status(500).json({ ok: false, message: `补充回信失败: ${error.message}` });
     }
   });
 }

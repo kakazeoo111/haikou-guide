@@ -1,3 +1,5 @@
+import { useState } from "react";
+import FeedbackThreadModal from "./FeedbackThreadModal";
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 
 function getNoticeText(notice) {
@@ -6,6 +8,16 @@ function getNoticeText(notice) {
   if (notice.type === "reply") return `回复了你：${notice.content || ""}`;
   if (notice.type === "admin_reply") return `给你发来回信：${notice.content || ""}`;
   return notice.content || "给你发送了一条消息";
+}
+
+function parseFeedbackIdFromNotice(notice) {
+  if (notice?.type !== "admin_reply") return null;
+  const placeId = String(notice?.place_id || "").trim();
+  const matched = placeId.match(/^feedback_(\d+)$/);
+  if (!matched) return null;
+  const normalized = Number(matched[1]);
+  if (!Number.isInteger(normalized) || normalized <= 0) return null;
+  return normalized;
 }
 
 function NoticeListModal({
@@ -18,7 +30,90 @@ function NoticeListModal({
   onRefresh,
   formatCommentTime,
 }) {
+  const [showThreadModal, setShowThreadModal] = useState(false);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [threadItems, setThreadItems] = useState([]);
+  const [threadRootId, setThreadRootId] = useState(null);
+  const [followupDraft, setFollowupDraft] = useState("");
+  const [followupSubmitting, setFollowupSubmitting] = useState(false);
+
   if (!visible) return null;
+
+  const fetchFeedbackThread = async (feedbackId) => {
+    setThreadLoading(true);
+    try {
+      const res = await fetch(`${authApiBase}/api/feedback/thread`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, feedbackId }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(data.message || "加载反馈会话失败");
+        setThreadItems([]);
+        setThreadRootId(null);
+        return false;
+      }
+      setThreadItems(Array.isArray(data.items) ? data.items : []);
+      setThreadRootId(Number(data.rootId) || feedbackId);
+      return true;
+    } catch (error) {
+      console.error("反馈会话加载失败:", error);
+      alert("网络错误，暂时无法加载反馈详情");
+      setThreadItems([]);
+      setThreadRootId(null);
+      return false;
+    } finally {
+      setThreadLoading(false);
+    }
+  };
+
+  const handleOpenAdminReply = async (notice) => {
+    const feedbackId = parseFeedbackIdFromNotice(notice);
+    if (!feedbackId) {
+      alert("该回信缺少关联反馈ID，无法查看详情");
+      return;
+    }
+    setShowThreadModal(true);
+    setFollowupDraft("");
+    await fetchFeedbackThread(feedbackId);
+  };
+
+  const handleCloseThreadModal = () => {
+    setShowThreadModal(false);
+    setThreadItems([]);
+    setThreadRootId(null);
+    setFollowupDraft("");
+    setFollowupSubmitting(false);
+  };
+
+  const handleSubmitFollowup = async () => {
+    const message = followupDraft.trim();
+    if (!threadRootId) return alert("反馈会话未加载完成，请稍后再试");
+    if (!message) return alert("补充回信不能为空");
+    setFollowupSubmitting(true);
+    try {
+      const res = await fetch(`${authApiBase}/api/feedback/followup`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, feedbackId: threadRootId, content: message }),
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(data.message || "发送补充回信失败");
+        return;
+      }
+      setFollowupDraft("");
+      alert(data.message || "补充回信已发送");
+      await fetchFeedbackThread(threadRootId);
+      await onRefresh();
+    } catch (error) {
+      console.error("补充回信请求失败:", error);
+      alert("网络错误，请稍后再试");
+    } finally {
+      setFollowupSubmitting(false);
+    }
+  };
 
   const handleMarkRead = async () => {
     try {
@@ -68,15 +163,20 @@ function NoticeListModal({
         {notifications.length === 0 && <p style={{ textAlign: "center", color: "#999", padding: "20px 0" }}>暂无消息</p>}
 
         {notifications.map((notice) => {
-          const canJump = notice.type !== "admin_reply" && Boolean(notice.place_id);
+          const canJumpToPlace = notice.type !== "admin_reply" && Boolean(notice.place_id);
+          const canOpenFeedbackThread = Boolean(parseFeedbackIdFromNotice(notice));
+          const isClickable = canJumpToPlace || canOpenFeedbackThread;
           return (
             <div
               key={notice.id}
-              onClick={() => canJump && onNoticeClick(notice)}
+              onClick={() => {
+                if (canJumpToPlace) onNoticeClick(notice);
+                if (canOpenFeedbackThread) handleOpenAdminReply(notice);
+              }}
               style={{
                 padding: "15px 10px",
                 borderBottom: "1px solid #f0f0f0",
-                cursor: canJump ? "pointer" : "default",
+                cursor: isClickable ? "pointer" : "default",
                 background: notice.is_read ? "transparent" : "#f4fbf6",
                 borderRadius: "10px",
                 marginBottom: "5px",
@@ -99,7 +199,7 @@ function NoticeListModal({
                   </div>
                   <div style={{ fontSize: "11px", color: "#bbb", marginTop: "6px", display: "flex", justifyContent: "space-between" }}>
                     <span>{formatCommentTime(notice.created_at)}</span>
-                    <span style={{ color: "#5aa77b" }}>{canJump ? "点击查看 ➜" : "站主回信"}</span>
+                    <span style={{ color: "#5aa77b" }}>{isClickable ? "点击查看 ➜" : "站主回信"}</span>
                   </div>
                 </div>
               </div>
@@ -116,6 +216,18 @@ function NoticeListModal({
           </button>
         </div>
       </div>
+
+      <FeedbackThreadModal
+        visible={showThreadModal}
+        loading={threadLoading}
+        submitting={followupSubmitting}
+        items={threadItems}
+        draft={followupDraft}
+        onDraftChange={setFollowupDraft}
+        onSubmit={handleSubmitFollowup}
+        onClose={handleCloseThreadModal}
+        formatCommentTime={formatCommentTime}
+      />
     </div>
   );
 }
