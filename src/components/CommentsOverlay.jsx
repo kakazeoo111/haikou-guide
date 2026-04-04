@@ -17,13 +17,18 @@ const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "128px";
 const CARTOON_AVATAR_STYLES = ["adventurer", "bottts", "fun-emoji", "personas"];
 const CARTOON_AVATAR_API_BASE = "https://api.dicebear.com/7.x";
 const DEFAULT_BADGE_TITLE = "\u672a\u89e3\u9501\u79f0\u53f7";
+const PARENT_AVATAR_SIZE = 36;
+const REPLY_AVATAR_SIZE = 24;
+const PARENT_BADGE_BUBBLE_SIZE = 20;
+const REPLY_BADGE_BUBBLE_SIZE = 16;
 const selfBadgeBaseStyle = {
-  marginTop: "4px",
   display: "inline-flex",
   alignItems: "center",
-  gap: "4px",
-  padding: "2px 8px",
+  gap: "5px",
+  padding: "3px 9px",
   borderRadius: "999px",
+  transform: "translateY(-1px)",
+  backdropFilter: "blur(2px)",
 };
 
 function hashString(value) {
@@ -84,6 +89,32 @@ function getSelfBadge(comment, currentUser, activeBadgeTitle, badgeIcon) {
   };
 }
 
+function createAvatarWrapStyle(size) {
+  return {
+    width: `${size}px`,
+    height: `${size}px`,
+    minWidth: `${size}px`,
+    position: "relative",
+  };
+}
+
+function createAvatarBadgeBubbleStyle(theme, size) {
+  return {
+    position: "absolute",
+    right: "-5px",
+    bottom: "-5px",
+    width: `${size}px`,
+    height: `${size}px`,
+    borderRadius: "999px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: theme.background,
+    border: `1px solid ${theme.border}`,
+    boxShadow: `${theme.shadow}, 0 0 0 2px rgba(255,255,255,0.88)`,
+  };
+}
+
 function sortAndFilterComments(comments, sortMode, showOnlyImages) {
   const source = Array.isArray(comments) ? [...comments] : [];
   const list = showOnlyImages ? source.filter(hasCommentImages) : source;
@@ -127,10 +158,14 @@ function CommentsOverlay({
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
   const selfBadgeStyle = {
     ...selfBadgeBaseStyle,
-    background: badgeTheme.background,
+    background: `linear-gradient(130deg, rgba(255,255,255,0.86), rgba(255,255,255,0.56)), ${badgeTheme.background}`,
     border: `1px solid ${badgeTheme.border}`,
-    boxShadow: badgeTheme.shadow,
+    boxShadow: `${badgeTheme.shadow}, 0 2px 0 rgba(255,255,255,0.74) inset`,
   };
+  const parentAvatarWrapStyle = createAvatarWrapStyle(PARENT_AVATAR_SIZE);
+  const replyAvatarWrapStyle = createAvatarWrapStyle(REPLY_AVATAR_SIZE);
+  const parentBadgeBubbleStyle = createAvatarBadgeBubbleStyle(badgeTheme, PARENT_BADGE_BUBBLE_SIZE);
+  const replyBadgeBubbleStyle = createAvatarBadgeBubbleStyle(badgeTheme, REPLY_BADGE_BUBBLE_SIZE);
 
   return (
     <div style={fullPageOverlayStyle}>
@@ -182,20 +217,29 @@ function CommentsOverlay({
           return (
             <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
               <div style={{ display: "flex", gap: "10px" }}>
-                <img
-                  src={getAvatarSrc(parent.avatar_url, parent.user_phone, parent.username)}
-                  onError={(event) => handleAvatarLoadError(event, parent.user_phone, parent.username)}
-                  style={{ width: "36px", height: "36px", minWidth: "36px", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
-                  alt="avatar"
-                />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: "13px", fontWeight: "bold", color: "#666" }}>{parent.username}</div>
+                <div style={parentAvatarWrapStyle}>
+                  <img
+                    src={getAvatarSrc(parent.avatar_url, parent.user_phone, parent.username)}
+                    onError={(event) => handleAvatarLoadError(event, parent.user_phone, parent.username)}
+                    style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
+                    alt="avatar"
+                  />
                   {parentBadge && (
-                    <div style={selfBadgeStyle}>
-                      <span style={{ fontSize: "11px" }}>{parentBadge.icon}</span>
-                      <span style={{ fontSize: "11px", color: badgeTheme.textColor, fontWeight: "bold" }}>{parentBadge.title}</span>
+                    <div style={parentBadgeBubbleStyle}>
+                      <span style={{ fontSize: "11px", lineHeight: 1 }}>{parentBadge.icon}</span>
                     </div>
                   )}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                    <div style={{ fontSize: "13px", fontWeight: "bold", color: "#666" }}>{parent.username}</div>
+                    {parentBadge && (
+                      <div style={selfBadgeStyle}>
+                        <span style={{ fontSize: "11px" }}>{parentBadge.icon}</span>
+                        <span style={{ fontSize: "11px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.2px" }}>{parentBadge.title}</span>
+                      </div>
+                    )}
+                  </div>
                   <div style={{ fontSize: "15px", color: "#222", margin: "4px 0" }}>{parent.content}</div>
                   {parentImages.length > 0 && (
                     <div
@@ -260,20 +304,29 @@ function CommentsOverlay({
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
                         return (
                           <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-                            <img
-                              src={getAvatarSrc(reply.avatar_url, reply.user_phone, reply.username)}
-                              onError={(event) => handleAvatarLoadError(event, reply.user_phone, reply.username)}
-                              style={{ width: "24px", height: "24px", minWidth: "24px", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
-                              alt="avatar"
-                            />
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontSize: "12px", fontWeight: "bold", color: "#666" }}>{reply.username}</div>
+                            <div style={replyAvatarWrapStyle}>
+                              <img
+                                src={getAvatarSrc(reply.avatar_url, reply.user_phone, reply.username)}
+                                onError={(event) => handleAvatarLoadError(event, reply.user_phone, reply.username)}
+                                style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
+                                alt="avatar"
+                              />
                               {replyBadge && (
-                                <div style={selfBadgeStyle}>
-                                  <span style={{ fontSize: "10px" }}>{replyBadge.icon}</span>
-                                  <span style={{ fontSize: "10px", color: badgeTheme.textColor, fontWeight: "bold" }}>{replyBadge.title}</span>
+                                <div style={replyBadgeBubbleStyle}>
+                                  <span style={{ fontSize: "9px", lineHeight: 1 }}>{replyBadge.icon}</span>
                                 </div>
                               )}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <div style={{ fontSize: "12px", fontWeight: "bold", color: "#666" }}>{reply.username}</div>
+                                {replyBadge && (
+                                  <div style={selfBadgeStyle}>
+                                    <span style={{ fontSize: "10px" }}>{replyBadge.icon}</span>
+                                    <span style={{ fontSize: "10px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.2px" }}>{replyBadge.title}</span>
+                                  </div>
+                                )}
+                              </div>
                               <div style={{ fontSize: "14px", color: "#333" }}>
                                 <span style={{ color: "#5aa77b" }}>回复：</span>
                                 {reply.content}
