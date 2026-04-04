@@ -26,7 +26,9 @@ const FILTER_ITEMS = [
 ];
 
 const UNREAD_BADGE_LIMIT = 99;
-const FAVORITE_ICON_COLOR = "#f4c542";
+const FAVORITE_ICON_ACTIVE_COLOR = "#ffb000";
+const FAVORITE_ICON_INACTIVE_COLOR = "#d89a00";
+const FAVORITE_ICON_SHADOW = "0 1px 2px rgba(120, 77, 0, 0.35)";
 const unreadBadgeStyle = {
   minWidth: "16px",
   height: "16px",
@@ -211,7 +213,17 @@ function HomePanels({
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{place.name}</h3>
-                      <span onClick={() => onToggleFavorite(place)} style={{ cursor: "pointer", fontSize: "22px", color: FAVORITE_ICON_COLOR }}>
+                      <span
+                        onClick={() => onToggleFavorite(place)}
+                        style={{
+                          cursor: "pointer",
+                          fontSize: "24px",
+                          fontWeight: 700,
+                          lineHeight: 1,
+                          color: isFav ? FAVORITE_ICON_ACTIVE_COLOR : FAVORITE_ICON_INACTIVE_COLOR,
+                          textShadow: FAVORITE_ICON_SHADOW,
+                        }}
+                      >
                         {isFav ? "★" : "☆"}
                       </span>
                     </div>
