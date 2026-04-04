@@ -34,6 +34,7 @@ function App() {
   const [myLikedPlaceIds, setMyLikedPlaceIds] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
   const [showAddRecommend, setShowAddRecommend] = useState(false);
+  const [myRecommendOnly, setMyRecommendOnly] = useState(false);
   const [newRec, setNewRec] = useState({ name: "", desc: "", lat: null, lng: null });
   const [recImages, setRecImages] = useState([]);
   const [recommendSuggestions, setRecommendSuggestions] = useState([]);
@@ -131,6 +132,8 @@ function App() {
     search,
     filter,
     favoriteIds,
+    myRecommendOnly,
+    currentUserPhone: currentUser?.phone,
   });
   const currentPlaceComments = viewingCommentsPlace ? activeComments[viewingCommentsPlace.id] || [] : [];
   const handleDismissAnnouncement = () => {
@@ -236,6 +239,7 @@ function App() {
       showBadgePicker={showBadgePicker}
       setShowNoticeList={setShowNoticeList}
       setFilter={setFilter}
+      setMyRecommendOnly={setMyRecommendOnly}
       viewingCommentsPlace={viewingCommentsPlace}
       currentPlaceComments={currentPlaceComments}
       commentSort={commentSort}

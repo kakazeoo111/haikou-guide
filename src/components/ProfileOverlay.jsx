@@ -114,7 +114,7 @@ function ProfileOverlay({
 
           <div style={menuItemStyle} onClick={onGoRecommend}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span>✨</span> 我的分享记录
+              <span>✨</span> 我的推荐
             </div>
             <span>›</span>
           </div>

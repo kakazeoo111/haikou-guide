@@ -22,6 +22,7 @@ function AppLayout({
   showBadgePicker,
   setShowNoticeList,
   setFilter,
+  setMyRecommendOnly,
   viewingCommentsPlace,
   currentPlaceComments,
   commentSort,
@@ -107,6 +108,7 @@ function AppLayout({
           onGoRecommend={() => {
             setActiveTab("home");
             setFilter("recommend");
+            setMyRecommendOnly(true);
           }}
           onAvatarUpload={generalHandlers.handleAvatarUpload}
           onLogout={generalHandlers.handleLogout}
@@ -252,7 +254,10 @@ function AppLayout({
         onFetchAllFeedbacks={generalHandlers.fetchAllFeedbacks}
         onSearchChange={setSearch}
         onShowRecommendModal={() => setShowAddRecommend(true)}
-        onFilterChange={setFilter}
+        onFilterChange={(nextFilter) => {
+          setMyRecommendOnly(false);
+          setFilter(nextFilter);
+        }}
         onDeleteRec={interactionHandlers.handleDeleteRec}
         onToggleFavorite={generalHandlers.toggleFavorite}
         onOpenDetail={generalHandlers.handleOpenDetail}
