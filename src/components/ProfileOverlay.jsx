@@ -1,7 +1,8 @@
 import BadgePickerModal from "./BadgePickerModal";
 import { badgeStyle, btnLogOutStyle, menuItemStyle, navHeaderStyle, profileAvatarLarge, profileInfoCard, profilePageStyle } from "../styles/appStyles";
+import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 
-const activeBadgePillStyle = {
+const activeBadgePillBaseStyle = {
   marginTop: "8px",
   display: "inline-flex",
   alignItems: "center",
@@ -33,7 +34,16 @@ function ProfileOverlay({
   onLogout,
 }) {
   const unreadCount = notifications.filter((notice) => !notice.is_read).length;
-  const badgeIcon = activeBadgeMeta?.icon || "🏅";
+  const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
+  const badgeTheme = getBadgeTheme(badgeSeed);
+  const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
+  const activeBadgePillStyle = {
+    ...activeBadgePillBaseStyle,
+    background: badgeTheme.background,
+    border: `1px solid ${badgeTheme.border}`,
+    boxShadow: badgeTheme.shadow,
+    color: badgeTheme.textColor,
+  };
 
   return (
     <div style={profilePageStyle}>

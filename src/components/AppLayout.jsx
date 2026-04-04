@@ -8,6 +8,7 @@ import AnnouncementModal, { AnnouncementEditorModal } from "./AnnouncementModal"
 import DetailModal from "./DetailModal";
 import FeedbackModal from "./FeedbackModal";
 import HomePanels from "./HomePanels";
+import BadgeGrantModal from "./BadgeGrantModal";
 import { formatCommentTime } from "../logic/placeUtils";
 
 function AppLayout({
@@ -79,6 +80,9 @@ function AppLayout({
   filteredPlaces,
   setTargetPlaces,
   onManageBadge,
+  showBadgeGrantModal,
+  onCloseManageBadgeModal,
+  onSubmitManageBadge,
   onOpenBadgePicker,
   onCloseBadgePicker,
   onSelectBadge,
@@ -136,6 +140,8 @@ function AppLayout({
       />
 
       <AdminFeedbackModal visible={showAdminFeedback} allFeedbacks={allFeedbacks} onClose={() => setShowAdminFeedback(false)} onZoomImage={setZoomedSingleImage} />
+
+      <BadgeGrantModal visible={showBadgeGrantModal} onClose={onCloseManageBadgeModal} onSubmit={onSubmitManageBadge} />
 
       <ZoomOverlay
         visible={zoomMode || !!zoomedSingleImage}

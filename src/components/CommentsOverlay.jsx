@@ -10,21 +10,20 @@ import {
   sortBtnStyle,
   sortContainerStyle,
 } from "../styles/appStyles";
+import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 
 const PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH = "152px";
 const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "128px";
 const CARTOON_AVATAR_STYLES = ["adventurer", "bottts", "fun-emoji", "personas"];
 const CARTOON_AVATAR_API_BASE = "https://api.dicebear.com/7.x";
 const DEFAULT_BADGE_TITLE = "\u672a\u89e3\u9501\u79f0\u53f7";
-const selfBadgeStyle = {
+const selfBadgeBaseStyle = {
   marginTop: "4px",
   display: "inline-flex",
   alignItems: "center",
   gap: "4px",
   padding: "2px 8px",
   borderRadius: "999px",
-  background: "linear-gradient(135deg, #e8fff1, #edf7ff)",
-  border: "1px solid #d6eee2",
 };
 
 function hashString(value) {
@@ -77,10 +76,10 @@ function handleAvatarLoadError(event, phone, username) {
   event.currentTarget.src = fallback;
 }
 
-function getSelfBadge(comment, currentUser, activeBadgeTitle, activeBadgeMeta) {
+function getSelfBadge(comment, currentUser, activeBadgeTitle, badgeIcon) {
   if (String(comment?.user_phone || "") !== String(currentUser?.phone || "")) return null;
   return {
-    icon: activeBadgeMeta?.icon || "\uD83C\uDFC5",
+    icon: badgeIcon,
     title: activeBadgeTitle || DEFAULT_BADGE_TITLE,
   };
 }
@@ -123,6 +122,15 @@ function CommentsOverlay({
   const sorted = sortAndFilterComments(comments, commentSort, showOnlyImages);
   const parents = sorted.filter((c) => !c.parent_id);
   const children = sorted.filter((c) => c.parent_id);
+  const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
+  const badgeTheme = getBadgeTheme(badgeSeed);
+  const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
+  const selfBadgeStyle = {
+    ...selfBadgeBaseStyle,
+    background: badgeTheme.background,
+    border: `1px solid ${badgeTheme.border}`,
+    boxShadow: badgeTheme.shadow,
+  };
 
   return (
     <div style={fullPageOverlayStyle}>
@@ -169,7 +177,7 @@ function CommentsOverlay({
             .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           const isExpanded = expandedParentIds.includes(parent.id);
           const parentImages = parseCommentImageUrls(parent.image_url);
-          const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, activeBadgeMeta);
+          const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
           return (
             <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
@@ -185,7 +193,7 @@ function CommentsOverlay({
                   {parentBadge && (
                     <div style={selfBadgeStyle}>
                       <span style={{ fontSize: "11px" }}>{parentBadge.icon}</span>
-                      <span style={{ fontSize: "11px", color: "#1f5f45", fontWeight: "bold" }}>{parentBadge.title}</span>
+                      <span style={{ fontSize: "11px", color: badgeTheme.textColor, fontWeight: "bold" }}>{parentBadge.title}</span>
                     </div>
                   )}
                   <div style={{ fontSize: "15px", color: "#222", margin: "4px 0" }}>{parent.content}</div>
@@ -249,7 +257,7 @@ function CommentsOverlay({
                     <div style={{ background: "#f9f9f9", padding: "10px", borderRadius: "8px" }}>
                       {replies.map((reply) => {
                         const replyImages = parseCommentImageUrls(reply.image_url);
-                        const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, activeBadgeMeta);
+                        const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
                         return (
                           <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
                             <img
@@ -263,7 +271,7 @@ function CommentsOverlay({
                               {replyBadge && (
                                 <div style={selfBadgeStyle}>
                                   <span style={{ fontSize: "10px" }}>{replyBadge.icon}</span>
-                                  <span style={{ fontSize: "10px", color: "#1f5f45", fontWeight: "bold" }}>{replyBadge.title}</span>
+                                  <span style={{ fontSize: "10px", color: badgeTheme.textColor, fontWeight: "bold" }}>{replyBadge.title}</span>
                                 </div>
                               )}
                               <div style={{ fontSize: "14px", color: "#333" }}>

@@ -55,7 +55,7 @@ function App() {
   const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
   const places = placesData;
   const getNoticeDismissKey = (phone) => `haikou_notice_dismissed_${phone}`;
-  const { activeBadgeTitle, activeBadgeMeta, badgeSummary, showBadgePicker, openBadgePicker, closeBadgePicker, handleSelectBadge, handleManageBadge } = useBadgeCenter({
+  const { activeBadgeTitle, activeBadgeMeta, badgeSummary, showBadgePicker, showBadgeGrantModal, openBadgePicker, closeBadgePicker, handleSelectBadge, handleManageBadge, closeManageBadgeModal, submitManageBadge } = useBadgeCenter({
     authApiBase,
     currentUser,
     adminPhone: ADMIN_PHONE,
@@ -275,6 +275,9 @@ function App() {
       onOpenAnnouncement={handleOpenAnnouncement}
       onDismissAnnouncement={handleDismissAnnouncement}
       onManageBadge={handleManageBadge}
+      showBadgeGrantModal={showBadgeGrantModal}
+      onCloseManageBadgeModal={closeManageBadgeModal}
+      onSubmitManageBadge={submitManageBadge}
       onOpenBadgePicker={openBadgePicker}
       onCloseBadgePicker={closeBadgePicker}
       onSelectBadge={handleSelectBadge}

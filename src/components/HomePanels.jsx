@@ -13,6 +13,7 @@ import {
   placeLikeBtnStyle,
   rankBadgeStyle,
 } from "../styles/appStyles";
+import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 
 const FILTER_ITEMS = [
   { key: "all", label: "全部" },
@@ -50,7 +51,7 @@ const unreadBadgeStyle = {
   boxShadow: "0 2px 6px rgba(255,77,109,0.35)",
 };
 
-const userBadgeStyle = {
+const userBadgeBaseStyle = {
   marginTop: "6px",
   display: "flex",
   alignItems: "center",
@@ -106,7 +107,15 @@ function HomePanels({
   formatCommentTime,
 }) {
   const unreadBadgeText = unreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : unreadCount;
-  const badgeIcon = activeBadgeMeta?.icon || "🏅";
+  const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
+  const badgeTheme = getBadgeTheme(badgeSeed);
+  const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
+  const userBadgeStyle = {
+    ...userBadgeBaseStyle,
+    background: badgeTheme.background,
+    border: `1px solid ${badgeTheme.border}`,
+    boxShadow: badgeTheme.shadow,
+  };
 
   return (
     <>
@@ -135,7 +144,7 @@ function HomePanels({
               </h3>
               <div style={userBadgeStyle}>
                 <span style={{ fontSize: "13px" }}>{badgeIcon}</span>
-                <span style={{ fontSize: "12px", color: "#1f5f45", fontWeight: 700 }}>{activeBadgeTitle || "未解锁称号"}</span>
+                <span style={{ fontSize: "12px", color: badgeTheme.textColor, fontWeight: 800 }}>{activeBadgeTitle || "未解锁称号"}</span>
               </div>
               <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginTop: "3px" }}>
                 <span onClick={onLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>

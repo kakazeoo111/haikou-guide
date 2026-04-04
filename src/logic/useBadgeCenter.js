@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { fetchBadgeSummary, getBadgeTitleOrDefault, promptAndUpdateManualBadge, selectActiveBadge } from "./badgeClient";
+import { fetchBadgeSummary, getBadgeTitleOrDefault, selectActiveBadge, updateManualBadgeGrant } from "./badgeClient";
 
-const DEFAULT_BADGE_TITLE = "未解锁称号";
+const DEFAULT_BADGE_TITLE = "\u672a\u89e3\u9501\u79f0\u53f7";
 
 function getActiveBadge(summary) {
   const title = getBadgeTitleOrDefault(summary);
   const fromCatalog = summary?.badgeCatalog?.find((item) => item.name === title);
   if (fromCatalog) return fromCatalog;
-  return { name: title, icon: "🏅", mood: "继续解锁更多称号" };
+  return { name: title, icon: "\uD83C\uDFC5", mood: "\u7ee7\u7eed\u89e3\u9501\u66f4\u591a\u79f0\u53f7" };
 }
 
 export function useBadgeCenter({ authApiBase, currentUser, adminPhone }) {
@@ -15,6 +15,7 @@ export function useBadgeCenter({ authApiBase, currentUser, adminPhone }) {
   const [activeBadgeTitle, setActiveBadgeTitle] = useState(DEFAULT_BADGE_TITLE);
   const [activeBadgeMeta, setActiveBadgeMeta] = useState(getActiveBadge(null));
   const [showBadgePicker, setShowBadgePicker] = useState(false);
+  const [showBadgeGrantModal, setShowBadgeGrantModal] = useState(false);
 
   const refreshBadgeSummary = async (phone) => {
     const summary = await fetchBadgeSummary(authApiBase, phone);
@@ -32,26 +33,29 @@ export function useBadgeCenter({ authApiBase, currentUser, adminPhone }) {
       return;
     }
     refreshBadgeSummary(currentUser.phone).catch((error) => {
-      console.error("获取称号失败:", error);
+      console.error("Fetch badge summary failed:", error);
       setActiveBadgeTitle(DEFAULT_BADGE_TITLE);
       setActiveBadgeMeta(getActiveBadge(null));
     });
   }, [authApiBase, currentUser?.phone]);
 
-  const handleManageBadge = async () => {
+  const openManageBadgeModal = () => {
     if (!currentUser || currentUser.phone !== adminPhone) {
-      alert("仅站主可以操作称号授权");
+      alert("\u4ec5\u7ad9\u4e3b\u53ef\u4ee5\u64cd\u4f5c\u79f0\u53f7\u6388\u6743");
       return;
     }
-    try {
-      const result = await promptAndUpdateManualBadge({ authApiBase, adminPhone });
-      if (!result) return;
-      alert("称号授权操作成功");
-      await refreshBadgeSummary(currentUser.phone);
-    } catch (error) {
-      console.error("称号授权失败:", error);
-      alert(error.message || "称号授权失败");
+    setShowBadgeGrantModal(true);
+  };
+
+  const closeManageBadgeModal = () => setShowBadgeGrantModal(false);
+
+  const submitManageBadge = async (payload) => {
+    if (!currentUser || currentUser.phone !== adminPhone) {
+      throw new Error("\u65e0\u6743\u9650\u64cd\u4f5c\u79f0\u53f7\u6388\u6743");
     }
+    const result = await updateManualBadgeGrant(authApiBase, { adminPhone, ...payload });
+    await refreshBadgeSummary(currentUser.phone);
+    return result;
   };
 
   const handleSelectBadge = async (badgeName) => {
@@ -63,8 +67,8 @@ export function useBadgeCenter({ authApiBase, currentUser, adminPhone }) {
       setActiveBadgeMeta(getActiveBadge(nextSummary));
       setShowBadgePicker(false);
     } catch (error) {
-      console.error("切换称号失败:", error);
-      alert(error.message || "切换称号失败");
+      console.error("Switch badge failed:", error);
+      alert(error.message || "\u5207\u6362\u79f0\u53f7\u5931\u8d25");
     }
   };
 
@@ -73,9 +77,13 @@ export function useBadgeCenter({ authApiBase, currentUser, adminPhone }) {
     activeBadgeMeta,
     badgeSummary,
     showBadgePicker,
+    showBadgeGrantModal,
     openBadgePicker: () => setShowBadgePicker(true),
     closeBadgePicker: () => setShowBadgePicker(false),
     handleSelectBadge,
-    handleManageBadge,
+    handleManageBadge: openManageBadgeModal,
+    openManageBadgeModal,
+    closeManageBadgeModal,
+    submitManageBadge,
   };
 }

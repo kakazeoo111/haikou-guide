@@ -12,8 +12,8 @@ const BADGE_PRIORITY = [
 ];
 const BADGE_CATALOG = [
   { name: "椰岛新兵", icon: "🌴", mood: "刚登陆，先热身", sourceType: "quant", ruleText: "登录三天即可获得" },
-  { name: "探店小椰", icon: "📍", mood: "发现好店达人", sourceType: "quant", ruleText: "推荐数 >= 3" },
-  { name: "评论小椰", icon: "💬", mood: "发言有料选手", sourceType: "quant", ruleText: "评论总数 >= 15" },
+  { name: "探店能手", icon: "📍", mood: "发现好店达人", sourceType: "quant", ruleText: "推荐数 >= 3" },
+  { name: "评论小子", icon: "💬", mood: "发言有料选手", sourceType: "quant", ruleText: "评论总数 >= 15" },
   { name: "人气椰", icon: "🔥", mood: "全场高光体质", sourceType: "quant", ruleText: "收到点赞总数 >= 50" },
   { name: "快乐种草机", icon: "✨", mood: "一发入魂种草王", sourceType: "quant", ruleText: "收到点赞总数 >= 100" },
   { name: "佛系椰", icon: "🧘", mood: "静静看世界", sourceType: "quant", ruleText: "近7天只浏览不发布" },
