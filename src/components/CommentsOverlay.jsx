@@ -19,17 +19,35 @@ const CARTOON_AVATAR_API_BASE = "https://api.dicebear.com/7.x";
 const DEFAULT_BADGE_TITLE = "\u672a\u89e3\u9501\u79f0\u53f7";
 const PARENT_AVATAR_SIZE = 36;
 const REPLY_AVATAR_SIZE = 24;
-const PARENT_BADGE_BUBBLE_SIZE = 20;
-const REPLY_BADGE_BUBBLE_SIZE = 16;
+const PARENT_BADGE_BUBBLE_SIZE = 14;
+const REPLY_BADGE_BUBBLE_SIZE = 12;
 const selfBadgeBaseStyle = {
   display: "inline-flex",
   alignItems: "center",
-  gap: "5px",
-  padding: "3px 9px",
+  gap: "3px",
+  padding: "1px 6px",
   borderRadius: "999px",
-  transform: "translateY(-1px)",
+  minHeight: "18px",
   backdropFilter: "blur(2px)",
 };
+const BADGE_ANIMATION_STYLE = `
+@keyframes hkBadgeFloat {
+  0% { transform: translateY(0); box-shadow: 0 1px 4px rgba(255, 124, 182, 0.16); }
+  50% { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(255, 124, 182, 0.2); }
+  100% { transform: translateY(0); box-shadow: 0 1px 4px rgba(255, 124, 182, 0.16); }
+}
+@keyframes hkBadgePulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.hk-badge-chip {
+  animation: hkBadgeFloat 2.8s ease-in-out infinite;
+}
+.hk-badge-bubble {
+  animation: hkBadgePulse 2.2s ease-in-out infinite;
+}
+`;
 
 function hashString(value) {
   let hash = 0;
@@ -101,8 +119,8 @@ function createAvatarWrapStyle(size) {
 function createAvatarBadgeBubbleStyle(theme, size) {
   return {
     position: "absolute",
-    right: "-5px",
-    bottom: "-5px",
+    right: "-3px",
+    bottom: "-3px",
     width: `${size}px`,
     height: `${size}px`,
     borderRadius: "999px",
@@ -111,7 +129,7 @@ function createAvatarBadgeBubbleStyle(theme, size) {
     justifyContent: "center",
     background: theme.background,
     border: `1px solid ${theme.border}`,
-    boxShadow: `${theme.shadow}, 0 0 0 2px rgba(255,255,255,0.88)`,
+    boxShadow: `0 2px 5px rgba(0,0,0,0.12), 0 0 0 2px rgba(255,255,255,0.9)`,
   };
 }
 
@@ -158,9 +176,9 @@ function CommentsOverlay({
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
   const selfBadgeStyle = {
     ...selfBadgeBaseStyle,
-    background: `linear-gradient(130deg, rgba(255,255,255,0.86), rgba(255,255,255,0.56)), ${badgeTheme.background}`,
+    background: `linear-gradient(130deg, rgba(255,255,255,0.9), rgba(255,255,255,0.66)), ${badgeTheme.background}`,
     border: `1px solid ${badgeTheme.border}`,
-    boxShadow: `${badgeTheme.shadow}, 0 2px 0 rgba(255,255,255,0.74) inset`,
+    boxShadow: `0 1px 4px rgba(255, 124, 182, 0.16), 0 1px 0 rgba(255,255,255,0.78) inset`,
   };
   const parentAvatarWrapStyle = createAvatarWrapStyle(PARENT_AVATAR_SIZE);
   const replyAvatarWrapStyle = createAvatarWrapStyle(REPLY_AVATAR_SIZE);
@@ -169,6 +187,7 @@ function CommentsOverlay({
 
   return (
     <div style={fullPageOverlayStyle}>
+      <style>{BADGE_ANIMATION_STYLE}</style>
       <div style={navHeaderStyle}>
         <span onClick={onClose} style={{ cursor: "pointer", fontSize: "18px" }}>
           ← 返回
@@ -225,8 +244,8 @@ function CommentsOverlay({
                     alt="avatar"
                   />
                   {parentBadge && (
-                    <div style={parentBadgeBubbleStyle}>
-                      <span style={{ fontSize: "11px", lineHeight: 1 }}>{parentBadge.icon}</span>
+                    <div className="hk-badge-bubble" style={parentBadgeBubbleStyle}>
+                      <span style={{ fontSize: "8px", lineHeight: 1 }}>{parentBadge.icon}</span>
                     </div>
                   )}
                 </div>
@@ -234,9 +253,11 @@ function CommentsOverlay({
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <div style={{ fontSize: "13px", fontWeight: "bold", color: "#666" }}>{parent.username}</div>
                     {parentBadge && (
-                      <div style={selfBadgeStyle}>
-                        <span style={{ fontSize: "11px" }}>{parentBadge.icon}</span>
-                        <span style={{ fontSize: "11px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.2px" }}>{parentBadge.title}</span>
+                      <div className="hk-badge-chip" style={selfBadgeStyle}>
+                        <span style={{ fontSize: "9px", lineHeight: 1 }}>{parentBadge.icon}</span>
+                        <span style={{ fontSize: "10px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.1px", maxWidth: "72px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                          {parentBadge.title}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -312,8 +333,8 @@ function CommentsOverlay({
                                 alt="avatar"
                               />
                               {replyBadge && (
-                                <div style={replyBadgeBubbleStyle}>
-                                  <span style={{ fontSize: "9px", lineHeight: 1 }}>{replyBadge.icon}</span>
+                                <div className="hk-badge-bubble" style={replyBadgeBubbleStyle}>
+                                  <span style={{ fontSize: "7px", lineHeight: 1 }}>{replyBadge.icon}</span>
                                 </div>
                               )}
                             </div>
@@ -321,9 +342,11 @@ function CommentsOverlay({
                               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                                 <div style={{ fontSize: "12px", fontWeight: "bold", color: "#666" }}>{reply.username}</div>
                                 {replyBadge && (
-                                  <div style={selfBadgeStyle}>
-                                    <span style={{ fontSize: "10px" }}>{replyBadge.icon}</span>
-                                    <span style={{ fontSize: "10px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.2px" }}>{replyBadge.title}</span>
+                                  <div className="hk-badge-chip" style={selfBadgeStyle}>
+                                    <span style={{ fontSize: "8px", lineHeight: 1 }}>{replyBadge.icon}</span>
+                                    <span style={{ fontSize: "9px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.1px", maxWidth: "62px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                                      {replyBadge.title}
+                                    </span>
                                   </div>
                                 )}
                               </div>
