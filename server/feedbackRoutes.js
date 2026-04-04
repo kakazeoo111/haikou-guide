@@ -3,6 +3,7 @@ const FEEDBACK_ADMIN_COLUMNS = [
   { name: "is_resolved", ddl: "ALTER TABLE feedback ADD COLUMN is_resolved TINYINT(1) NOT NULL DEFAULT 0" },
   { name: "resolved_at", ddl: "ALTER TABLE feedback ADD COLUMN resolved_at DATETIME NULL" },
   { name: "admin_reply", ddl: "ALTER TABLE feedback ADD COLUMN admin_reply TEXT NULL" },
+  { name: "admin_reply_image_url", ddl: "ALTER TABLE feedback ADD COLUMN admin_reply_image_url LONGTEXT NULL" },
   { name: "replied_at", ddl: "ALTER TABLE feedback ADD COLUMN replied_at DATETIME NULL" },
   { name: "parent_feedback_id", ddl: "ALTER TABLE feedback ADD COLUMN parent_feedback_id INT NULL" },
 ];
@@ -18,12 +19,10 @@ function parseOptionalBoolean(value) {
   return null;
 }
 
-function hasReplyImagePayload(body) {
-  if (!body || typeof body !== "object") return false;
-  if (body.image || body.image_url) return true;
-  if (Array.isArray(body.images) && body.images.length > 0) return true;
-  if (typeof body.images === "string" && body.images.trim()) return true;
-  return false;
+function toUploadedImageJson(files) {
+  const urls = (files || []).map((item) => `https://api.suzcore.top/uploads/${item.filename}`);
+  if (!urls.length) return null;
+  return JSON.stringify(urls);
 }
 
 function parseFeedbackId(value) {
@@ -51,7 +50,7 @@ async function fetchFeedbackRoot(pool, feedbackId) {
 async function fetchFeedbackThreadRows(pool, rootId) {
   const [rows] = await pool.execute(
     `SELECT id, parent_feedback_id, phone, content, image_url, created_at,
-            is_read, is_resolved, resolved_at, admin_reply, replied_at
+            is_read, is_resolved, resolved_at, admin_reply, admin_reply_image_url, replied_at
      FROM feedback
      WHERE id = ? OR parent_feedback_id = ?
      ORDER BY created_at ASC`,
@@ -86,7 +85,7 @@ function formatFeedbackRows(rows) {
 async function fetchAllFeedbackRows(pool) {
   const [rows] = await pool.execute(
     `SELECT id, phone, phone AS user_phone, content, image_url, created_at, 
-            is_read, is_resolved, resolved_at, admin_reply, replied_at, parent_feedback_id
+            is_read, is_resolved, resolved_at, admin_reply, admin_reply_image_url, replied_at, parent_feedback_id
      FROM feedback 
      ORDER BY created_at DESC`
   );
@@ -99,7 +98,7 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
   app.post("/api/feedback/submit", upload.array("images", 9), async (req, res) => {
     try {
       const { phone, content } = req.body;
-      const imageUrl = JSON.stringify((req.files || []).map((item) => `https://api.suzcore.top/uploads/${item.filename}`));
+      const imageUrl = toUploadedImageJson(req.files);
       await pool.execute("INSERT INTO feedback (phone, content, image_url) VALUES (?, ?, ?)", [phone, content || "", imageUrl]);
       res.json({ ok: true, message: "反馈已收到" });
     } catch (error) {
@@ -170,16 +169,16 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
     }
   });
 
-  app.post("/api/feedback/reply", async (req, res) => {
+  app.post("/api/feedback/reply", upload.array("images", 9), async (req, res) => {
     const { phone, feedbackId, letter, markResolved } = req.body;
     if (!isAdminPhone(phone, ADMIN_PHONE)) return res.status(403).json({ ok: false, message: "无权限发送回信" });
-    if (hasReplyImagePayload(req.body)) return res.status(400).json({ ok: false, message: "站长回信不支持上传图片" });
 
     const normalizedId = Number(feedbackId);
     if (!Number.isInteger(normalizedId) || normalizedId <= 0) return res.status(400).json({ ok: false, message: "反馈ID无效" });
 
     const message = String(letter || "").trim();
     if (!message) return res.status(400).json({ ok: false, message: "回信内容不能为空" });
+    const replyImageUrl = toUploadedImageJson(req.files);
 
     try {
       const [rows] = await pool.execute("SELECT id, phone FROM feedback WHERE id = ? LIMIT 1", [normalizedId]);
@@ -197,11 +196,14 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
 
       if (parseOptionalBoolean(markResolved)) {
         await pool.execute(
-          "UPDATE feedback SET admin_reply = ?, replied_at = NOW(), is_read = 1, is_resolved = 1, resolved_at = NOW() WHERE id = ?",
-          [message, normalizedId]
+          "UPDATE feedback SET admin_reply = ?, admin_reply_image_url = ?, replied_at = NOW(), is_read = 1, is_resolved = 1, resolved_at = NOW() WHERE id = ?",
+          [message, replyImageUrl, normalizedId]
         );
       } else {
-        await pool.execute("UPDATE feedback SET admin_reply = ?, replied_at = NOW(), is_read = 1 WHERE id = ?", [message, normalizedId]);
+        await pool.execute(
+          "UPDATE feedback SET admin_reply = ?, admin_reply_image_url = ?, replied_at = NOW(), is_read = 1 WHERE id = ?",
+          [message, replyImageUrl, normalizedId]
+        );
       }
 
       res.json({ ok: true, message: "回信已发送" });
@@ -230,13 +232,13 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
     }
   });
 
-  app.post("/api/feedback/followup", async (req, res) => {
+  app.post("/api/feedback/followup", upload.array("images", 9), async (req, res) => {
     const { phone, feedbackId, content } = req.body;
-    if (hasReplyImagePayload(req.body)) return res.status(400).json({ ok: false, message: "补充回信不支持上传图片" });
     const normalizedId = parseFeedbackId(feedbackId);
     if (!normalizedId) return res.status(400).json({ ok: false, message: "反馈ID无效" });
     const message = String(content || "").trim();
     if (!message) return res.status(400).json({ ok: false, message: "补充回信不能为空" });
+    const followupImageUrl = toUploadedImageJson(req.files);
     try {
       const rootInfo = await fetchFeedbackRoot(pool, normalizedId);
       if (!rootInfo) return res.status(404).json({ ok: false, message: "反馈不存在或已删除" });
@@ -245,7 +247,7 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
       }
       await pool.execute(
         "INSERT INTO feedback (phone, content, image_url, parent_feedback_id, is_read, is_resolved) VALUES (?, ?, ?, ?, 0, 0)",
-        [rootInfo.ownerPhone, message, null, rootInfo.rootId]
+        [rootInfo.ownerPhone, message, followupImageUrl, rootInfo.rootId]
       );
       await pool.execute("UPDATE feedback SET is_resolved = 0, resolved_at = NULL WHERE id = ?", [rootInfo.rootId]);
       res.json({ ok: true, message: "补充回信已发送给站长" });

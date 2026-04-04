@@ -35,6 +35,7 @@ function NoticeListModal({
   const [threadItems, setThreadItems] = useState([]);
   const [threadRootId, setThreadRootId] = useState(null);
   const [followupDraft, setFollowupDraft] = useState("");
+  const [followupImages, setFollowupImages] = useState([]);
   const [followupSubmitting, setFollowupSubmitting] = useState(false);
 
   if (!visible) return null;
@@ -76,6 +77,7 @@ function NoticeListModal({
     }
     setShowThreadModal(true);
     setFollowupDraft("");
+    setFollowupImages([]);
     await fetchFeedbackThread(feedbackId);
   };
 
@@ -84,6 +86,7 @@ function NoticeListModal({
     setThreadItems([]);
     setThreadRootId(null);
     setFollowupDraft("");
+    setFollowupImages([]);
     setFollowupSubmitting(false);
   };
 
@@ -93,10 +96,14 @@ function NoticeListModal({
     if (!message) return alert("补充回信不能为空");
     setFollowupSubmitting(true);
     try {
+      const formData = new FormData();
+      formData.append("phone", currentUser.phone);
+      formData.append("feedbackId", threadRootId);
+      formData.append("content", message);
+      followupImages.forEach((file) => formData.append("images", file));
       const res = await fetch(`${authApiBase}/api/feedback/followup`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: currentUser.phone, feedbackId: threadRootId, content: message }),
+        body: formData,
       });
       const data = await res.json();
       if (!data.ok) {
@@ -104,6 +111,7 @@ function NoticeListModal({
         return;
       }
       setFollowupDraft("");
+      setFollowupImages([]);
       alert(data.message || "补充回信已发送");
       await fetchFeedbackThread(threadRootId);
       await onRefresh();
@@ -223,7 +231,10 @@ function NoticeListModal({
         submitting={followupSubmitting}
         items={threadItems}
         draft={followupDraft}
+        followupImages={followupImages}
         onDraftChange={setFollowupDraft}
+        onFollowupImagesChange={(nextFiles) => setFollowupImages((prev) => [...prev, ...nextFiles])}
+        onFollowupImageRemove={(index) => setFollowupImages((prev) => prev.filter((_, i) => i !== index))}
         onSubmit={handleSubmitFollowup}
         onClose={handleCloseThreadModal}
         formatCommentTime={formatCommentTime}

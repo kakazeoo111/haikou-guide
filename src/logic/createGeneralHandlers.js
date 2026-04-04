@@ -147,11 +147,16 @@ export function createGeneralHandlers(ctx) {
     return true;
   };
 
-  const handleFeedbackReply = async ({ feedbackId, letter, markResolved }) => {
+  const handleFeedbackReply = async ({ feedbackId, letter, markResolved, images }) => {
+    const formData = new FormData();
+    formData.append("phone", currentUser.phone);
+    formData.append("feedbackId", feedbackId);
+    formData.append("letter", letter);
+    formData.append("markResolved", markResolved ? "true" : "false");
+    (images || []).forEach((file) => formData.append("images", file));
     const res = await fetch(`${authApiBase}/api/feedback/reply`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: currentUser.phone, feedbackId, letter, markResolved }),
+      body: formData,
     });
     const data = await res.json();
     if (!data.ok) {

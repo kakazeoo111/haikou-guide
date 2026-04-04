@@ -2,6 +2,7 @@ import { useState } from "react";
 import { btnMainStyle, feedbackItemStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 import { parseFeedbackImageUrls } from "../logic/feedbackImageUtils";
 
+const MAX_REPLY_IMAGES = 9;
 const actionBtnStyle = {
   border: "1px solid #d7e9df",
   background: "#fff",
@@ -23,6 +24,7 @@ function AdminFeedbackModal({
 }) {
   const [activeReplyId, setActiveReplyId] = useState(null);
   const [replyText, setReplyText] = useState("");
+  const [replyImages, setReplyImages] = useState([]);
   const [markResolvedAfterReply, setMarkResolvedAfterReply] = useState(true);
   const [pendingId, setPendingId] = useState(null);
   if (!visible) return null;
@@ -39,20 +41,37 @@ function AdminFeedbackModal({
   const openReplyBox = (item) => {
     setActiveReplyId(item.id);
     setReplyText(item.admin_reply || "");
+    setReplyImages([]);
     setMarkResolvedAfterReply(!item.is_resolved);
   };
 
   const closeReplyBox = () => {
     setActiveReplyId(null);
     setReplyText("");
+    setReplyImages([]);
     setMarkResolvedAfterReply(true);
+  };
+
+  const handleSelectReplyImages = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+    const remain = MAX_REPLY_IMAGES - replyImages.length;
+    if (remain <= 0) {
+      alert(`回信最多上传 ${MAX_REPLY_IMAGES} 张图片`);
+      event.target.value = "";
+      return;
+    }
+    const nextFiles = files.slice(0, remain);
+    setReplyImages((prev) => [...prev, ...nextFiles]);
+    if (files.length > remain) alert(`最多上传 ${MAX_REPLY_IMAGES} 张图片，已自动截取前 ${remain} 张`);
+    event.target.value = "";
   };
 
   const handleSendReply = async (item) => {
     const letter = replyText.trim();
     if (!letter) return alert("回信内容不能为空");
     await withPending(item.id, async () => {
-      const ok = await onSendReply({ feedbackId: item.id, letter, markResolved: markResolvedAfterReply });
+      const ok = await onSendReply({ feedbackId: item.id, letter, markResolved: markResolvedAfterReply, images: replyImages });
       if (ok) closeReplyBox();
     });
   };
@@ -128,21 +147,60 @@ function AdminFeedbackModal({
                 </button>
               </div>
 
-              {activeReplyId === item.id && (
-                <div style={{ marginTop: "10px", background: "#fff", border: "1px solid #e7efe8", borderRadius: "14px", padding: "10px" }}>
+	              {activeReplyId === item.id && (
+	                <div style={{ marginTop: "10px", background: "#fff", border: "1px solid #e7efe8", borderRadius: "14px", padding: "10px" }}>
                   <textarea
                     value={replyText}
                     onChange={(event) => setReplyText(event.target.value)}
                     placeholder="写给反馈用户的一封信..."
                     style={{ width: "100%", minHeight: "86px", border: "1px solid #dceae1", borderRadius: "10px", padding: "8px", resize: "vertical", outline: "none", fontSize: "13px" }}
                   />
-                  <label style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", fontSize: "12px", color: "#3d6e57" }}>
-                    <input type="checkbox" checked={markResolvedAfterReply} onChange={(event) => setMarkResolvedAfterReply(event.target.checked)} />
-                    发送后标记为已解决
-                  </label>
-                  <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
-                    <button onClick={() => handleSendReply(item)} disabled={isPending} style={{ ...btnMainStyle, marginTop: 0, flex: 1 }}>
-                      发送回信
+	                  <label style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", fontSize: "12px", color: "#3d6e57" }}>
+	                    <input type="checkbox" checked={markResolvedAfterReply} onChange={(event) => setMarkResolvedAfterReply(event.target.checked)} />
+	                    发送后标记为已解决
+	                  </label>
+	                  {replyImages.length > 0 && (
+	                    <div style={{ marginTop: "8px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", maxWidth: "220px" }}>
+	                      {replyImages.map((file, index) => (
+	                        <div key={`${file.name}-${index}`} style={{ position: "relative" }}>
+	                          <img src={URL.createObjectURL(file)} style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover" }} alt="reply-preview" />
+	                          <div
+	                            onClick={() => setReplyImages((prev) => prev.filter((_, i) => i !== index))}
+	                            style={{
+	                              position: "absolute",
+	                              top: "-5px",
+	                              right: "-5px",
+	                              width: "18px",
+	                              height: "18px",
+	                              borderRadius: "50%",
+	                              background: "#ff4d4f",
+	                              color: "#fff",
+	                              fontSize: "12px",
+	                              lineHeight: "18px",
+	                              textAlign: "center",
+	                              cursor: "pointer",
+	                            }}
+	                          >
+	                            ×
+	                          </div>
+	                        </div>
+	                      ))}
+	                    </div>
+	                  )}
+	                  <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+	                    <button
+	                      onClick={() => document.getElementById(`admin-reply-images-${item.id}`)?.click()}
+	                      disabled={isPending}
+	                      style={{ ...actionBtnStyle, padding: "6px 12px" }}
+	                    >
+	                      添加照片
+	                    </button>
+	                    <span style={{ fontSize: "12px", color: "#7c9187" }}>已选 {replyImages.length}/{MAX_REPLY_IMAGES}</span>
+	                    <input id={`admin-reply-images-${item.id}`} type="file" hidden accept="image/*" multiple onChange={handleSelectReplyImages} />
+	                  </div>
+	                  <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
+	                    <button onClick={() => handleSendReply(item)} disabled={isPending} style={{ ...btnMainStyle, marginTop: 0, flex: 1 }}>
+	                      发送回信
                     </button>
                     <button onClick={closeReplyBox} disabled={isPending} style={{ ...btnMainStyle, marginTop: 0, flex: 1, background: "#b8c8bf" }}>
                       取消
