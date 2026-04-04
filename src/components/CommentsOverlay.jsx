@@ -19,33 +19,59 @@ const CARTOON_AVATAR_API_BASE = "https://api.dicebear.com/7.x";
 const DEFAULT_BADGE_TITLE = "\u672a\u89e3\u9501\u79f0\u53f7";
 const PARENT_AVATAR_SIZE = 36;
 const REPLY_AVATAR_SIZE = 24;
-const PARENT_BADGE_BUBBLE_SIZE = 14;
+const PARENT_BADGE_BUBBLE_SIZE = 15;
 const REPLY_BADGE_BUBBLE_SIZE = 12;
+const MOTION_BADGE_ICONS = ["🔥", "👾", "⚡", "✨", "💥", "🪐", "🎧", "🦄", "🕷️", "🌪️"];
 const selfBadgeBaseStyle = {
   display: "inline-flex",
   alignItems: "center",
   gap: "3px",
-  padding: "1px 6px",
+  padding: "1px 7px",
   borderRadius: "999px",
-  minHeight: "18px",
+  minHeight: "17px",
   backdropFilter: "blur(2px)",
 };
 const BADGE_ANIMATION_STYLE = `
 @keyframes hkBadgeFloat {
-  0% { transform: translateY(0); box-shadow: 0 1px 4px rgba(255, 124, 182, 0.16); }
-  50% { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(255, 124, 182, 0.2); }
-  100% { transform: translateY(0); box-shadow: 0 1px 4px rgba(255, 124, 182, 0.16); }
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+  100% { transform: translateY(0); }
 }
-@keyframes hkBadgePulse {
+@keyframes hkBadgeCorePulse {
   0% { transform: scale(1); }
-  50% { transform: scale(1.06); }
+  50% { transform: scale(1.08); }
   100% { transform: scale(1); }
 }
+@keyframes hkBadgeOrbitSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
 .hk-badge-chip {
-  animation: hkBadgeFloat 2.8s ease-in-out infinite;
+  animation: hkBadgeFloat 2.6s ease-in-out infinite;
 }
 .hk-badge-bubble {
-  animation: hkBadgePulse 2.2s ease-in-out infinite;
+  animation: hkBadgeFloat 2.2s ease-in-out infinite;
+  overflow: hidden;
+}
+.hk-badge-core {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 30% 25%, #ffffff, #ffe7f3 55%, #ffd1e8);
+  animation: hkBadgeCorePulse 1.8s ease-in-out infinite;
+}
+.hk-badge-orbit {
+  position: absolute;
+  inset: -1px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-top-color: rgba(255, 115, 184, 0.7);
+  border-right-color: rgba(255, 163, 99, 0.65);
+  pointer-events: none;
+  animation: hkBadgeOrbitSpin 3.4s linear infinite;
 }
 `;
 
@@ -107,6 +133,11 @@ function getSelfBadge(comment, currentUser, activeBadgeTitle, badgeIcon) {
   };
 }
 
+function getMotionBadgeIcon(seed) {
+  const index = hashString(`motion-icon-${seed}`) % MOTION_BADGE_ICONS.length;
+  return MOTION_BADGE_ICONS[index];
+}
+
 function createAvatarWrapStyle(size) {
   return {
     width: `${size}px`,
@@ -127,9 +158,9 @@ function createAvatarBadgeBubbleStyle(theme, size) {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: theme.background,
-    border: `1px solid ${theme.border}`,
-    boxShadow: `0 2px 5px rgba(0,0,0,0.12), 0 0 0 2px rgba(255,255,255,0.9)`,
+    background: "transparent",
+    border: `1px solid rgba(255, 255, 255, 0.92)`,
+    boxShadow: `0 2px 6px rgba(0,0,0,0.1), 0 0 0 1px ${theme.border}`,
   };
 }
 
@@ -174,11 +205,12 @@ function CommentsOverlay({
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
   const badgeTheme = getBadgeTheme(badgeSeed);
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
+  const motionBadgeIcon = getMotionBadgeIcon(`${badgeSeed}-${badgeIcon}`);
   const selfBadgeStyle = {
     ...selfBadgeBaseStyle,
-    background: `linear-gradient(130deg, rgba(255,255,255,0.9), rgba(255,255,255,0.66)), ${badgeTheme.background}`,
+    background: `linear-gradient(130deg, rgba(255,255,255,0.95), rgba(255,255,255,0.76)), ${badgeTheme.background}`,
     border: `1px solid ${badgeTheme.border}`,
-    boxShadow: `0 1px 4px rgba(255, 124, 182, 0.16), 0 1px 0 rgba(255,255,255,0.78) inset`,
+    boxShadow: `0 1px 3px rgba(255, 124, 182, 0.12), 0 1px 0 rgba(255,255,255,0.8) inset`,
   };
   const parentAvatarWrapStyle = createAvatarWrapStyle(PARENT_AVATAR_SIZE);
   const replyAvatarWrapStyle = createAvatarWrapStyle(REPLY_AVATAR_SIZE);
@@ -245,7 +277,10 @@ function CommentsOverlay({
                   />
                   {parentBadge && (
                     <div className="hk-badge-bubble" style={parentBadgeBubbleStyle}>
-                      <span style={{ fontSize: "8px", lineHeight: 1 }}>{parentBadge.icon}</span>
+                      <span className="hk-badge-orbit"></span>
+                      <span className="hk-badge-core">
+                        <span style={{ fontSize: "8px", lineHeight: 1, filter: "saturate(1.1)" }}>{motionBadgeIcon}</span>
+                      </span>
                     </div>
                   )}
                 </div>
@@ -254,8 +289,7 @@ function CommentsOverlay({
                     <div style={{ fontSize: "13px", fontWeight: "bold", color: "#666" }}>{parent.username}</div>
                     {parentBadge && (
                       <div className="hk-badge-chip" style={selfBadgeStyle}>
-                        <span style={{ fontSize: "9px", lineHeight: 1 }}>{parentBadge.icon}</span>
-                        <span style={{ fontSize: "10px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.1px", maxWidth: "72px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                        <span style={{ fontSize: "10px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.1px", maxWidth: "78px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                           {parentBadge.title}
                         </span>
                       </div>
@@ -334,7 +368,10 @@ function CommentsOverlay({
                               />
                               {replyBadge && (
                                 <div className="hk-badge-bubble" style={replyBadgeBubbleStyle}>
-                                  <span style={{ fontSize: "7px", lineHeight: 1 }}>{replyBadge.icon}</span>
+                                  <span className="hk-badge-orbit"></span>
+                                  <span className="hk-badge-core">
+                                    <span style={{ fontSize: "7px", lineHeight: 1, filter: "saturate(1.1)" }}>{motionBadgeIcon}</span>
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -343,8 +380,7 @@ function CommentsOverlay({
                                 <div style={{ fontSize: "12px", fontWeight: "bold", color: "#666" }}>{reply.username}</div>
                                 {replyBadge && (
                                   <div className="hk-badge-chip" style={selfBadgeStyle}>
-                                    <span style={{ fontSize: "8px", lineHeight: 1 }}>{replyBadge.icon}</span>
-                                    <span style={{ fontSize: "9px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.1px", maxWidth: "62px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
+                                    <span style={{ fontSize: "9px", color: badgeTheme.textColor, fontWeight: "bold", letterSpacing: "0.1px", maxWidth: "68px", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis" }}>
                                       {replyBadge.title}
                                     </span>
                                   </div>
