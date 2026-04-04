@@ -43,7 +43,7 @@ function drawUserMarker(map, BMapGL, userLocation, targetPlaces, userMarkerRef) 
   if (!userLocation?.lng) return;
   const myPoint = toPoint(BMapGL, userLocation);
   const myMarker = new BMapGL.Marker(myPoint);
-  const label = new BMapGL.Label("我的位置", {
+  const label = new BMapGL.Label("🚶 我的位置", {
     offset: new BMapGL.Size(USER_LABEL_OFFSET_X, USER_LABEL_OFFSET_Y),
   });
 

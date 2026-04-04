@@ -16,14 +16,14 @@ import {
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 
 const FILTER_ITEMS = [
-  { key: "all", label: "鍏ㄩ儴" },
-  { key: "recommend", label: "鉁?鎺ㄨ崘" },
-  { key: "top10", label: "馃弳 姒滃崟" },
-  { key: "favorite", label: "猸?鏀惰棌" },
-  { key: "food", label: "馃嵄 缇庨" },
-  { key: "view", label: "馃彏锔?鏅偣" },
-  { key: "street", label: "馃泹锔?鍟嗗湀" },
-  { key: "cafe", label: "鈽?鍜栧暋" },
+  { key: "all", label: "全部" },
+  { key: "recommend", label: "✨ 推荐" },
+  { key: "top10", label: "🏆 榜单" },
+  { key: "favorite", label: "⭐ 收藏" },
+  { key: "food", label: "🍱 美食" },
+  { key: "view", label: "🖼️ 景点" },
+  { key: "street", label: "🛍️ 商圈" },
+  { key: "cafe", label: "☕ 咖啡" },
 ];
 
 const UNREAD_BADGE_LIMIT = 99;
@@ -65,11 +65,11 @@ const userBadgeBaseStyle = {
 };
 
 function formatPlaceTypeTag(type) {
-  if (type === "food") return "馃嵄 缇庨";
-  if (type === "view") return "馃彏锔?鏅偣";
-  if (type === "cafe") return "鈽?鍜栧暋";
-  if (type === "recommend") return "鉁?鎺ㄨ崘";
-  return "馃泹锔?鍟嗗湀";
+  if (type === "food") return "🍱 美食";
+  if (type === "view") return "🖼️ 景点";
+  if (type === "cafe") return "☕ 咖啡";
+  if (type === "recommend") return "✨ 推荐";
+  return "🛍️ 商圈";
 }
 
 function HomePanels({
@@ -122,7 +122,7 @@ function HomePanels({
       <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "30vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
         <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} isMobile={isMobile} />
         <button onClick={onRefreshLocation} style={floatBtnStyle}>
-          馃幆
+          🎯
         </button>
       </div>
 
@@ -140,7 +140,7 @@ function HomePanels({
               <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content" }}>
                 <span>{currentUser.username}</span>
                 {unreadCount > 0 && <span style={unreadBadgeStyle}>{unreadBadgeText}</span>}
-                <span style={{ fontSize: "12px", color: "#ccc" }}>▼</span>
+                <span style={{ fontSize: "12px", color: "#ccc" }}>▶</span>
               </h3>
               <div style={userBadgeStyle}>
                 <span style={{ fontSize: "13px" }}>{badgeIcon}</span>
@@ -148,22 +148,22 @@ function HomePanels({
               </div>
               <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginTop: "3px" }}>
                 <span onClick={onLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>
-                  閫€鍑?
+                  退出
                 </span>
                 <span onClick={onShowFeedback} style={{ color: "#5aa77b", cursor: "pointer" }}>
-                  鍙嶉寤鸿
+                  反馈建议
                 </span>
                 <span onClick={onShowAnnouncement} style={{ color: "#5aa77b", cursor: "pointer" }}>
-                  鍏憡
+                  公告
                 </span>
                 {currentUser.phone === adminPhone && (
                   <span onClick={onManageBadge} style={{ color: "#5aa77b", cursor: "pointer" }}>
-                    绉板彿鎺堟潈
+                    称号授权
                   </span>
                 )}
                 {currentUser.phone === adminPhone && (
                   <span onClick={onFetchAllFeedbacks} style={{ color: "#333", cursor: "pointer" }}>
-                    鍙嶉搴?
+                    反馈库
                   </span>
                 )}
               </div>
@@ -171,9 +171,9 @@ function HomePanels({
           </div>
 
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <input placeholder="鎼滅储鐩殑鍦?.." value={search} onChange={(e) => onSearchChange(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }} />
+            <input placeholder="搜索目的地..." value={search} onChange={(e) => onSearchChange(e.target.value)} style={{ ...inputStyle, marginBottom: 0 }} />
             <button onClick={onShowRecommendModal} style={{ ...btnCodeStyle, width: "100px", height: "42px", background: "#5aa77b" }}>
-              鎴戣鎺ㄨ崘
+              我要推荐
             </button>
           </div>
         </div>
@@ -212,11 +212,11 @@ function HomePanels({
                 {place.type === "recommend" && (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
                     <img src={place.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${place.user_phone}`} style={{ width: "24px", height: "24px", borderRadius: "50%" }} alt="user-avatar" />
-                    <span style={{ fontSize: "12px", fontWeight: "bold" }}>{place.username} 鍒嗕韩</span>
+                    <span style={{ fontSize: "12px", fontWeight: "bold" }}>{place.username} 分享</span>
                     <span style={{ fontSize: "10px", color: "#999" }}>{formatCommentTime(place.created_at)}</span>
                     {place.user_phone === currentUser.phone && (
                       <span onClick={(e) => onDeleteRec(e, place.realId)} style={{ fontSize: "10px", color: "red", marginLeft: "auto", cursor: "pointer" }}>
-                        鍒犻櫎
+                        删除
                       </span>
                     )}
                   </div>
@@ -253,10 +253,10 @@ function HomePanels({
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "4px", flexWrap: "wrap" }}>
                       <span style={categoryTagStyle}>{formatPlaceTypeTag(place.type)}</span>
                       {place.isPhotoReady && <span style={photoTagStyle}>📸 可出片</span>}
-                      {place.hours && <span style={{ fontSize: "11px", color: "#888" }}>馃晿 {place.hours}</span>}
+                      {place.hours && <span style={{ fontSize: "11px", color: "#888" }}>🕘 {place.hours}</span>}
                       {place.phone && place.phone !== "无" && (
                         <a href={`tel:${place.phone}`} style={{ fontSize: "11px", color: "#5aa77b", textDecoration: "none", display: "flex", alignItems: "center", gap: "2px" }}>
-                          馃摓 {place.phone}
+                          📞 {place.phone}
                         </a>
                       )}
                     </div>
@@ -265,7 +265,7 @@ function HomePanels({
 
                 <p style={{ fontSize: "12px", color: "#777", margin: "10px 0" }}>{place.desc}</p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-                  <div style={{ fontSize: "12px", color: "#5aa77b" }}>馃搹 璺濅綘: {place.distVal} km</div>
+                  <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你: {place.distVal} km</div>
                   <div onClick={(e) => (place.type === "recommend" ? onLikeRec(e, place.realId) : onLikePlace(e, place.id))} style={placeLikeBtnStyle(place.isPlaceLiked)}>
                     <span style={{ fontSize: "13px" }}>{place.isPlaceLiked ? "❤️" : "🤍"}</span>
                     <span>{place.likes}</span>
@@ -274,18 +274,18 @@ function HomePanels({
 
                 <div style={{ display: "flex", gap: "8px" }}>
                   <button onClick={() => onOpenDetail(place, 0, false)} style={btnDetailStyle}>
-                    馃柤锔?璇︽儏
+                    🖼️ 详情
                   </button>
                   <button onClick={() => onToggleTarget(place)} style={btnSmallStyle(isMarked)}>
-                    {isMarked ? "鍙栨秷" : "鏍囪"}
+                    {isMarked ? "取消" : "标记"}
                   </button>
                   <button onClick={() => onNavigate(place)} style={btnNavStyle}>
-                    馃Л 瀵艰埅
+                    🧭 导航
                   </button>
                 </div>
 
                 <div onClick={() => onOpenComments(place)} style={{ marginTop: "15px", borderTop: "1px dashed #eee", paddingTop: "10px", color: "#5aa77b", fontSize: "12px", cursor: "pointer" }}>
-                  馃挰 鏌ョ湅璇勮鍖?
+                  💬 查看评论区
                 </div>
               </div>
             );
@@ -297,3 +297,4 @@ function HomePanels({
 }
 
 export default HomePanels;
+
