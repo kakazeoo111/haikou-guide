@@ -10,6 +10,10 @@ function parsePositiveInt(value) {
   return normalized;
 }
 
+function parseForumSortMode(value) {
+  return String(value || "").trim().toLowerCase() === "chill" ? "chill" : "latest";
+}
+
 async function ensureForumTables(pool) {
   await pool.execute(
     `CREATE TABLE IF NOT EXISTS forum_posts (
@@ -38,6 +42,19 @@ async function ensureForumTables(pool) {
       KEY idx_forum_comments_user_phone (user_phone)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
   );
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS forum_post_calls (
+      id INT NOT NULL AUTO_INCREMENT,
+      post_id INT NOT NULL,
+      user_phone VARCHAR(20) NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_forum_post_calls_post_user (post_id, user_phone),
+      KEY idx_forum_post_calls_post_id (post_id),
+      KEY idx_forum_post_calls_user_phone (user_phone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  );
 }
 
 async function isForumPostActive(pool, postId) {
@@ -52,21 +69,34 @@ export async function registerForumRoutes(app, { pool, upload }) {
   await ensureForumTables(pool);
 
   app.get("/api/forum/posts", async (req, res) => {
+    const viewerPhone = String(req.query.phone || "").trim();
     const search = String(req.query.search || "").trim();
+    const sortMode = parseForumSortMode(req.query.sort);
+    const orderBySql = sortMode === "chill" ? "ORDER BY call_count DESC, p.created_at DESC, p.id DESC" : "ORDER BY p.created_at DESC, p.id DESC";
+
     try {
       const [rows] = await pool.execute(
         `SELECT p.id, p.user_phone, p.content, p.image_url, p.created_at, u.username, u.avatar_url,
                 (SELECT COUNT(*) FROM forum_comments c
                   WHERE c.post_id = p.id
-                    AND c.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) AS comment_count
+                    AND c.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) AS comment_count,
+                (SELECT COUNT(*) FROM forum_post_calls fpc WHERE fpc.post_id = p.id) AS call_count,
+                (SELECT COUNT(*) FROM forum_post_calls fpc WHERE fpc.post_id = p.id AND fpc.user_phone = ?) AS is_called
          FROM forum_posts p
          JOIN users u ON p.user_phone = u.phone
          WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
            AND (? = '' OR u.username LIKE CONCAT('%', ?, '%') OR p.content LIKE CONCAT('%', ?, '%'))
-         ORDER BY p.created_at DESC, p.id DESC`,
-        [search, search, search]
+         ${orderBySql}`,
+        [viewerPhone, search, search, search]
       );
-      res.json({ ok: true, data: rows });
+
+      const data = rows.map((row) => ({
+        ...row,
+        comment_count: Number(row.comment_count || 0),
+        call_count: Number(row.call_count || 0),
+        is_called: Number(row.is_called || 0) > 0,
+      }));
+      res.json({ ok: true, data, sortMode });
     } catch (error) {
       console.error("论坛帖子获取失败:", error.message);
       res.status(500).json({ ok: false, message: `论坛帖子获取失败: ${error.message}` });
@@ -80,6 +110,7 @@ export async function registerForumRoutes(app, { pool, upload }) {
     const imageUrl = normalizeForumImages(req.files);
     if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
     if (!message && !imageUrl) return res.status(400).json({ ok: false, message: "发布内容不能为空" });
+
     try {
       const [users] = await pool.execute("SELECT phone FROM users WHERE phone = ? LIMIT 1", [normalizedPhone]);
       if (!users.length) return res.status(404).json({ ok: false, message: "用户不存在，请重新登录" });
@@ -94,9 +125,45 @@ export async function registerForumRoutes(app, { pool, upload }) {
     }
   });
 
+  app.post("/api/forum/post/call", async (req, res) => {
+    const { phone, postId } = req.body;
+    const normalizedPhone = String(phone || "").trim();
+    const normalizedPostId = parsePositiveInt(postId);
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
+    if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
+
+    try {
+      const [users] = await pool.execute("SELECT phone FROM users WHERE phone = ? LIMIT 1", [normalizedPhone]);
+      if (!users.length) return res.status(404).json({ ok: false, message: "用户不存在，请重新登录" });
+
+      const active = await isForumPostActive(pool, normalizedPostId);
+      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
+
+      const [rows] = await pool.execute(
+        "SELECT id FROM forum_post_calls WHERE post_id = ? AND user_phone = ? LIMIT 1",
+        [normalizedPostId, normalizedPhone]
+      );
+
+      const action = rows.length > 0 ? "uncalled" : "called";
+      if (action === "uncalled") {
+        await pool.execute("DELETE FROM forum_post_calls WHERE post_id = ? AND user_phone = ?", [normalizedPostId, normalizedPhone]);
+      } else {
+        await pool.execute("INSERT INTO forum_post_calls (post_id, user_phone) VALUES (?, ?)", [normalizedPostId, normalizedPhone]);
+      }
+
+      const [countRows] = await pool.execute("SELECT COUNT(*) AS count FROM forum_post_calls WHERE post_id = ?", [normalizedPostId]);
+      const callCount = Number(countRows[0]?.count || 0);
+      res.json({ ok: true, action, callCount });
+    } catch (error) {
+      console.error("论坛打call失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛打call失败: ${error.message}` });
+    }
+  });
+
   app.get("/api/forum/comments/:postId", async (req, res) => {
     const postId = parsePositiveInt(req.params.postId);
     if (!postId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
+
     try {
       const active = await isForumPostActive(pool, postId);
       if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
@@ -125,6 +192,7 @@ export async function registerForumRoutes(app, { pool, upload }) {
     if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
     if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
     if (!message) return res.status(400).json({ ok: false, message: "评论内容不能为空" });
+
     try {
       const active = await isForumPostActive(pool, normalizedPostId);
       if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
