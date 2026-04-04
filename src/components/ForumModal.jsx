@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
+import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { btnMainStyle } from "../styles/appStyles";
 import { parseForumImageUrls } from "../logic/forumImageUtils";
-
-const MAX_FORUM_IMAGES = 9;
-const FORUM_POST_INPUT_ID = "forum-post-images-input";
-
+const MAX_FORUM_IMAGES = 9, FORUM_POST_INPUT_ID = "forum-post-images-input";
 const pageStyle = {
   position: "fixed",
   top: 0,
@@ -16,7 +14,6 @@ const pageStyle = {
   display: "flex",
   flexDirection: "column",
 };
-
 const headerStyle = {
   height: "56px",
   display: "flex",
@@ -26,14 +23,12 @@ const headerStyle = {
   borderBottom: "1px solid #e8efe9",
   background: "#fff",
 };
-
-function getAvatarSrc(userPhone, avatarUrl) {
+function getAvatarSrc(phone, avatarUrl) {
   const normalized = String(avatarUrl || "").trim();
   if (normalized) return normalized.replace("http://", "https://");
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${userPhone || "forum-user"}`;
+  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || "forum-user"}`;
 }
-
-function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
+function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMeta, onBack, onZoomImage, formatCommentTime }) {
   const [posts, setPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [submittingPost, setSubmittingPost] = useState(false);
@@ -47,16 +42,24 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
   const [commentDraftMap, setCommentDraftMap] = useState({});
   const [replyTargetMap, setReplyTargetMap] = useState({});
 
-  useEffect(() => {
-    if (!currentUser?.phone) return;
-    loadPosts("");
-  }, [currentUser?.phone]);
-
-  const isLoadingComments = (postId) => loadingCommentPostIds.includes(postId);
-  const isSubmittingComment = (postId) => submittingCommentPostIds.includes(postId);
-  const isExpanded = (postId) => expandedPostIds.includes(postId);
+  const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
+  const badgeTheme = getBadgeTheme(badgeSeed);
+  const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
+  const selfBadgeStyle = {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    borderRadius: "999px",
+    padding: "2px 8px",
+    fontSize: "11px",
+    fontWeight: 700,
+    background: badgeTheme.background,
+    border: `1px solid ${badgeTheme.border}`,
+    color: badgeTheme.textColor,
+  };
 
   const loadPosts = async (keyword) => {
+    if (!currentUser?.phone) return;
     setLoadingPosts(true);
     try {
       const query = encodeURIComponent(String(keyword || "").trim());
@@ -72,7 +75,17 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
     }
   };
 
+  useEffect(() => {
+    loadPosts("");
+  }, [currentUser?.phone]);
+
+  useEffect(() => {
+    if (searchKeyword.trim()) return;
+    loadPosts("");
+  }, [searchKeyword]);
+
   const loadComments = async (postId) => {
+    if (!currentUser?.phone) return;
     setLoadingCommentPostIds((prev) => [...prev, postId]);
     try {
       const res = await fetch(`${authApiBase}/api/forum/comments/${postId}?phone=${currentUser.phone}`);
@@ -88,7 +101,10 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
   };
 
   const handleToggleComments = async (postId) => {
-    if (isExpanded(postId)) return setExpandedPostIds((prev) => prev.filter((id) => id !== postId));
+    if (expandedPostIds.includes(postId)) {
+      setExpandedPostIds((prev) => prev.filter((id) => id !== postId));
+      return;
+    }
     setExpandedPostIds((prev) => [...prev, postId]);
     if (!commentsMap[postId]) await loadComments(postId);
   };
@@ -109,13 +125,13 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
   };
 
   const handleSubmitPost = async () => {
-    const text = postContent.trim();
-    if (!text && postImages.length === 0) return alert("发布内容不能为空");
+    const content = postContent.trim();
+    if (!content && postImages.length === 0) return alert("发布内容不能为空");
     setSubmittingPost(true);
     try {
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
-      formData.append("content", text);
+      formData.append("content", content);
       postImages.forEach((file) => formData.append("images", file));
       const res = await fetch(`${authApiBase}/api/forum/post/add`, { method: "POST", body: formData });
       const data = await res.json();
@@ -140,12 +156,7 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
       const res = await fetch(`${authApiBase}/api/forum/comment/add`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: currentUser.phone,
-          postId,
-          content,
-          parentId: replyTarget ? replyTarget.id : null,
-        }),
+        body: JSON.stringify({ phone: currentUser.phone, postId, content, parentId: replyTarget ? replyTarget.id : null }),
       });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "评论发布失败");
@@ -181,7 +192,7 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
               {postImages.map((file, index) => (
                 <div key={`${file.name}-${index}`} style={{ position: "relative" }}>
                   <img src={URL.createObjectURL(file)} alt="forum-post-preview" style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover" }} />
-                  <div onClick={() => setPostImages((prev) => prev.filter((_, i) => i !== index))} style={{ position: "absolute", top: "-5px", right: "-5px", width: "18px", height: "18px", borderRadius: "50%", background: "#ff4d4f", color: "#fff", textAlign: "center", lineHeight: "18px", cursor: "pointer" }}>x</div>
+                  <div onClick={() => setPostImages((prev) => prev.filter((_, i) => i !== index))} style={{ position: "absolute", top: "-5px", right: "-5px", width: "18px", height: "18px", borderRadius: "50%", background: "#ff4d4f", color: "#fff", textAlign: "center", lineHeight: "18px", cursor: "pointer" }}>×</div>
                 </div>
               ))}
             </div>
@@ -213,34 +224,57 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
           const comments = commentsMap[postId] || [];
           const commentMap = new Map(comments.map((item) => [Number(item.id), item]));
           const replying = replyTargetMap[postId];
+          const isSelfPost = String(post.user_phone || "") === String(currentUser?.phone || "");
+
           return (
             <div key={post.id} style={{ border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                 <img src={getAvatarSrc(post.user_phone, post.avatar_url)} alt="forum-user-avatar" style={{ width: "30px", height: "30px", borderRadius: "50%", objectFit: "cover" }} />
                 <div style={{ fontSize: "13px", color: "#456a56", fontWeight: 700 }}>{post.username}</div>
+                {isSelfPost && (
+                  <span style={selfBadgeStyle}>
+                    <span>{badgeIcon}</span>
+                    <span>{activeBadgeTitle || "未解锁称号"}</span>
+                  </span>
+                )}
                 <div style={{ fontSize: "11px", color: "#9db0a7", marginLeft: "auto" }}>{formatCommentTime(post.created_at)}</div>
               </div>
               <div style={{ marginTop: "8px", whiteSpace: "pre-wrap", color: "#233a2f", lineHeight: 1.55, fontSize: "14px" }}>{post.content || "（图片帖）"}</div>
               {postImageUrls.length > 0 && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", maxWidth: "320px" }}>
-                  {postImageUrls.map((url, index) => <img key={`${post.id}-${index}`} src={url} alt="forum-post-img" style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover" }} />)}
+                  {postImageUrls.map((url, index) => (
+                    <img
+                      key={`${post.id}-${index}`}
+                      src={url}
+                      alt="forum-post-img"
+                      style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover", cursor: "zoom-in" }}
+                      onClick={() => onZoomImage(postImageUrls, index)}
+                    />
+                  ))}
                 </div>
               )}
               <div style={{ marginTop: "10px" }}>
                 <span onClick={() => handleToggleComments(postId)} style={{ fontSize: "12px", color: "#5aa77b", cursor: "pointer", fontWeight: 700 }}>
-                  {isExpanded(postId) ? "收起评论" : `查看评论（${post.comment_count || 0}）`}
+                  {expandedPostIds.includes(postId) ? "收起评论" : `查看评论（${post.comment_count || 0}）`}
                 </span>
               </div>
-              {isExpanded(postId) && (
+              {expandedPostIds.includes(postId) && (
                 <div style={{ marginTop: "10px", background: "#f9fcfa", borderRadius: "12px", padding: "10px", border: "1px solid #edf4f0" }}>
-                  {isLoadingComments(postId) && <div style={{ fontSize: "12px", color: "#8fa39a" }}>评论加载中...</div>}
-                  {!isLoadingComments(postId) && comments.length === 0 && <div style={{ fontSize: "12px", color: "#9aac9f" }}>暂无评论，来抢沙发吧</div>}
-                  {!isLoadingComments(postId) && comments.map((comment) => {
+                  {loadingCommentPostIds.includes(postId) && <div style={{ fontSize: "12px", color: "#8fa39a" }}>评论加载中...</div>}
+                  {!loadingCommentPostIds.includes(postId) && comments.length === 0 && <div style={{ fontSize: "12px", color: "#9aac9f" }}>暂无评论，来抢沙发吧</div>}
+                  {!loadingCommentPostIds.includes(postId) && comments.map((comment) => {
                     const parent = comment.parent_id ? commentMap.get(Number(comment.parent_id)) : null;
+                    const isSelfComment = String(comment.user_phone || "") === String(currentUser?.phone || "");
                     return (
                       <div key={comment.id} style={{ borderBottom: "1px dashed #e5eeea", padding: "8px 0" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                           <span style={{ fontSize: "12px", color: "#39664f", fontWeight: 700 }}>{comment.username}</span>
+                          {isSelfComment && (
+                            <span style={selfBadgeStyle}>
+                              <span>{badgeIcon}</span>
+                              <span>{activeBadgeTitle || "未解锁称号"}</span>
+                            </span>
+                          )}
                           {parent && <span style={{ fontSize: "11px", color: "#7f968a" }}>回复 @{parent.username}</span>}
                           <span style={{ marginLeft: "auto", fontSize: "11px", color: "#a3b3ac" }}>{formatCommentTime(comment.created_at)}</span>
                         </div>
@@ -264,8 +298,8 @@ function ForumModal({ currentUser, authApiBase, onBack, formatCommentTime }) {
                       placeholder={replying ? `回复 @${replying.username}` : "写下评论..."}
                       style={{ flex: 1, border: "1px solid #d8e5de", borderRadius: "10px", padding: "8px 10px", outline: "none" }}
                     />
-                    <button onClick={() => handleSubmitComment(postId)} disabled={isSubmittingComment(postId)} style={{ ...btnMainStyle, marginTop: 0, width: "78px", borderRadius: "10px", padding: "8px 10px" }}>
-                      {isSubmittingComment(postId) ? "发送中" : "发送"}
+                    <button onClick={() => handleSubmitComment(postId)} disabled={submittingCommentPostIds.includes(postId)} style={{ ...btnMainStyle, marginTop: 0, width: "78px", borderRadius: "10px", padding: "8px 10px" }}>
+                      {submittingCommentPostIds.includes(postId) ? "发送中" : "发送"}
                     </button>
                   </div>
                 </div>

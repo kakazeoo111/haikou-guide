@@ -235,7 +235,21 @@ function AppLayout({
         formatCommentTime={formatCommentTime}
       />
 
-      {activeTab === "forum" && <ForumModal currentUser={currentUser} authApiBase={authApiBase} onBack={() => setActiveTab("home")} formatCommentTime={formatCommentTime} />}
+      {activeTab === "forum" && (
+        <ForumModal
+          currentUser={currentUser}
+          authApiBase={authApiBase}
+          activeBadgeTitle={activeBadgeTitle}
+          activeBadgeMeta={activeBadgeMeta}
+          onBack={() => setActiveTab("home")}
+          onZoomImage={(images, index) => {
+            setZoomedSingleImage({ images, index });
+            setInitialSlide(index || 0);
+            setZoomMode(true);
+          }}
+          formatCommentTime={formatCommentTime}
+        />
+      )}
 
       <HomePanels
         isMobile={isMobile}
