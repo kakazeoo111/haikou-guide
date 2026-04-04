@@ -53,7 +53,7 @@ async function fetchFeedbackThreadRows(pool, rootId) {
             is_read, is_resolved, resolved_at, admin_reply, admin_reply_image_url, replied_at
      FROM feedback
      WHERE id = ? OR parent_feedback_id = ?
-     ORDER BY created_at ASC`,
+     ORDER BY created_at DESC, id DESC`,
     [rootId, rootId]
   );
   return formatFeedbackRows(rows);

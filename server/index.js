@@ -237,7 +237,7 @@ app.get("/api/comments/:placeId", async (req, res) => {
                     FROM comments c 
                     JOIN users u ON c.user_phone = u.phone 
                     WHERE c.place_id = ? 
-                    ORDER BY c.created_at ASC`;
+                    ORDER BY c.created_at DESC, c.id DESC`;
         const [rows] = await pool.execute(sql, [phone || '', placeId]);
         res.json({ ok: true, comments: rows.map(r => ({ ...r, is_liked: r.is_liked > 0 })) });
     } catch (e) { res.status(500).json({ ok: false, message: "获取评论失败" }); }
