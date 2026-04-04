@@ -140,7 +140,15 @@ function AppLayout({
         formatCommentTime={formatCommentTime}
       />
 
-      <AdminFeedbackModal visible={showAdminFeedback} allFeedbacks={allFeedbacks} onClose={() => setShowAdminFeedback(false)} onZoomImage={setZoomedSingleImage} />
+      <AdminFeedbackModal
+        visible={showAdminFeedback}
+        allFeedbacks={allFeedbacks}
+        onClose={() => setShowAdminFeedback(false)}
+        onZoomImage={setZoomedSingleImage}
+        onUpdateStatus={generalHandlers.handleFeedbackStatusUpdate}
+        onDeleteFeedback={generalHandlers.handleFeedbackDelete}
+        onSendReply={generalHandlers.handleFeedbackReply}
+      />
 
       <BadgeGrantModal visible={showBadgeGrantModal} onClose={onCloseManageBadgeModal} onSubmit={onSubmitManageBadge} />
 

@@ -1,5 +1,13 @@
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 
+function getNoticeText(notice) {
+  if (notice.type === "like_place") return "点赞了你的分享";
+  if (notice.type === "like_comment") return "点赞了你的评论";
+  if (notice.type === "reply") return `回复了你：${notice.content || ""}`;
+  if (notice.type === "admin_reply") return `给你发来回信：${notice.content || ""}`;
+  return notice.content || "给你发送了一条消息";
+}
+
 function NoticeListModal({
   visible,
   notifications,
@@ -36,7 +44,7 @@ function NoticeListModal({
       });
       const data = await res.json();
       if (!data.ok) {
-        alert("清空失败");
+        alert(data.message || "清空失败");
         return;
       }
       onRefresh();
@@ -59,44 +67,45 @@ function NoticeListModal({
 
         {notifications.length === 0 && <p style={{ textAlign: "center", color: "#999", padding: "20px 0" }}>暂无消息</p>}
 
-        {notifications.map((notice) => (
-          <div
-            key={notice.id}
-            onClick={() => onNoticeClick(notice)}
-            style={{
-              padding: "15px 10px",
-              borderBottom: "1px solid #f0f0f0",
-              cursor: "pointer",
-              background: notice.is_read ? "transparent" : "#f4fbf6",
-              borderRadius: "10px",
-              marginBottom: "5px",
-            }}
-          >
-            <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
-              <img
-                src={
-                  notice.sender_avatar && notice.sender_avatar !== "null"
-                    ? notice.sender_avatar.replace("http://", "https://")
-                    : `https://api.dicebear.com/7.x/avataaars/svg?seed=${notice.sender_phone}`
-                }
-                style={{ width: "32px", height: "32px", minWidth: "32px", borderRadius: "50%", objectFit: "cover" }}
-                alt="avatar"
-              />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: "14px", color: "#333" }}>
-                  <span style={{ fontWeight: "bold" }}>{notice.sender_name}</span>
-                  {notice.type === "like_place" && " 点赞了你的分享"}
-                  {notice.type === "like_comment" && " 点赞了你的评论"}
-                  {notice.type === "reply" && <span style={{ color: "#666" }}> 回复了你：{notice.content}</span>}
-                </div>
-                <div style={{ fontSize: "11px", color: "#bbb", marginTop: "6px", display: "flex", justifyContent: "space-between" }}>
-                  <span>{formatCommentTime(notice.created_at)}</span>
-                  <span style={{ color: "#5aa77b" }}>点击查看 ❯</span>
+        {notifications.map((notice) => {
+          const canJump = notice.type !== "admin_reply" && Boolean(notice.place_id);
+          return (
+            <div
+              key={notice.id}
+              onClick={() => canJump && onNoticeClick(notice)}
+              style={{
+                padding: "15px 10px",
+                borderBottom: "1px solid #f0f0f0",
+                cursor: canJump ? "pointer" : "default",
+                background: notice.is_read ? "transparent" : "#f4fbf6",
+                borderRadius: "10px",
+                marginBottom: "5px",
+              }}
+            >
+              <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                <img
+                  src={
+                    notice.sender_avatar && notice.sender_avatar !== "null"
+                      ? notice.sender_avatar.replace("http://", "https://")
+                      : `https://api.dicebear.com/7.x/avataaars/svg?seed=${notice.sender_phone}`
+                  }
+                  style={{ width: "32px", height: "32px", minWidth: "32px", borderRadius: "50%", objectFit: "cover" }}
+                  alt="avatar"
+                />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "14px", color: "#333", lineHeight: 1.5 }}>
+                    <span style={{ fontWeight: "bold" }}>{notice.sender_name}</span>
+                    <span style={{ color: "#666", marginLeft: "4px" }}>{getNoticeText(notice)}</span>
+                  </div>
+                  <div style={{ fontSize: "11px", color: "#bbb", marginTop: "6px", display: "flex", justifyContent: "space-between" }}>
+                    <span>{formatCommentTime(notice.created_at)}</span>
+                    <span style={{ color: "#5aa77b" }}>{canJump ? "点击查看 ➜" : "站主回信"}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
           <button onClick={handleMarkRead} style={{ ...btnMainStyle, flex: 1, marginTop: 0 }}>

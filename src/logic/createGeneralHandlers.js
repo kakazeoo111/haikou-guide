@@ -63,6 +63,7 @@ export function createGeneralHandlers(ctx) {
   };
 
   const handleNoticeClick = (notice) => {
+    if (notice?.type === "admin_reply") return;
     const allSource = [
       ...places.map((p) => ({ ...p, id: String(p.id) })),
       ...recommendations.map((r) => ({ ...r, id: `rec_${r.id}`, name: r.place_name, album: parseRecommendationAlbum(r.image_url) })),
@@ -95,12 +96,70 @@ export function createGeneralHandlers(ctx) {
     }
   };
 
-  const fetchAllFeedbacks = async () => {
-    const res = await fetch(`${authApiBase}/api/feedback/all`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ phone: currentUser.phone }) });
+  const fetchAdminFeedbacks = async () => {
+    const res = await fetch(`${authApiBase}/api/feedback/all`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: currentUser.phone }),
+    });
     const data = await res.json();
-    if (!data.ok) return;
-    setAllFeedbacks(data.data);
+    if (!data.ok) {
+      alert(data.message || "获取反馈库失败");
+      return null;
+    }
+    setAllFeedbacks(data.data || []);
+    return data.data || [];
+  };
+
+  const fetchAllFeedbacks = async () => {
+    const data = await fetchAdminFeedbacks();
+    if (!data) return;
     setShowAdminFeedback(true);
+  };
+
+  const handleFeedbackStatusUpdate = async (feedbackId, patch) => {
+    const res = await fetch(`${authApiBase}/api/feedback/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: currentUser.phone, feedbackId, ...patch }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.message || "更新反馈状态失败");
+      return false;
+    }
+    await fetchAdminFeedbacks();
+    return true;
+  };
+
+  const handleFeedbackDelete = async (feedbackId) => {
+    const res = await fetch(`${authApiBase}/api/feedback/delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: currentUser.phone, feedbackId }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.message || "删除反馈失败");
+      return false;
+    }
+    await fetchAdminFeedbacks();
+    return true;
+  };
+
+  const handleFeedbackReply = async ({ feedbackId, letter, markResolved }) => {
+    const res = await fetch(`${authApiBase}/api/feedback/reply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: currentUser.phone, feedbackId, letter, markResolved }),
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      alert(data.message || "发送回信失败");
+      return false;
+    }
+    await fetchAdminFeedbacks();
+    return true;
   };
 
   const handleFeedbackSubmit = async () => {
@@ -224,6 +283,9 @@ export function createGeneralHandlers(ctx) {
     handleNoticeClick,
     handleAvatarUpload,
     fetchAllFeedbacks,
+    handleFeedbackStatusUpdate,
+    handleFeedbackDelete,
+    handleFeedbackReply,
     handleFeedbackSubmit,
     handleUpdateNotice,
     handleSendCode,

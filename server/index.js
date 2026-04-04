@@ -11,6 +11,7 @@ import multer from "multer";
 import fs from "fs";
 import { ensureBadgeGrantTable } from "./badgesService.js";
 import { registerBadgeRoutes } from "./badgesRoutes.js";
+import { registerFeedbackRoutes } from "./feedbackRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,6 +67,11 @@ try {
   console.error("称号授权表初始化失败:", error.message);
 }
 registerBadgeRoutes(app, { pool, ADMIN_PHONE });
+try {
+  await registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE });
+} catch (error) {
+  console.error("反馈管理路由初始化失败:", error.message);
+}
 
 // ✅ 辅助函数：添加通知
 async function addNotice(receiver, sender, type, placeId, content = "") {
@@ -286,9 +292,9 @@ app.post("/api/comments/delete", async (req, res) => {
 // ✅ 新增：获取通知中心内容
 app.get("/api/notifications/:phone", async (req, res) => {
     try {
-        const sql = `SELECT n.*, u.username as sender_name, u.avatar_url as sender_avatar 
+        const sql = `SELECT n.*, COALESCE(u.username, n.sender_phone) as sender_name, u.avatar_url as sender_avatar 
                      FROM notifications n 
-                     JOIN users u ON n.sender_phone = u.phone 
+                     LEFT JOIN users u ON n.sender_phone = u.phone 
                      WHERE n.receiver_phone = ? 
                      ORDER BY n.created_at DESC LIMIT 50`;
         const [rows] = await pool.execute(sql, [req.params.phone]);
@@ -334,7 +340,7 @@ app.post("/api/announcement/update", async (req, res) => {
   } catch (e) { res.status(500).json({ ok: false }); }
 });
 
-app.post("/api/feedback/submit", upload.single('image'), async (req, res) => {
+app.post("/api/feedback/submit-legacy-disabled", upload.single('image'), async (req, res) => {
   try {
     const { phone, content } = req.body;
     const imageUrl = req.file ? `https://api.suzcore.top/uploads/${req.file.filename}` : null;
@@ -346,7 +352,7 @@ app.post("/api/feedback/submit", upload.single('image'), async (req, res) => {
   }
 });
 
-app.post("/api/feedback/all", async (req, res) => {
+app.post("/api/feedback/all-legacy-disabled", async (req, res) => {
   const { phone } = req.body;
   if (phone !== ADMIN_PHONE) return res.status(403).json({ ok: false });
   try {
