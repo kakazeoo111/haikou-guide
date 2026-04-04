@@ -47,7 +47,7 @@ function App() {
   const [isEditingNotice, setIsEditingNotice] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
-  const [feedbackImage, setFeedbackImage] = useState(null);
+  const [feedbackImages, setFeedbackImages] = useState([]);
   const [showAdminFeedback, setShowAdminFeedback] = useState(false);
   const [allFeedbacks, setAllFeedbacks] = useState([]);
 
@@ -70,7 +70,7 @@ function App() {
     authMode,
     noticeContent,
     feedbackContent,
-    feedbackImage,
+    feedbackImages,
     favoriteIds,
     setRecommendations,
     setNotifications,
@@ -82,7 +82,7 @@ function App() {
     setAllFeedbacks,
     setShowAdminFeedback,
     setFeedbackContent,
-    setFeedbackImage,
+    setFeedbackImages,
     setShowFeedback,
     setIsEditingNotice,
     setCountdown,
@@ -287,8 +287,8 @@ function App() {
       showFeedback={showFeedback}
       feedbackContent={feedbackContent}
       setFeedbackContent={setFeedbackContent}
-      feedbackImage={feedbackImage}
-      setFeedbackImage={setFeedbackImage}
+      feedbackImages={feedbackImages}
+      setFeedbackImages={setFeedbackImages}
       setShowFeedback={setShowFeedback}
       showNoticeList={showNoticeList}
       authApiBase={authApiBase}

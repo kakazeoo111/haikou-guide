@@ -1,26 +1,28 @@
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
+import { parseFeedbackImageUrls } from "../logic/feedbackImageUtils";
 
 const MESSAGE_WRAP_RADIUS = "14px";
 const USER_CARD_BG = "#f4fbf6";
 const ADMIN_CARD_BG = "#f7fffb";
 
-function normalizeImageUrl(url) {
-  return String(url || "").replace("http://", "https://").trim();
-}
-
 function renderReplyPair(item, formatCommentTime) {
-  const imageUrl = normalizeImageUrl(item.image_url);
+  const imageUrls = parseFeedbackImageUrls(item.image_url);
   return (
     <div key={item.id} style={{ marginBottom: "14px" }}>
       <div style={{ background: USER_CARD_BG, borderRadius: MESSAGE_WRAP_RADIUS, padding: "12px", border: "1px solid #e8f1eb" }}>
         <div style={{ fontSize: "12px", color: "#4e7f65", marginBottom: "6px", fontWeight: 700 }}>你的反馈</div>
         <div style={{ fontSize: "14px", color: "#222", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{item.content || "（空内容）"}</div>
-        {imageUrl && (
-          <img
-            src={imageUrl}
-            alt="feedback-img"
-            style={{ width: "100%", borderRadius: "10px", marginTop: "8px", maxHeight: "180px", objectFit: "cover" }}
-          />
+        {imageUrls.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px" }}>
+            {imageUrls.map((url, idx) => (
+              <img
+                key={`${item.id}-${idx}`}
+                src={url}
+                alt="feedback-img"
+                style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "10px", objectFit: "cover" }}
+              />
+            ))}
+          </div>
         )}
         <div style={{ marginTop: "8px", fontSize: "11px", color: "#9aa9a1" }}>{formatCommentTime(item.created_at)}</div>
       </div>

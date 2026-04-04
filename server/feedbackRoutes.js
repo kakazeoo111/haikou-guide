@@ -18,6 +18,14 @@ function parseOptionalBoolean(value) {
   return null;
 }
 
+function hasReplyImagePayload(body) {
+  if (!body || typeof body !== "object") return false;
+  if (body.image || body.image_url) return true;
+  if (Array.isArray(body.images) && body.images.length > 0) return true;
+  if (typeof body.images === "string" && body.images.trim()) return true;
+  return false;
+}
+
 function parseFeedbackId(value) {
   const normalized = Number(value);
   if (!Number.isInteger(normalized) || normalized <= 0) return null;
@@ -59,6 +67,11 @@ async function ensureFeedbackAdminColumns(pool) {
     if (existed.has(column.name)) continue;
     await pool.execute(column.ddl);
   }
+  const imageColumn = columns.find((col) => String(col.Field || "") === "image_url");
+  const imageColumnType = String(imageColumn?.Type || "").toLowerCase();
+  if (imageColumn && !imageColumnType.includes("text")) {
+    await pool.execute("ALTER TABLE feedback MODIFY COLUMN image_url LONGTEXT NULL");
+  }
 }
 
 function formatFeedbackRows(rows) {
@@ -83,10 +96,10 @@ async function fetchAllFeedbackRows(pool) {
 export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE }) {
   await ensureFeedbackAdminColumns(pool);
 
-  app.post("/api/feedback/submit", upload.single("image"), async (req, res) => {
+  app.post("/api/feedback/submit", upload.array("images", 9), async (req, res) => {
     try {
       const { phone, content } = req.body;
-      const imageUrl = req.file ? `https://api.suzcore.top/uploads/${req.file.filename}` : null;
+      const imageUrl = JSON.stringify((req.files || []).map((item) => `https://api.suzcore.top/uploads/${item.filename}`));
       await pool.execute("INSERT INTO feedback (phone, content, image_url) VALUES (?, ?, ?)", [phone, content || "", imageUrl]);
       res.json({ ok: true, message: "反馈已收到" });
     } catch (error) {
@@ -160,6 +173,7 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
   app.post("/api/feedback/reply", async (req, res) => {
     const { phone, feedbackId, letter, markResolved } = req.body;
     if (!isAdminPhone(phone, ADMIN_PHONE)) return res.status(403).json({ ok: false, message: "无权限发送回信" });
+    if (hasReplyImagePayload(req.body)) return res.status(400).json({ ok: false, message: "站长回信不支持上传图片" });
 
     const normalizedId = Number(feedbackId);
     if (!Number.isInteger(normalizedId) || normalizedId <= 0) return res.status(400).json({ ok: false, message: "反馈ID无效" });
@@ -218,6 +232,7 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
 
   app.post("/api/feedback/followup", async (req, res) => {
     const { phone, feedbackId, content } = req.body;
+    if (hasReplyImagePayload(req.body)) return res.status(400).json({ ok: false, message: "补充回信不支持上传图片" });
     const normalizedId = parseFeedbackId(feedbackId);
     if (!normalizedId) return res.status(400).json({ ok: false, message: "反馈ID无效" });
     const message = String(content || "").trim();

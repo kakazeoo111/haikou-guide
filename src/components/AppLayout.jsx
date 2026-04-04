@@ -66,8 +66,8 @@ function AppLayout({
   showFeedback,
   feedbackContent,
   setFeedbackContent,
-  feedbackImage,
-  setFeedbackImage,
+  feedbackImages,
+  setFeedbackImages,
   setShowFeedback,
   showNoticeList,
   authApiBase,
@@ -215,10 +215,10 @@ function AppLayout({
       <FeedbackModal
         visible={showFeedback}
         feedbackContent={feedbackContent}
-        feedbackImage={feedbackImage}
+        feedbackImages={feedbackImages}
         onContentChange={setFeedbackContent}
-        onImageChange={setFeedbackImage}
-        onImageRemove={() => setFeedbackImage(null)}
+        onImageChange={(nextFiles) => setFeedbackImages((prev) => [...prev, ...nextFiles])}
+        onImageRemove={(index) => setFeedbackImages((prev) => prev.filter((_, i) => i !== index))}
         onCancel={() => setShowFeedback(false)}
         onSubmit={generalHandlers.handleFeedbackSubmit}
       />

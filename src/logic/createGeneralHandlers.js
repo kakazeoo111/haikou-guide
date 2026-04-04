@@ -10,7 +10,7 @@ export function createGeneralHandlers(ctx) {
     authMode,
     noticeContent,
     feedbackContent,
-    feedbackImage,
+    feedbackImages,
     favoriteIds,
     setRecommendations,
     setNotifications,
@@ -22,7 +22,7 @@ export function createGeneralHandlers(ctx) {
     setAllFeedbacks,
     setShowAdminFeedback,
     setFeedbackContent,
-    setFeedbackImage,
+    setFeedbackImages,
     setShowFeedback,
     setIsEditingNotice,
     setCountdown,
@@ -167,13 +167,13 @@ export function createGeneralHandlers(ctx) {
     const formData = new FormData();
     formData.append("phone", currentUser.phone);
     formData.append("content", feedbackContent);
-    if (feedbackImage) formData.append("image", feedbackImage);
+    (feedbackImages || []).forEach((file) => formData.append("images", file));
     const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
     const data = await res.json();
     if (!data.ok) return;
     alert(data.message);
     setFeedbackContent("");
-    setFeedbackImage(null);
+    setFeedbackImages([]);
     setShowFeedback(false);
   };
 
