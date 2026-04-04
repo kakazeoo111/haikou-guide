@@ -1,3 +1,4 @@
+import { useState } from "react";
 import CommentsOverlay from "./CommentsOverlay";
 import ProfileOverlay from "./ProfileOverlay";
 import NoticeListModal from "./NoticeListModal";
@@ -7,6 +8,7 @@ import ZoomOverlay from "./ZoomOverlay";
 import AnnouncementModal, { AnnouncementEditorModal } from "./AnnouncementModal";
 import DetailModal from "./DetailModal";
 import FeedbackModal from "./FeedbackModal";
+import ForumModal from "./ForumModal";
 import HomePanels from "./HomePanels";
 import BadgeGrantModal from "./BadgeGrantModal";
 import { formatCommentTime } from "../logic/placeUtils";
@@ -87,6 +89,7 @@ function AppLayout({
   onCloseBadgePicker,
   onSelectBadge,
 }) {
+  const [showForum, setShowForum] = useState(false);
   const unreadCount = notifications.filter((notice) => !notice.is_read).length;
 
   return (
@@ -234,6 +237,14 @@ function AppLayout({
         formatCommentTime={formatCommentTime}
       />
 
+      <ForumModal
+        visible={showForum}
+        currentUser={currentUser}
+        authApiBase={authApiBase}
+        onClose={() => setShowForum(false)}
+        formatCommentTime={formatCommentTime}
+      />
+
       <HomePanels
         isMobile={isMobile}
         userLocation={userLocation}
@@ -253,6 +264,7 @@ function AppLayout({
         onLogout={generalHandlers.handleLogout}
         onShowFeedback={() => setShowFeedback(true)}
         onShowAnnouncement={onOpenAnnouncement}
+        onShowForum={() => setShowForum(true)}
         onManageBadge={onManageBadge}
         onFetchAllFeedbacks={generalHandlers.fetchAllFeedbacks}
         onSearchChange={setSearch}

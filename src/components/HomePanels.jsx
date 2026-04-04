@@ -14,17 +14,7 @@ import {
   rankBadgeStyle,
 } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
-
-const FILTER_ITEMS = [
-  { key: "all", label: "全部" },
-  { key: "recommend", label: "✨ 推荐" },
-  { key: "top10", label: "🏆 榜单" },
-  { key: "favorite", label: "⭐ 收藏" },
-  { key: "food", label: "🍱 美食" },
-  { key: "view", label: "🖼️ 景点" },
-  { key: "street", label: "🛍️ 商圈" },
-  { key: "cafe", label: "☕ 咖啡" },
-];
+import { FILTER_ITEMS } from "../constants/homeFilters";
 
 const UNREAD_BADGE_LIMIT = 99;
 const FAVORITE_ICON_SIZE = "32px";
@@ -91,6 +81,7 @@ function HomePanels({
   onLogout,
   onShowFeedback,
   onShowAnnouncement,
+  onShowForum,
   onManageBadge,
   onFetchAllFeedbacks,
   onSearchChange,
@@ -152,6 +143,9 @@ function HomePanels({
                 </span>
                 <span onClick={onShowFeedback} style={{ color: "#5aa77b", cursor: "pointer" }}>
                   反馈建议
+                </span>
+                <span onClick={onShowForum} style={{ color: "#5aa77b", cursor: "pointer" }}>
+                  论坛
                 </span>
                 <span onClick={onShowAnnouncement} style={{ color: "#5aa77b", cursor: "pointer" }}>
                   公告
