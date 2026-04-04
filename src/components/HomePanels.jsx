@@ -52,7 +52,7 @@ const unreadBadgeStyle = {
 
 const userBadgeStyle = {
   marginTop: "6px",
-  display: "inline-flex",
+  display: "flex",
   alignItems: "center",
   gap: "6px",
   padding: "4px 10px",
@@ -60,6 +60,7 @@ const userBadgeStyle = {
   background: "linear-gradient(135deg, #e8fff1, #edf7ff)",
   border: "1px solid #d6eee2",
   boxShadow: "0 8px 16px rgba(90,167,123,0.16)",
+  width: "fit-content",
 };
 
 function formatPlaceTypeTag(type) {
@@ -106,7 +107,6 @@ function HomePanels({
 }) {
   const unreadBadgeText = unreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : unreadCount;
   const badgeIcon = activeBadgeMeta?.icon || "🏅";
-  const badgeMood = activeBadgeMeta?.mood || "继续探索";
 
   return (
     <>
@@ -128,7 +128,7 @@ function HomePanels({
             />
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={onAvatarUpload} />
             <div style={{ flex: 1 }}>
-              <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+              <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content" }}>
                 <span>{currentUser.username}</span>
                 {unreadCount > 0 && <span style={unreadBadgeStyle}>{unreadBadgeText}</span>}
                 <span style={{ fontSize: "12px", color: "#ccc" }}>▶</span>
@@ -136,7 +136,6 @@ function HomePanels({
               <div style={userBadgeStyle}>
                 <span style={{ fontSize: "13px" }}>{badgeIcon}</span>
                 <span style={{ fontSize: "12px", color: "#1f5f45", fontWeight: 700 }}>{activeBadgeTitle || "未解锁称号"}</span>
-                <span style={{ fontSize: "10px", color: "#6b8578" }}>{badgeMood}</span>
               </div>
               <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginTop: "3px" }}>
                 <span onClick={onLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>

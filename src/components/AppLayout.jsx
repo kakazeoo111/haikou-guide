@@ -116,6 +116,8 @@ function AppLayout({
         showOnlyImages={showOnlyImages}
         expandedParentIds={expandedParentIds}
         currentUser={currentUser}
+        activeBadgeTitle={activeBadgeTitle}
+        activeBadgeMeta={activeBadgeMeta}
         replyTo={replyTo}
         newComment={newComment}
         commentImages={commentImages}
