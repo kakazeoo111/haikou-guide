@@ -219,7 +219,7 @@ function CommentsOverlay({
                           loading="lazy"
                           decoding="async"
                           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
-                          onClick={() => onZoomImage(url)}
+                          onClick={() => onZoomImage(parentImages, idx)}
                           alt="comment-img"
                         />
                       ))}
@@ -287,7 +287,7 @@ function CommentsOverlay({
                                       loading="lazy"
                                       decoding="async"
                                       style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
-                                      onClick={() => onZoomImage(url)}
+                                      onClick={() => onZoomImage(replyImages, idx)}
                                       alt="reply-img"
                                     />
                                   ))}

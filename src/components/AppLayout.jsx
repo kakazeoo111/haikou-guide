@@ -135,7 +135,11 @@ function AppLayout({
         onAddComment={interactionHandlers.handleAddComment}
         onLikeComment={interactionHandlers.handleLikeComment}
         onDeleteComment={interactionHandlers.handleDeleteComment}
-        onZoomImage={setZoomedSingleImage}
+        onZoomImage={(images, index) => {
+          setZoomedSingleImage({ images, index });
+          setInitialSlide(index || 0);
+          setZoomMode(true);
+        }}
         formatCommentTime={formatCommentTime}
       />
 
