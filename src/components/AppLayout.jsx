@@ -1,4 +1,3 @@
-import { useState } from "react";
 import CommentsOverlay from "./CommentsOverlay";
 import ProfileOverlay from "./ProfileOverlay";
 import NoticeListModal from "./NoticeListModal";
@@ -89,7 +88,6 @@ function AppLayout({
   onCloseBadgePicker,
   onSelectBadge,
 }) {
-  const [showForum, setShowForum] = useState(false);
   const unreadCount = notifications.filter((notice) => !notice.is_read).length;
 
   return (
@@ -237,13 +235,7 @@ function AppLayout({
         formatCommentTime={formatCommentTime}
       />
 
-      <ForumModal
-        visible={showForum}
-        currentUser={currentUser}
-        authApiBase={authApiBase}
-        onClose={() => setShowForum(false)}
-        formatCommentTime={formatCommentTime}
-      />
+      {activeTab === "forum" && <ForumModal currentUser={currentUser} authApiBase={authApiBase} onBack={() => setActiveTab("home")} formatCommentTime={formatCommentTime} />}
 
       <HomePanels
         isMobile={isMobile}
@@ -264,7 +256,7 @@ function AppLayout({
         onLogout={generalHandlers.handleLogout}
         onShowFeedback={() => setShowFeedback(true)}
         onShowAnnouncement={onOpenAnnouncement}
-        onShowForum={() => setShowForum(true)}
+        onShowForum={() => setActiveTab("forum")}
         onManageBadge={onManageBadge}
         onFetchAllFeedbacks={generalHandlers.fetchAllFeedbacks}
         onSearchChange={setSearch}
