@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const MAP_CONTAINER_ID = "map";
-const MAP_LOAD_TIMEOUT_MS = 5000;
+const MAP_LOAD_TIMEOUT_MS = 20000;
 const MAP_CHECK_INTERVAL_MS = 250;
 const DEFAULT_CENTER = { lng: 110.331398, lat: 20.031957 };
 const DEFAULT_ZOOM = 13;
@@ -24,6 +24,7 @@ function BaiduMap({ targetPlaces, userLocation }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
+  const timeoutReportedRef = useRef(false);
   const [mapError, setMapError] = useState("");
 
   useEffect(() => {
@@ -37,15 +38,18 @@ function BaiduMap({ targetPlaces, userLocation }) {
       if (isCancelled) return;
       if (!hasBMapGL()) {
         elapsedMs += MAP_CHECK_INTERVAL_MS;
-        if (elapsedMs >= MAP_LOAD_TIMEOUT_MS) {
-          console.error("Baidu map load timeout: window.BMapGL.Map is unavailable");
+        if (elapsedMs >= MAP_LOAD_TIMEOUT_MS && !timeoutReportedRef.current) {
+          timeoutReportedRef.current = true;
+          console.error(
+            `Baidu map load timeout after ${MAP_LOAD_TIMEOUT_MS}ms: window.BMapGL.Map is unavailable`
+          );
           setMapError(MAP_ERROR_TEXT);
-          if (timerId) window.clearInterval(timerId);
         }
         return;
       }
 
       try {
+        timeoutReportedRef.current = false;
         const BMapGL = window.BMapGL;
         const map = new BMapGL.Map(MAP_CONTAINER_ID);
         const initPoint =
