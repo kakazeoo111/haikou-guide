@@ -17,16 +17,24 @@ function ZoomOverlay({ visible, zoomMode, detailPlace, zoomedSingleImage, scroll
   return (
     <div style={zoomOverlayStyle} onClick={onClose}>
       {zoomMode && swipeImages.length > 0 && (
-        <div ref={scrollContainerRef} style={swipeContainerStyle} onClick={(e) => e.stopPropagation()}>
-          {swipeImages.map((img, i) => (
-            <div key={`${img}-${i}`} style={swipeItemStyle}>
+        <div ref={scrollContainerRef} style={swipeContainerStyle} onClick={(event) => event.stopPropagation()}>
+          {swipeImages.map((img, index) => (
+            <div key={`${img}-${index}`} style={swipeItemStyle}>
               <img src={img} style={zoomedImgStyle} alt="zoom" />
             </div>
           ))}
         </div>
       )}
       {!zoomMode && singleImage && <img src={singleImage} style={zoomedImgStyle} onClick={onClose} alt="single-zoom" />}
-      <div style={closeZoomStyle}>×</div>
+      <div
+        style={closeZoomStyle}
+        onClick={(event) => {
+          event.stopPropagation();
+          onClose();
+        }}
+      >
+        ×
+      </div>
     </div>
   );
 }

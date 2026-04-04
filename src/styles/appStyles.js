@@ -15,9 +15,9 @@ export const commentAvatarStyle = { width: "36px", height: "36px", borderRadius:
 export const commentImgStyle = { width: "160px", borderRadius: "10px", marginTop: "10px", display: "block", cursor: "zoom-in" };
 export const likeBtnStyle = (liked) => ({ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 10px", borderRadius: "999px", border: liked ? "1px solid #ffbfd2" : "1px solid #e4e9e6", background: liked ? "linear-gradient(135deg, #ffe8f0, #ffdce8)" : "#f5f7f6", color: liked ? "#ff4f87" : "#7f8d87", fontSize: "12px", fontWeight: 600, lineHeight: 1, transition: "all 0.2s ease", boxShadow: liked ? "0 4px 10px rgba(255,79,135,0.18)" : "none", userSelect: "none" });
 export const feedbackItemStyle = { padding: "10px", borderBottom: "1px solid #eee", background: "#f9fcf9", borderRadius: "10px", marginBottom: "10px" };
-export const zoomOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "black", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center" };
+export const zoomOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "black", zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center" };
 export const zoomedImgStyle = { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" };
-export const closeZoomStyle = { position: "absolute", top: "30px", right: "30px", color: "white", fontSize: "50px", zIndex: 3100, cursor: "pointer" };
+export const closeZoomStyle = { position: "absolute", top: "30px", right: "30px", color: "white", fontSize: "50px", zIndex: 5100, cursor: "pointer" };
 export const swipeContainerStyle = { display: "flex", overflowX: "auto", overflowY: "hidden", width: "100vw", height: "100vh", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", touchAction: "pan-x", overscrollBehaviorX: "contain" };
 export const swipeItemStyle = { flexShrink: 0, width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center", scrollSnapAlign: "start" };
 export const modalOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "rgba(0,0,0,0.7)", zIndex: 4000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" };
