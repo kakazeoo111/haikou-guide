@@ -1,6 +1,8 @@
+import { useState } from "react";
 import BadgePickerModal from "./BadgePickerModal";
 import { badgeStyle, btnLogOutStyle, menuItemStyle, navHeaderStyle, profileAvatarLarge, profileInfoCard, profilePageStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
+import { formatCommentTime, parseRecommendationAlbum } from "../logic/placeUtils";
 
 const activeBadgePillBaseStyle = {
   marginTop: "8px",
@@ -17,6 +19,18 @@ const activeBadgePillBaseStyle = {
   fontSize: "12px",
 };
 
+const myRecommendOverlayStyle = {
+  position: "fixed",
+  top: 0,
+  left: 0,
+  width: "100vw",
+  height: "100%",
+  background: "#f8fbf9",
+  zIndex: 3200,
+  display: "flex",
+  flexDirection: "column",
+};
+
 function ProfileOverlay({
   currentUser,
   notifications,
@@ -29,10 +43,13 @@ function ProfileOverlay({
   onOpenBadgePicker,
   onCloseBadgePicker,
   onSelectBadge,
-  onGoRecommend,
+  authApiBase,
   onAvatarUpload,
   onLogout,
 }) {
+  const [showMyRecommendations, setShowMyRecommendations] = useState(false);
+  const [myRecommendations, setMyRecommendations] = useState([]);
+  const [myRecommendationsLoading, setMyRecommendationsLoading] = useState(false);
   const unreadCount = notifications.filter((notice) => !notice.is_read).length;
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
   const badgeTheme = getBadgeTheme(badgeSeed);
@@ -43,6 +60,28 @@ function ProfileOverlay({
     border: `1px solid ${badgeTheme.border}`,
     boxShadow: badgeTheme.shadow,
     color: badgeTheme.textColor,
+  };
+
+  const handleOpenMyRecommendations = async () => {
+    if (!currentUser?.phone) return;
+    setMyRecommendationsLoading(true);
+    try {
+      const res = await fetch(`${authApiBase}/api/recommendations?phone=${currentUser.phone}`);
+      const data = await res.json();
+      if (!data.ok) {
+        console.error("获取我的推荐失败:", data);
+        alert("获取我的推荐失败，请稍后重试");
+        return;
+      }
+      const mine = (data.data || []).filter((item) => String(item.user_phone || "") === String(currentUser.phone));
+      setMyRecommendations(mine);
+      setShowMyRecommendations(true);
+    } catch (error) {
+      console.error("获取我的推荐失败:", error);
+      alert("获取我的推荐失败，请稍后重试");
+    } finally {
+      setMyRecommendationsLoading(false);
+    }
   };
 
   return (
@@ -93,7 +132,7 @@ function ProfileOverlay({
             <span>{badgeIcon}</span>
             <span>{activeBadgeTitle || "未解锁称号"}</span>
           </div>
-          <p style={{ color: "#999", fontSize: "13px", margin: "10px 0 0" }}>手机号：{currentUser.phone}</p>
+          <p style={{ color: "#999", fontSize: "13px", margin: "10px 0 0" }}>手机号: {currentUser.phone}</p>
           <p style={{ color: "#5aa77b", fontSize: "11px", marginTop: "5px" }}>点击头像可更换</p>
         </div>
 
@@ -112,11 +151,11 @@ function ProfileOverlay({
             <div style={{ fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>{activeBadgeTitle || "未解锁称号"}</div>
           </div>
 
-          <div style={menuItemStyle} onClick={onGoRecommend}>
+          <div style={menuItemStyle} onClick={handleOpenMyRecommendations}>
             <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
               <span>✨</span> 我的推荐
             </div>
-            <span>›</span>
+            <span>{myRecommendationsLoading ? "加载中..." : "›"}</span>
           </div>
         </div>
 
@@ -132,6 +171,51 @@ function ProfileOverlay({
         onClose={onCloseBadgePicker}
         onSelect={onSelectBadge}
       />
+
+      {showMyRecommendations && (
+        <div style={myRecommendOverlayStyle}>
+          <div style={navHeaderStyle}>
+            <span onClick={() => setShowMyRecommendations(false)} style={{ cursor: "pointer", fontSize: "18px" }}>
+              ← 返回
+            </span>
+            <span style={{ fontWeight: "bold" }}>我的推荐</span>
+            <span style={{ width: "40px" }}></span>
+          </div>
+          <div style={{ padding: "16px 20px 30px", overflowY: "auto", flex: 1 }}>
+            {myRecommendations.length === 0 && (
+              <div style={{ textAlign: "center", color: "#97a39e", marginTop: "120px" }}>你还没有发布推荐景点</div>
+            )}
+            {myRecommendations.map((item) => {
+              const album = parseRecommendationAlbum(item.image_url);
+              const cover = album[0] || "https://api.suzcore.top/uploads/default_place.jpg";
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    background: "white",
+                    borderRadius: "20px",
+                    border: "1px solid #ebf3ee",
+                    padding: "14px",
+                    marginBottom: "14px",
+                    boxShadow: "0 4px 14px rgba(20,47,35,0.04)",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: "12px" }}>
+                    <img src={cover} alt={item.place_name} style={{ width: "78px", height: "78px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: "16px", fontWeight: 700, color: "#1f4133", marginBottom: "4px" }}>{item.place_name}</div>
+                      <div style={{ fontSize: "12px", color: "#6c7f77", lineHeight: 1.45 }}>{item.description || "暂无描述"}</div>
+                      <div style={{ marginTop: "8px", fontSize: "11px", color: "#97a39e" }}>
+                        发布于 {formatCommentTime(item.created_at)} · 点赞 {item.like_count || 0}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
