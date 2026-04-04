@@ -210,6 +210,22 @@ export async function updateManualBadgeGrant(pool, { targetPhone, badgeName, adm
     `,
     [targetPhone, badgeName, adminPhone, isActive ? 1 : 0, note || ""]
   );
+
+  // 手动授权后直接切换为该称号，避免“授权成功但界面没生效”的错觉。
+  if (isActive) {
+    await saveSelectedBadge(pool, { phone: targetPhone, badgeName });
+    return;
+  }
+
+  // 取消授权时，如果当前正使用该称号，则清空选择让系统自动回退到可用称号。
+  await pool.execute(
+    `
+      UPDATE user_badge_preferences
+      SET selected_badge_name = ''
+      WHERE user_phone = ? AND selected_badge_name = ?
+    `,
+    [targetPhone, badgeName]
+  );
 }
 
 export async function saveSelectedBadge(pool, { phone, badgeName }) {
