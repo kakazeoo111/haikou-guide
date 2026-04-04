@@ -151,6 +151,8 @@ function App() {
     try {
       const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
       if (savedUser) setCurrentUser(savedUser);
+      const savedTab = localStorage.getItem("haikou_active_tab");
+      if (["home", "profile", "forum"].includes(savedTab)) setActiveTab(savedTab);
     } catch (error) {
       console.error("用户缓存解析失败:", error);
     }
@@ -170,6 +172,7 @@ function App() {
     if (!zoomMode || !scrollContainerRef.current) return;
     scrollContainerRef.current.scrollLeft = window.innerWidth * initialSlide;
   }, [zoomMode, initialSlide]);
+  useEffect(() => localStorage.setItem("haikou_active_tab", activeTab), [activeTab]);
 
   useEffect(() => {
     if (!currentUser) return;

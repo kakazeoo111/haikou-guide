@@ -207,7 +207,13 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
       });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "打call失败");
-      await loadPosts(searchKeyword, sortMode);
+      const nextCalled = data.action === "called";
+      const nextCount = Number(data.callCount);
+      setPosts((prev) => prev.map((item) => {
+        if (Number(item.id) !== Number(postId)) return item;
+        const fallback = Math.max(0, Number(item.call_count || 0) + (nextCalled ? 1 : -1));
+        return { ...item, is_called: nextCalled, call_count: Number.isFinite(nextCount) ? nextCount : fallback };
+      }));
     } catch (error) {
       console.error("论坛打call失败:", error);
       alert("网络错误，打call失败");
@@ -262,7 +268,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
         </div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
           <button onClick={handleToggleSortMode} style={{ border: "none", background: "transparent", color: sortMode === "chill" ? "#2e6a4a" : "#6f8b7e", cursor: "pointer", fontWeight: 700, fontSize: "13px", padding: 0 }}>
-            {sortMode === "chill" ? "按最新排序" : "最chill排序"}
+            {sortMode === "chill" ? "按最新排序" : "按chill排序"}
           </button>
           <span style={onlinePillStyle}>
             <span style={{ fontSize: "10px" }}>●</span>
