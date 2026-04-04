@@ -1,4 +1,4 @@
-import { btnMainStyle, likeBtnStyle } from "../../styles/appStyles";
+import { btnMainStyle } from "../../styles/appStyles";
 import { parseForumImageUrls } from "../../logic/forumImageUtils";
 
 const DEFAULT_BADGE_TITLE = "未解锁称号";
@@ -33,6 +33,31 @@ const avatarBubbleStyle = {
   pointerEvents: "none",
   filter: "drop-shadow(0 1px 1px rgba(255,255,255,0.85))",
 };
+
+const callBtnStyle = (active, disabled) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  padding: "4px 12px",
+  borderRadius: "999px",
+  border: active ? "1px solid #8ee1d1" : "1px solid #e3ece8",
+  background: active ? "linear-gradient(135deg, #e8fff6, #dff4ff)" : "#f5f7f6",
+  color: active ? "#1f9d85" : "#7f8d87",
+  fontSize: "12px",
+  fontWeight: 700,
+  lineHeight: 1,
+  boxShadow: active ? "0 4px 12px rgba(44,170,150,0.2)" : "none",
+  cursor: disabled ? "not-allowed" : "pointer",
+  opacity: disabled ? 0.65 : 1,
+  userSelect: "none",
+});
+
+const callLabelStyle = (active) => ({
+  fontSize: "11px",
+  color: active ? "#2a9f87" : "#8ba197",
+  fontWeight: 700,
+  whiteSpace: "nowrap",
+});
 
 function getAvatarSrc(phone, avatarUrl) {
   const normalized = String(avatarUrl || "").trim();
@@ -104,11 +129,13 @@ function ForumPostCard({
         <span onClick={() => onToggleComments(postId)} style={{ fontSize: "12px", color: "#5aa77b", cursor: "pointer", fontWeight: 700 }}>
           {expanded ? "收起评论" : `查看评论（${Number(post.comment_count || 0)}）`}
         </span>
-        <span onClick={() => onToggleCall(postId)} style={{ ...likeBtnStyle(Boolean(post.is_called)), opacity: callingPost ? 0.65 : 1, cursor: callingPost ? "not-allowed" : "pointer" }}>
-          <span style={{ fontSize: "13px" }}>{post.is_called ? "♥" : "♡"}</span>
-          <span>{Number(post.call_count || 0)}</span>
-        </span>
-        <span style={{ fontSize: "11px", color: "#8ba197", fontWeight: 700 }}>{post.is_called ? "已打call" : "打call"}</span>
+        <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+          <span onClick={() => onToggleCall(postId)} style={callBtnStyle(Boolean(post.is_called), callingPost)}>
+            <span style={{ fontSize: "13px" }}>{post.is_called ? "⚡" : "✦"}</span>
+            <span>{Number(post.call_count || 0)}</span>
+          </span>
+          <span style={callLabelStyle(Boolean(post.is_called))}>{post.is_called ? "已共鸣" : "打call"}</span>
+        </div>
       </div>
 
       {expanded && (

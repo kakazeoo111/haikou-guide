@@ -13,6 +13,7 @@ import { ensureBadgeGrantTable } from "./badgesService.js";
 import { registerBadgeRoutes } from "./badgesRoutes.js";
 import { registerFeedbackRoutes } from "./feedbackRoutes.js";
 import { registerForumRoutes } from "./forumRoutes.js";
+import { registerOnlineRoutes } from "./onlineRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -77,6 +78,11 @@ try {
   await registerForumRoutes(app, { pool, upload });
 } catch (error) {
   console.error("论坛路由初始化失败:", error.message);
+}
+try {
+  registerOnlineRoutes(app);
+} catch (error) {
+  console.error("在线人数路由初始化失败:", error.message);
 }
 
 // ✅ 辅助函数：添加通知

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { btnMainStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import ForumPostCard from "./forum/ForumPostCard";
+import { useOnlineCount } from "../logic/useOnlineCount";
 
 const MAX_FORUM_IMAGES = 9;
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
@@ -26,6 +27,19 @@ const headerStyle = {
   padding: "0 14px",
   borderBottom: "1px solid #e8efe9",
   background: "#fff",
+};
+
+const onlinePillStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "5px",
+  padding: "4px 10px",
+  borderRadius: "999px",
+  fontSize: "12px",
+  fontWeight: 700,
+  background: "#eef8f2",
+  color: "#2e6a4a",
+  border: "1px solid #d6ecde",
 };
 
 function buildForumPostsUrl(authApiBase, phone, keyword, sortMode) {
@@ -66,6 +80,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
   const badgeTheme = getBadgeTheme(badgeSeed);
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
+  const onlineCount = useOnlineCount({ enabled: Boolean(currentUser?.phone), authApiBase, phone: currentUser?.phone });
 
   const loadPosts = async (keyword = searchKeyword, nextSortMode = sortMode) => {
     if (!currentUser?.phone) return;
@@ -245,10 +260,14 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
           <input value={searchKeyword} onChange={(event) => setSearchKeyword(event.target.value)} placeholder="搜索用户或帖子内容" style={{ flex: 1, border: "1px solid #dce8e1", borderRadius: "12px", padding: "10px 12px", outline: "none", background: "#fff" }} />
           <button onClick={() => loadPosts(searchKeyword, sortMode)} style={{ ...btnMainStyle, marginTop: 0, width: "88px" }}>搜索</button>
         </div>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
-          <button onClick={handleToggleSortMode} style={{ border: "none", background: "transparent", color: sortMode === "chill" ? "#2e6a4a" : "#6f8b7e", cursor: "pointer", fontWeight: 700, fontSize: "13px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
+          <button onClick={handleToggleSortMode} style={{ border: "none", background: "transparent", color: sortMode === "chill" ? "#2e6a4a" : "#6f8b7e", cursor: "pointer", fontWeight: 700, fontSize: "13px", padding: 0 }}>
             {sortMode === "chill" ? "按最新排序" : "最chill排序"}
           </button>
+          <span style={onlinePillStyle}>
+            <span style={{ fontSize: "10px" }}>●</span>
+            <span>在线 {onlineCount}</span>
+          </span>
         </div>
 
         {loadingPosts && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>论坛内容加载中...</div>}
