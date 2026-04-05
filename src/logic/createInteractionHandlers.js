@@ -38,7 +38,14 @@ export function createInteractionHandlers(ctx) {
     const data = await res.json();
     if (!data.ok) return;
     setPlaceStats((prev) => ({ ...prev, [pId]: data.newCount }));
-    setMyLikedPlaceIds((prev) => (data.action === "liked" ? [...prev, pId] : prev.filter((id) => id !== pId)));
+    if (data.action !== "liked" && data.action !== "unliked") {
+      console.error("地点点赞接口返回异常，缺少 action:", data);
+      return;
+    }
+    setMyLikedPlaceIds((prev) => {
+      if (data.action === "liked") return Array.from(new Set([...prev, pId]));
+      return prev.filter((id) => id !== pId);
+    });
   };
 
   const handleLikeComment = async (commentId) => {

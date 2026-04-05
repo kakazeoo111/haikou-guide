@@ -22,6 +22,7 @@ export function registerPlaceCommentRoutes(app, { pool, upload, addNotice }) {
     const { phone, placeId } = req.body;
     try {
       const [rows] = await pool.execute("SELECT id FROM place_likes WHERE phone = ? AND place_id = ?", [phone, placeId]);
+      const action = rows.length > 0 ? "unliked" : "liked";
       if (rows.length > 0) {
         await pool.execute("DELETE FROM place_likes WHERE phone = ? AND place_id = ?", [phone, placeId]);
       } else {
@@ -33,7 +34,7 @@ export function registerPlaceCommentRoutes(app, { pool, upload, addNotice }) {
         }
       }
       const [countRow] = await pool.execute("SELECT COUNT(*) as count FROM place_likes WHERE place_id = ?", [placeId]);
-      res.json({ ok: true, newCount: countRow[0].count });
+      res.json({ ok: true, action, newCount: countRow[0].count });
     } catch (error) {
       res.status(500).json({ ok: false });
     }

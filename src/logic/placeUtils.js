@@ -29,6 +29,12 @@ export function getDist(l1, l2) {
   return (radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))).toFixed(2);
 }
 
+const TEMP_HIDDEN_PLACE_IDS = new Set(["37", "39", "40"]);
+
+function shouldDisplayPlace(placeId) {
+  return !TEMP_HIDDEN_PLACE_IDS.has(String(placeId));
+}
+
 export function getFilteredPlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation, search, filter, favoriteIds }) {
   const allSource = [
     ...places.map((p) => ({
@@ -52,7 +58,7 @@ export function getFilteredPlaces({ places, recommendations, placeStats, myLiked
     })),
   ];
 
-  let list = allSource.filter((p) => p.name.includes(search));
+  let list = allSource.filter((p) => shouldDisplayPlace(p.id)).filter((p) => p.name.includes(search));
   if (filter === "favorite") return list.filter((p) => favoriteIds.includes(p.id)).sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
   if (filter === "top10") return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
   if (filter === "photo") list = list.filter((p) => p.isPhotoReady);
