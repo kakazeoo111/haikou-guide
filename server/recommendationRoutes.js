@@ -2,22 +2,56 @@ function normalizeUploadedImages(files) {
   return files ? files.map((file) => `https://api.suzcore.top/uploads/${file.filename}`) : [];
 }
 
-export function registerRecommendationRoutes(app, { pool, upload, addNotice }) {
+async function ensureRecommendationTables(pool) {
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS recommendations (
+      id INT NOT NULL AUTO_INCREMENT,
+      user_phone VARCHAR(20) NOT NULL,
+      place_name VARCHAR(255) NOT NULL,
+      description TEXT NULL,
+      lat DECIMAL(10,7) NULL,
+      lng DECIMAL(10,7) NULL,
+      image_url LONGTEXT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_recommendations_created (created_at),
+      KEY idx_recommendations_user_phone (user_phone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  );
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS recommendation_likes (
+      id INT NOT NULL AUTO_INCREMENT,
+      phone VARCHAR(20) NOT NULL,
+      recommendation_id INT NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_recommendation_like_phone_rec (phone, recommendation_id),
+      KEY idx_recommendation_likes_rec (recommendation_id),
+      KEY idx_recommendation_likes_phone (phone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  );
+}
+
+export async function registerRecommendationRoutes(app, { pool, upload, addNotice }) {
+  await ensureRecommendationTables(pool);
+
   app.get("/api/recommendations", async (req, res) => {
     const { phone } = req.query;
     try {
       const sql = `
         SELECT r.*, u.username, u.avatar_url,
         (SELECT COUNT(*) FROM recommendation_likes WHERE recommendation_id = r.id) as like_count,
-        (SELECT COUNT(*) FROM recommendation_likes WHERE recommendation_id = r.id AND phone = ?) as is_liked
+        (SELECT COUNT(*) FROM recommendation_likes WHERE recommendation_id = r.id AND phone COLLATE utf8mb4_general_ci = ?) as is_liked
         FROM recommendations r
-        JOIN users u ON r.user_phone = u.phone
+        JOIN users u ON r.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
         ORDER BY r.created_at DESC`;
       const [rows] = await pool.execute(sql, [phone || ""]);
       const data = rows.map((row) => ({ ...row, is_liked: row.is_liked > 0 }));
       res.json({ ok: true, data });
     } catch (error) {
-      res.status(500).json({ ok: false });
+      console.error("获取推荐失败:", error.message);
+      res.status(500).json({ ok: false, message: `获取推荐失败: ${error.message}` });
     }
   });
 
@@ -27,11 +61,12 @@ export function registerRecommendationRoutes(app, { pool, upload, addNotice }) {
     try {
       await pool.execute(
         "INSERT INTO recommendations (user_phone, place_name, description, lat, lng, image_url) VALUES (?, ?, ?, ?, ?, ?)",
-        [phone, place_name, description || "", lat, lng, JSON.stringify(imageUrls)],
+        [phone, place_name, description || "", lat, lng, JSON.stringify(imageUrls)]
       );
-      res.json({ ok: true, message: "推荐成功！" });
+      res.json({ ok: true, message: "推荐成功" });
     } catch (error) {
-      res.status(500).json({ ok: false });
+      console.error("提交推荐失败:", error.message);
+      res.status(500).json({ ok: false, message: `提交推荐失败: ${error.message}` });
     }
   });
 
@@ -39,9 +74,12 @@ export function registerRecommendationRoutes(app, { pool, upload, addNotice }) {
     const { phone, recId } = req.body;
     try {
       const id = parseInt(recId, 10);
-      const [rows] = await pool.execute("SELECT id FROM recommendation_likes WHERE phone = ? AND recommendation_id = ?", [phone, id]);
+      const [rows] = await pool.execute(
+        "SELECT id FROM recommendation_likes WHERE phone COLLATE utf8mb4_general_ci = ? AND recommendation_id = ?",
+        [phone, id]
+      );
       if (rows.length > 0) {
-        await pool.execute("DELETE FROM recommendation_likes WHERE phone = ? AND recommendation_id = ?", [phone, id]);
+        await pool.execute("DELETE FROM recommendation_likes WHERE phone COLLATE utf8mb4_general_ci = ? AND recommendation_id = ?", [phone, id]);
         return res.json({ ok: true, action: "unliked" });
       }
       await pool.execute("INSERT INTO recommendation_likes (phone, recommendation_id) VALUES (?, ?)", [phone, id]);
@@ -49,17 +87,22 @@ export function registerRecommendationRoutes(app, { pool, upload, addNotice }) {
       if (owner.length > 0) await addNotice(owner[0].user_phone, phone, "like_place", `rec_${id}`);
       res.json({ ok: true, action: "liked" });
     } catch (error) {
-      res.status(500).json({ ok: false, message: error.message });
+      console.error("推荐点赞失败:", error.message);
+      res.status(500).json({ ok: false, message: `推荐点赞失败: ${error.message}` });
     }
   });
 
   app.post("/api/recommendations/delete", async (req, res) => {
     const { phone, recId } = req.body;
     try {
-      const [result] = await pool.execute("DELETE FROM recommendations WHERE id = ? AND user_phone = ?", [recId, phone]);
+      const [result] = await pool.execute(
+        "DELETE FROM recommendations WHERE id = ? AND user_phone COLLATE utf8mb4_general_ci = ?",
+        [recId, phone]
+      );
       res.json({ ok: result.affectedRows > 0 });
     } catch (error) {
-      res.status(500).json({ ok: false });
+      console.error("删除推荐失败:", error.message);
+      res.status(500).json({ ok: false, message: `删除推荐失败: ${error.message}` });
     }
   });
 }

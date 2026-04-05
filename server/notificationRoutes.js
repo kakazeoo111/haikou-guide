@@ -1,4 +1,24 @@
-export function registerNotificationRoutes(app, { pool }) {
+async function ensureNotificationsTable(pool) {
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id INT NOT NULL AUTO_INCREMENT,
+      receiver_phone VARCHAR(20) NOT NULL,
+      sender_phone VARCHAR(20) NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      place_id VARCHAR(120) NULL,
+      content TEXT NULL,
+      is_read TINYINT(1) NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_notifications_receiver_created (receiver_phone, created_at),
+      KEY idx_notifications_sender (sender_phone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  );
+}
+
+export async function registerNotificationRoutes(app, { pool }) {
+  await ensureNotificationsTable(pool);
+
   app.get("/api/notifications/:phone", async (req, res) => {
     try {
       const sql = `SELECT n.*, COALESCE(u.username, n.sender_phone) as sender_name, u.avatar_url as sender_avatar

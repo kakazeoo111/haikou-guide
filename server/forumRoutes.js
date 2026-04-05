@@ -106,9 +106,9 @@ export async function registerForumRoutes(app, { pool, upload }) {
                   WHERE c.post_id = p.id
                     AND c.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)) AS comment_count,
                 (SELECT COUNT(*) FROM forum_post_calls fpc WHERE fpc.post_id = p.id) AS call_count,
-                (SELECT COUNT(*) FROM forum_post_calls fpc WHERE fpc.post_id = p.id AND fpc.user_phone = ?) AS is_called
+                (SELECT COUNT(*) FROM forum_post_calls fpc WHERE fpc.post_id = p.id AND fpc.user_phone COLLATE utf8mb4_general_ci = ?) AS is_called
          FROM forum_posts p
-         JOIN users u ON p.user_phone = u.phone
+         JOIN users u ON p.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
          WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
            AND (? = '' OR u.username LIKE CONCAT('%', ?, '%') OR p.content LIKE CONCAT('%', ?, '%'))
          ${orderBySql}`,
@@ -139,7 +139,7 @@ export async function registerForumRoutes(app, { pool, upload }) {
     if (!message && !imageUrl) return res.status(400).json({ ok: false, message: "发布内容不能为空" });
 
     try {
-      const [users] = await pool.execute("SELECT phone FROM users WHERE phone = ? LIMIT 1", [normalizedPhone]);
+      const [users] = await pool.execute("SELECT phone FROM users WHERE phone COLLATE utf8mb4_general_ci = ? LIMIT 1", [normalizedPhone]);
       if (!users.length) return res.status(404).json({ ok: false, message: "用户不存在，请重新登录" });
       const [result] = await pool.execute(
         "INSERT INTO forum_posts (user_phone, content, image_url) VALUES (?, ?, ?)",
@@ -160,20 +160,23 @@ export async function registerForumRoutes(app, { pool, upload }) {
     if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
 
     try {
-      const [users] = await pool.execute("SELECT phone FROM users WHERE phone = ? LIMIT 1", [normalizedPhone]);
+      const [users] = await pool.execute("SELECT phone FROM users WHERE phone COLLATE utf8mb4_general_ci = ? LIMIT 1", [normalizedPhone]);
       if (!users.length) return res.status(404).json({ ok: false, message: "用户不存在，请重新登录" });
 
       const active = await isForumPostActive(pool, normalizedPostId);
       if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
 
       const [rows] = await pool.execute(
-        "SELECT id FROM forum_post_calls WHERE post_id = ? AND user_phone = ? LIMIT 1",
+        "SELECT id FROM forum_post_calls WHERE post_id = ? AND user_phone COLLATE utf8mb4_general_ci = ? LIMIT 1",
         [normalizedPostId, normalizedPhone]
       );
 
       const action = rows.length > 0 ? "uncalled" : "called";
       if (action === "uncalled") {
-        await pool.execute("DELETE FROM forum_post_calls WHERE post_id = ? AND user_phone = ?", [normalizedPostId, normalizedPhone]);
+        await pool.execute(
+          "DELETE FROM forum_post_calls WHERE post_id = ? AND user_phone COLLATE utf8mb4_general_ci = ?",
+          [normalizedPostId, normalizedPhone]
+        );
       } else {
         await pool.execute("INSERT INTO forum_post_calls (post_id, user_phone) VALUES (?, ?)", [normalizedPostId, normalizedPhone]);
       }
@@ -197,7 +200,7 @@ export async function registerForumRoutes(app, { pool, upload }) {
       const [rows] = await pool.execute(
         `SELECT c.id, c.post_id, c.parent_id, c.user_phone, c.content, c.image_url, c.created_at, u.username, u.avatar_url
          FROM forum_comments c
-         JOIN users u ON c.user_phone = u.phone
+         JOIN users u ON c.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
          WHERE c.post_id = ?
            AND c.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
          ORDER BY c.created_at DESC, c.id DESC`,

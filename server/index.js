@@ -74,6 +74,25 @@ const smsClient = new DypnsapiClient.default(
   }),
 );
 
+async function ensureUsersProfileColumns(pool) {
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS users (
+      id INT NOT NULL AUTO_INCREMENT,
+      username VARCHAR(50) NOT NULL,
+      phone VARCHAR(20) NOT NULL,
+      password_hash VARCHAR(255) NOT NULL,
+      avatar_url VARCHAR(500) NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_users_phone (phone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  );
+  const [avatarRows] = await pool.execute("SHOW COLUMNS FROM users LIKE 'avatar_url'");
+  if (avatarRows.length === 0) {
+    await pool.execute("ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500) NULL AFTER password_hash");
+  }
+}
+
 async function addNotice(receiver, sender, type, placeId, content = "") {
   if (receiver === sender) return;
   try {
@@ -89,6 +108,11 @@ async function addNotice(receiver, sender, type, placeId, content = "") {
 app.get("/api/health", (req, res) => res.json({ ok: true, db: "connected" }));
 
 try {
+  await ensureUsersProfileColumns(pool);
+} catch (error) {
+  console.error("用户资料字段初始化失败:", error.message);
+}
+try {
   await ensureBadgeGrantTable(pool);
 } catch (error) {
   console.error("称号授权表初始化失败:", error.message);
@@ -96,9 +120,9 @@ try {
 
 registerBadgeRoutes(app, { pool, ADMIN_PHONE });
 registerAuthRoutes(app, { pool, otpStore, smsClient });
-registerRecommendationRoutes(app, { pool, upload, addNotice });
-registerPlaceCommentRoutes(app, { pool, upload, addNotice });
-registerNotificationRoutes(app, { pool });
+await registerRecommendationRoutes(app, { pool, upload, addNotice });
+await registerPlaceCommentRoutes(app, { pool, upload, addNotice });
+await registerNotificationRoutes(app, { pool });
 registerMiscRoutes(app, { pool, upload, ADMIN_PHONE });
 registerUserSummaryRoutes(app, { pool });
 
