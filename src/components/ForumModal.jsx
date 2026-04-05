@@ -2,12 +2,15 @@ import { useEffect, useState } from "react";
 import { btnMainStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import ForumPostCard from "./forum/ForumPostCard";
+import ForumNoticeModal from "./forum/ForumNoticeModal";
 import { useOnlineCount } from "../logic/useOnlineCount";
+import { useForumNotice } from "../logic/useForumNotice";
 import {
   FORUM_IMAGE_TOO_LARGE_MESSAGE,
   MAX_FORUM_IMAGES,
   buildForumPostsUrl,
   forumHeaderStyle,
+  forumNoticeButtonStyle,
   forumOnlinePillStyle,
   forumPageStyle,
   normalizeForumPosts,
@@ -37,6 +40,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   const badgeTheme = getBadgeTheme(badgeSeed);
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
   const onlineCount = useOnlineCount({ enabled: Boolean(currentUser?.phone), authApiBase, phone: currentUser?.phone });
+  const { showNotice, openNotice, closeNotice, dontShowAgain, updateDontShowAgain } = useForumNotice(currentUser?.phone);
 
   const loadPosts = async (keyword = searchKeyword, nextSortMode = sortMode) => {
     if (!currentUser?.phone) return;
@@ -263,10 +267,13 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
           <button onClick={handleToggleSortMode} style={{ border: "none", background: "transparent", color: sortMode === "chill" ? "#2e6a4a" : "#6f8b7e", cursor: "pointer", fontWeight: 700, fontSize: "13px", padding: 0 }}>
             {sortMode === "chill" ? "按最新排序" : "按chill排序"}
           </button>
-          <span style={forumOnlinePillStyle}>
-            <span style={{ fontSize: "10px" }}>●</span>
-            <span>在线 {onlineCount}</span>
-          </span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+            <button onClick={openNotice} style={forumNoticeButtonStyle}>公告</button>
+            <span style={forumOnlinePillStyle}>
+              <span style={{ fontSize: "10px" }}>●</span>
+              <span>在线 {onlineCount}</span>
+            </span>
+          </div>
         </div>
 
         {loadingPosts && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>论坛内容加载中...</div>}
@@ -301,6 +308,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
           />
         ))}
       </div>
+      <ForumNoticeModal visible={showNotice} dontShowAgain={dontShowAgain} onToggleDontShowAgain={updateDontShowAgain} onClose={closeNotice} />
     </div>
   );
 }

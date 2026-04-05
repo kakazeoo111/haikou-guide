@@ -37,6 +37,17 @@ export const forumOnlinePillStyle = {
   border: "1px solid #d6ecde",
 };
 
+export const forumNoticeButtonStyle = {
+  border: "1px solid #cfe8db",
+  background: "#f2fbf6",
+  color: "#2e6a4a",
+  borderRadius: "999px",
+  padding: "4px 10px",
+  fontSize: "12px",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
 export function buildForumPostsUrl(authApiBase, phone, keyword, sortMode) {
   const params = new URLSearchParams({
     phone: String(phone || "").trim(),

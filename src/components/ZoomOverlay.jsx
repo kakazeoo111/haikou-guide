@@ -10,6 +10,7 @@ function ZoomOverlay({ visible, zoomMode, detailPlace, zoomedSingleImage, scroll
   if (!visible) return null;
 
   const groupedZoomData = getGroupedZoomData(zoomedSingleImage);
+  const closeOnAnyTap = Boolean(groupedZoomData);
   const groupedImages = groupedZoomData?.images || [];
   const swipeImages = groupedImages.length > 0 ? groupedImages : detailPlace?.album || [];
   const singleImage = typeof zoomedSingleImage === "string" ? zoomedSingleImage : "";
@@ -17,7 +18,17 @@ function ZoomOverlay({ visible, zoomMode, detailPlace, zoomedSingleImage, scroll
   return (
     <div style={zoomOverlayStyle} onClick={onClose}>
       {zoomMode && swipeImages.length > 0 && (
-        <div ref={scrollContainerRef} style={swipeContainerStyle} onClick={(event) => event.stopPropagation()}>
+        <div
+          ref={scrollContainerRef}
+          style={swipeContainerStyle}
+          onClick={(event) => {
+            if (closeOnAnyTap) {
+              onClose();
+              return;
+            }
+            event.stopPropagation();
+          }}
+        >
           {swipeImages.map((img, index) => (
             <div key={`${img}-${index}`} style={swipeItemStyle}>
               <img src={img} style={zoomedImgStyle} alt="zoom" />
