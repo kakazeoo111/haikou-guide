@@ -119,7 +119,7 @@ function HomePanels({
 
       <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: 0, boxSizing: "border-box" }}>
         <div style={{ padding: "20px 20px 0 20px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
             <img
               src={currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.phone}`}
               style={avatarStyle}
@@ -127,41 +127,41 @@ function HomePanels({
               alt="avatar"
             />
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={onAvatarUpload} />
-            <div style={{ flex: 1 }}>
-              <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content" }}>
+            <div style={{ flex: 1, minHeight: "50px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content", lineHeight: 1 }}>
                 <span>{currentUser.username}</span>
                 {unreadCount > 0 && <span style={unreadBadgeStyle}>{unreadBadgeText}</span>}
                 <span style={{ fontSize: "12px", color: "#ccc" }}>▶</span>
               </h3>
-              <div style={userBadgeStyle}>
+              <div style={{ ...userBadgeStyle, marginTop: 0 }}>
                 <span style={{ fontSize: "13px" }}>{badgeIcon}</span>
                 <span style={{ fontSize: "12px", color: badgeTheme.textColor, fontWeight: 800 }}>{activeBadgeTitle || "未解锁称号"}</span>
               </div>
-              <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginTop: "3px" }}>
-                <span onClick={onLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>
-                  退出
-                </span>
-                <span onClick={onShowFeedback} style={{ color: "#5aa77b", cursor: "pointer" }}>
-                  反馈建议
-                </span>
-                <span onClick={onShowForum} style={{ color: "#5aa77b", cursor: "pointer" }}>
-                  论坛
-                </span>
-                <span onClick={onShowAnnouncement} style={{ color: "#5aa77b", cursor: "pointer" }}>
-                  公告
-                </span>
-                {currentUser.phone === adminPhone && (
-                  <span onClick={onManageBadge} style={{ color: "#5aa77b", cursor: "pointer" }}>
-                    称号授权
-                  </span>
-                )}
-                {currentUser.phone === adminPhone && (
-                  <span onClick={onFetchAllFeedbacks} style={{ color: "#333", cursor: "pointer" }}>
-                    反馈库
-                  </span>
-                )}
-              </div>
             </div>
+          </div>
+          <div style={{ display: "flex", gap: "8px", fontSize: "12px", marginBottom: "20px" }}>
+            <span onClick={onLogout} style={{ color: "#d94f5c", cursor: "pointer" }}>
+              退出
+            </span>
+            <span onClick={onShowFeedback} style={{ color: "#5aa77b", cursor: "pointer" }}>
+              反馈建议
+            </span>
+            <span onClick={onShowForum} style={{ color: "#5aa77b", cursor: "pointer" }}>
+              论坛
+            </span>
+            <span onClick={onShowAnnouncement} style={{ color: "#5aa77b", cursor: "pointer" }}>
+              公告
+            </span>
+            {currentUser.phone === adminPhone && (
+              <span onClick={onManageBadge} style={{ color: "#5aa77b", cursor: "pointer" }}>
+                称号授权
+              </span>
+            )}
+            {currentUser.phone === adminPhone && (
+              <span onClick={onFetchAllFeedbacks} style={{ color: "#333", cursor: "pointer" }}>
+                反馈库
+              </span>
+            )}
           </div>
 
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
