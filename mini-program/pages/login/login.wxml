@@ -35,5 +35,13 @@
     </view>
 
     <button class="login-btn" loading="{{loading}}" bindtap="handleLogin">登录</button>
+    <button
+      class="wx-phone-btn"
+      loading="{{loading}}"
+      open-type="getPhoneNumber"
+      bindgetphonenumber="handleWxPhoneLogin"
+    >
+      微信一键手机号登录
+    </button>
   </view>
 </view>

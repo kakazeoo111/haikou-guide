@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import DypnsapiClient from "@alicloud/dypnsapi20170525";
+import { fetchPhoneByWxCode } from "./wechatMiniService.js";
 
 const PHONE_REGEX = /^1\d{10}$/;
 const DEFAULT_CHANCE_GAIN = 1;
@@ -188,6 +189,36 @@ export async function registerMiniProgramRoutes(app, { pool, otpStore, smsClient
     } catch (error) {
       console.error("小程序验证码登录失败:", error.message);
       res.status(500).json({ ok: false, message: `登录失败: ${error.message}` });
+    }
+  });
+
+  app.post("/api/mp/auth/login-by-wx-phone", async (req, res) => {
+    const wxCode = String(req.body?.wxCode || "").trim();
+    if (!wxCode) return res.status(400).json({ ok: false, message: "微信手机号 code 不能为空" });
+    try {
+      const phone = await fetchPhoneByWxCode(wxCode);
+      if (!isPhoneValid(phone)) {
+        return res.status(400).json({ ok: false, message: "获取到的手机号无效" });
+      }
+      const user = await ensureUserByPhone(pool, phone);
+      await ensureAssetRow(pool, phone);
+      const drawChances = await queryDrawChances(pool, phone);
+      res.json({
+        ok: true,
+        data: {
+          phone: user.phone,
+          username: user.username || phone,
+          avatar_url: user.avatar_url || "",
+          drawChances,
+        },
+      });
+    } catch (error) {
+      const wxErrCode = Number(error?.code || 0);
+      if ([48001, 61007].includes(wxErrCode)) {
+        return res.status(400).json({ ok: false, message: "当前小程序主体暂不支持一键手机号登录，请改用短信验证码登录" });
+      }
+      console.error("小程序微信一键登录失败:", error.message);
+      res.status(500).json({ ok: false, message: `微信一键登录失败: ${error.message}` });
     }
   });
 

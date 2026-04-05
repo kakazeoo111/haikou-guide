@@ -32,6 +32,10 @@ function loginByCode(phone, code) {
   return request("/api/mp/auth/login-by-code", "POST", { phone, code });
 }
 
+function loginByWxPhoneCode(wxCode) {
+  return request("/api/mp/auth/login-by-wx-phone", "POST", { wxCode });
+}
+
 function fetchSignStatus(phone) {
   return request(`/api/mp/sign/status?phone=${encodeURIComponent(phone)}`);
 }
@@ -55,6 +59,7 @@ function fetchLotteryLogs(phone) {
 module.exports = {
   sendCode,
   loginByCode,
+  loginByWxPhoneCode,
   fetchSignStatus,
   checkin,
   fetchPrizes,

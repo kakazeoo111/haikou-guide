@@ -1,4 +1,4 @@
-const { sendCode, loginByCode } = require("../../utils/api");
+const { sendCode, loginByCode, loginByWxPhoneCode } = require("../../utils/api");
 
 const PHONE_REGEX = /^1\d{10}$/;
 const CODE_LENGTH = 6;
@@ -75,6 +75,28 @@ Page({
     this.setData({ loading: true });
     try {
       const result = await loginByCode(phone, code);
+      const user = result.data || {};
+      getApp().globalData.user = user;
+      wx.setStorageSync("mp_user", user);
+      wx.showToast({ title: "登录成功", icon: "success" });
+      wx.reLaunch({ url: "/pages/home/home" });
+    } catch (error) {
+      wx.showToast({ title: error.message, icon: "none" });
+    } finally {
+      this.setData({ loading: false });
+    }
+  },
+
+  async handleWxPhoneLogin(event) {
+    if (this.data.loading) return;
+    const wxCode = String(event?.detail?.code || "").trim();
+    if (!wxCode) {
+      wx.showToast({ title: "当前主体可能不支持一键手机号，请用验证码登录", icon: "none" });
+      return;
+    }
+    this.setData({ loading: true });
+    try {
+      const result = await loginByWxPhoneCode(wxCode);
       const user = result.data || {};
       getApp().globalData.user = user;
       wx.setStorageSync("mp_user", user);

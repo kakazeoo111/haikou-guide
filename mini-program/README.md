@@ -19,6 +19,7 @@
 
 - `POST /api/mp/auth/send-code`
 - `POST /api/mp/auth/login-by-code`
+- `POST /api/mp/auth/login-by-wx-phone`
 - `GET /api/mp/sign/status`
 - `POST /api/mp/sign/checkin`
 - `GET /api/mp/lottery/prizes`
@@ -30,6 +31,11 @@
 ```js
 const BASE_URL = "https://api.suzcore.top";
 ```
+
+一键手机号登录依赖后端环境变量：
+
+- `WECHAT_MINI_APPID`
+- `WECHAT_MINI_APPSECRET`
 
 ## 启动步骤
 
