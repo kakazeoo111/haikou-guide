@@ -1,5 +1,7 @@
 import { btnMainStyle } from "../../styles/appStyles";
 import { parseForumImageUrls } from "../../logic/forumImageUtils";
+import { useUserPointsCard } from "../../logic/useUserPointsCard";
+import UserPointsCardModal from "../UserPointsCardModal";
 
 const DEFAULT_BADGE_TITLE = "未解锁称号";
 
@@ -95,6 +97,7 @@ function ForumPostCard({
   onSubmitComment,
   formatCommentTime,
 }) {
+  const userPointsCard = useUserPointsCard();
   const postId = Number(post.id);
   const postImages = parseForumImageUrls(post.image_url);
   const commentImageInputId = `forum-comment-images-input-${postId}`;
@@ -104,7 +107,10 @@ function ForumPostCard({
   return (
     <div style={{ border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-        <div style={{ width: "32px", height: "32px", position: "relative" }}>
+        <div
+          onClick={() => userPointsCard.openByPhone(post.user_phone)}
+          style={{ width: "32px", height: "32px", position: "relative", cursor: "pointer" }}
+        >
           <img src={getAvatarSrc(post.user_phone, post.avatar_url)} alt="forum-user-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
           {postBadge && <span style={avatarBubbleStyle}>{postBadge.icon}</span>}
         </div>
@@ -224,6 +230,7 @@ function ForumPostCard({
           </div>
         </div>
       )}
+      <UserPointsCardModal visible={userPointsCard.visible} loading={userPointsCard.loading} data={userPointsCard.data} onClose={userPointsCard.close} />
     </div>
   );
 }

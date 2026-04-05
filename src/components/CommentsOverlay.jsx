@@ -21,6 +21,8 @@ import {
   parseCommentImageUrls,
   sortAndFilterComments,
 } from "../logic/commentsOverlayUtils";
+import { useUserPointsCard } from "../logic/useUserPointsCard";
+import UserPointsCardModal from "./UserPointsCardModal";
 
 function CommentsOverlay({
   place,
@@ -47,6 +49,7 @@ function CommentsOverlay({
   onZoomImage,
   formatCommentTime,
 }) {
+  const userPointsCard = useUserPointsCard();
   if (!place) return null;
   const sorted = sortAndFilterComments(comments, commentSort, showOnlyImages);
   const parents = sorted.filter((c) => !c.parent_id);
@@ -103,7 +106,7 @@ function CommentsOverlay({
           return (
             <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
               <div style={{ display: "flex", gap: "10px" }}>
-                <div style={parentAvatarWrapStyle}>
+                <div onClick={() => userPointsCard.openByPhone(parent.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
                   <img
                     src={getAvatarSrc(parent.avatar_url, parent.user_phone, parent.username)}
                     onError={(event) => handleAvatarLoadError(event, parent.user_phone, parent.username)}
@@ -191,7 +194,7 @@ function CommentsOverlay({
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
                         return (
                           <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
-                            <div style={replyAvatarWrapStyle}>
+                            <div onClick={() => userPointsCard.openByPhone(reply.user_phone)} style={{ ...replyAvatarWrapStyle, cursor: "pointer" }}>
                               <img
                                 src={getAvatarSrc(reply.avatar_url, reply.user_phone, reply.username)}
                                 onError={(event) => handleAvatarLoadError(event, reply.user_phone, reply.username)}
@@ -301,6 +304,7 @@ function CommentsOverlay({
           </div>
         )}
       </div>
+      <UserPointsCardModal visible={userPointsCard.visible} loading={userPointsCard.loading} data={userPointsCard.data} onClose={userPointsCard.close} />
     </div>
   );
 }
