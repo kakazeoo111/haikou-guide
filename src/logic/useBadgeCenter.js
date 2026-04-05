@@ -39,6 +39,15 @@ export function useBadgeCenter({ authApiBase, currentUser, adminPhone }) {
     });
   }, [authApiBase, currentUser?.phone]);
 
+  useEffect(() => {
+    if (!showBadgePicker || !currentUser?.phone) return undefined;
+    refreshBadgeSummary(currentUser.phone).catch((error) => console.error("Refresh badge summary failed:", error));
+    const timer = setInterval(() => {
+      refreshBadgeSummary(currentUser.phone).catch((error) => console.error("Poll badge summary failed:", error));
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [showBadgePicker, currentUser?.phone, authApiBase]);
+
   const openManageBadgeModal = () => {
     if (!currentUser || currentUser.phone !== adminPhone) {
       alert("\u4ec5\u7ad9\u4e3b\u53ef\u4ee5\u64cd\u4f5c\u79f0\u53f7\u6388\u6743");

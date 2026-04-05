@@ -41,7 +41,20 @@ function getCardStyle(item, activeBadgeTitle) {
   };
 }
 
+function getBadgeProgress(item) {
+  if (item?.progress?.text) {
+    const rawPercent = Number(item?.progress?.percent || 0);
+    const percent = item.owned ? 100 : Math.max(0, Math.min(100, Number.isFinite(rawPercent) ? rawPercent : 0));
+    return { text: item.progress.text, percent };
+  }
+  if (item.owned) return { text: "已达成，随时切换佩戴", percent: 100 };
+  const rawPercent = Number(item?.progress?.percent || 0);
+  const percent = Math.max(0, Math.min(100, Number.isFinite(rawPercent) ? rawPercent : 0));
+  return { text: item?.progress?.text || "继续冲刺，马上解锁", percent };
+}
+
 function BadgeCard({ item, activeBadgeTitle, onSelect }) {
+  const progress = getBadgeProgress(item);
   return (
     <div style={getCardStyle(item, activeBadgeTitle)} onClick={() => item.owned && onSelect(item.name)}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
@@ -51,6 +64,21 @@ function BadgeCard({ item, activeBadgeTitle, onSelect }) {
       <div style={{ fontSize: "14px", color: "#1f3a2d", fontWeight: 700 }}>{item.name}</div>
       <div style={{ fontSize: "12px", color: "#4f6b5e", marginTop: "4px" }}>{item.mood || "继续探索解锁更多称号"}</div>
       <div style={{ fontSize: "11px", color: "#7a8f84", marginTop: "4px" }}>{item.ruleText || ""}</div>
+      <div style={{ marginTop: "8px" }}>
+        <div style={{ fontSize: "11px", color: "#3f5f51", fontWeight: 700 }}>{progress.text}</div>
+        <div style={{ marginTop: "5px", width: "100%", height: "6px", borderRadius: "999px", background: "rgba(153,177,165,0.25)", overflow: "hidden" }}>
+          <div
+            style={{
+              width: `${progress.percent}%`,
+              height: "100%",
+              borderRadius: "999px",
+              background: "linear-gradient(90deg, #5aa77b 0%, #39b8a3 52%, #52c9ff 100%)",
+              boxShadow: "0 0 10px rgba(57,184,163,0.45)",
+              transition: "width 0.25s ease",
+            }}
+          />
+        </div>
+      </div>
     </div>
   );
 }

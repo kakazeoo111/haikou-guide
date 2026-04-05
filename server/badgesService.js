@@ -1,12 +1,15 @@
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_BADGE_TITLE = "未解锁称号";
+const FORUM_POST_TARGET = 7;
+const FORUM_CALL_TARGET = 31; // >30
 const BADGE_PRIORITY = [
   "无私奉献",
   "快乐种草机",
+  "论坛居士",
   "人气椰",
   "小夜猫",
-  "评论小椰",
-  "探店小椰",
+  "评论小子",
+  "探店能手",
   "佛系椰",
   "椰岛新兵",
 ];
@@ -16,16 +19,18 @@ const BADGE_CATALOG = [
   { name: "评论小子", icon: "💬", mood: "发言有料选手", sourceType: "quant", ruleText: "评论总数 >= 15" },
   { name: "人气椰", icon: "🔥", mood: "全场高光体质", sourceType: "quant", ruleText: "收到点赞总数 >= 50" },
   { name: "快乐种草机", icon: "✨", mood: "一发入魂种草王", sourceType: "quant", ruleText: "收到点赞总数 >= 100" },
+  { name: "论坛居士", icon: "🪩", mood: "深夜发光体，句句都有人共鸣", sourceType: "quant", ruleText: "论坛发帖 >= 7 且累计被打call > 30" },
   { name: "佛系椰", icon: "🧘", mood: "静静看世界", sourceType: "quant", ruleText: "近7天只浏览不发布" },
   { name: "小夜猫", icon: "🌙", mood: "深夜营业常驻", sourceType: "quant", ruleText: "22:00-02:00评论+发布 >= 15" },
   { name: "无私奉献", icon: "🤝", mood: "站主特别认可", sourceType: "manual", ruleText: "站主手动授权" },
 ];
 const QUANT_BADGE_RULES = [
   { name: "椰岛新兵", isEarned: (metrics) => metrics.accountAgeDays >= 3 },
-  { name: "探店小椰", isEarned: (metrics) => metrics.recommendationCount >= 3 },
-  { name: "评论小椰", isEarned: (metrics) => metrics.commentCount >= 15 },
+  { name: "探店能手", isEarned: (metrics) => metrics.recommendationCount >= 3 },
+  { name: "评论小子", isEarned: (metrics) => metrics.commentCount >= 15 },
   { name: "人气椰", isEarned: (metrics) => metrics.receivedLikesTotal >= 50 },
   { name: "快乐种草机", isEarned: (metrics) => metrics.receivedLikesTotal >= 100 },
+  { name: "论坛居士", isEarned: (metrics) => metrics.forumPostCount >= FORUM_POST_TARGET && metrics.forumCallReceivedCount > 30 },
   { name: "佛系椰", isEarned: (metrics) => metrics.accountAgeDays >= 7 && metrics.postCountLast7Days === 0 },
   { name: "小夜猫", isEarned: (metrics) => metrics.nightActiveCount >= 15 },
 ];
@@ -73,9 +78,40 @@ function pickPriorityBadgeName(allBadges) {
   return allBadges[0] || DEFAULT_BADGE_TITLE;
 }
 
-function buildBadgeCatalog(allBadges, manualBadges) {
+function getProgressPercent(current, target) {
+  const normalizedTarget = Math.max(1, toCount(target));
+  return Math.max(0, Math.min(100, Math.round((toCount(current) / normalizedTarget) * 100)));
+}
+
+function buildBadgeProgressMap(metrics) {
+  const forumPostCurrent = toCount(metrics.forumPostCount);
+  const forumCallCurrent = toCount(metrics.forumCallReceivedCount);
+  const forumProgress = {
+    text: `发帖 ${forumPostCurrent}/${FORUM_POST_TARGET} · 被打call ${forumCallCurrent}/${FORUM_CALL_TARGET}`,
+    percent: Math.round((getProgressPercent(forumPostCurrent, FORUM_POST_TARGET) + getProgressPercent(forumCallCurrent, FORUM_CALL_TARGET)) / 2),
+  };
+  const quietDays = toCount(metrics.accountAgeDays);
+  const quietPostCount = toCount(metrics.postCountLast7Days);
+  const quietProgress = {
+    text: `账号天数 ${quietDays}/7 · 近7天发布 ${quietPostCount}/0`,
+    percent: Math.round((getProgressPercent(quietDays, 7) + (quietPostCount === 0 ? 100 : 0)) / 2),
+  };
+  return {
+    "椰岛新兵": { text: `登录天数 ${toCount(metrics.accountAgeDays)}/3`, percent: getProgressPercent(metrics.accountAgeDays, 3) },
+    "探店能手": { text: `推荐 ${toCount(metrics.recommendationCount)}/3`, percent: getProgressPercent(metrics.recommendationCount, 3) },
+    "评论小子": { text: `评论 ${toCount(metrics.commentCount)}/15`, percent: getProgressPercent(metrics.commentCount, 15) },
+    "人气椰": { text: `收到点赞 ${toCount(metrics.receivedLikesTotal)}/50`, percent: getProgressPercent(metrics.receivedLikesTotal, 50) },
+    "快乐种草机": { text: `收到点赞 ${toCount(metrics.receivedLikesTotal)}/100`, percent: getProgressPercent(metrics.receivedLikesTotal, 100) },
+    "论坛居士": forumProgress,
+    "佛系椰": quietProgress,
+    "小夜猫": { text: `深夜活跃 ${toCount(metrics.nightActiveCount)}/15`, percent: getProgressPercent(metrics.nightActiveCount, 15) },
+  };
+}
+
+function buildBadgeCatalog(allBadges, manualBadges, metrics) {
   const ownedSet = new Set(allBadges);
-  const baseCatalog = BADGE_CATALOG.map((badge) => ({ ...badge, owned: ownedSet.has(badge.name) }));
+  const progressMap = buildBadgeProgressMap(metrics);
+  const baseCatalog = BADGE_CATALOG.map((badge) => ({ ...badge, owned: ownedSet.has(badge.name), progress: progressMap[badge.name] || null }));
   const extraManualBadges = manualBadges
     .filter((name) => !BADGE_CATALOG.some((badge) => badge.name === name))
     .map((name) => ({
@@ -85,6 +121,7 @@ function buildBadgeCatalog(allBadges, manualBadges) {
       sourceType: "manual",
       ruleText: "站主手动授权称号",
       owned: true,
+      progress: null,
     }));
   return [...baseCatalog, ...extraManualBadges];
 }
@@ -149,6 +186,21 @@ async function collectActivityMetrics(pool, phone) {
   return { postCountLast7Days, nightActiveCount };
 }
 
+async function collectForumMetrics(pool, phone) {
+  const forumPostCount = await queryCount(pool, "SELECT COUNT(*) AS count FROM forum_posts WHERE user_phone = ?", [phone]);
+  const forumCallReceivedCount = await queryCount(
+    pool,
+    `
+      SELECT COUNT(*) AS count
+      FROM forum_post_calls c
+      JOIN forum_posts p ON c.post_id = p.id
+      WHERE p.user_phone = ?
+    `,
+    [phone]
+  );
+  return { forumPostCount, forumCallReceivedCount };
+}
+
 export async function ensureBadgeGrantTable(pool) {
   await pool.execute(`
     CREATE TABLE IF NOT EXISTS user_badge_grants (
@@ -174,14 +226,15 @@ export async function ensureBadgeGrantTable(pool) {
 }
 
 export async function buildUserBadgeData(pool, phone) {
-  const [baseMetrics, likeMetrics, activityMetrics, manualBadges, selectedRaw] = await Promise.all([
+  const [baseMetrics, likeMetrics, activityMetrics, forumMetrics, manualBadges, selectedRaw] = await Promise.all([
     collectBaseMetrics(pool, phone),
     collectLikeMetrics(pool, phone),
     collectActivityMetrics(pool, phone),
+    collectForumMetrics(pool, phone),
     getManualBadgeNames(pool, phone),
     getSelectedBadgeName(pool, phone),
   ]);
-  const metrics = { ...baseMetrics, ...likeMetrics, ...activityMetrics };
+  const metrics = { ...baseMetrics, ...likeMetrics, ...activityMetrics, ...forumMetrics };
   const quantifiedBadges = getQuantBadgeNames(metrics);
   const allBadges = [...new Set([...manualBadges, ...quantifiedBadges])];
   const selectedTitle = allBadges.includes(selectedRaw) ? selectedRaw : "";
@@ -192,7 +245,7 @@ export async function buildUserBadgeData(pool, phone) {
     allBadges,
     quantifiedBadges,
     manualBadges,
-    badgeCatalog: buildBadgeCatalog(allBadges, manualBadges),
+    badgeCatalog: buildBadgeCatalog(allBadges, manualBadges, metrics),
     metrics,
   };
 }
