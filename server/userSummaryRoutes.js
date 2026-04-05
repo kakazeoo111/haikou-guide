@@ -26,7 +26,7 @@ async function queryReceivedLikeCount(pool, phone) {
         FROM recommendation_likes rl
         JOIN recommendations r ON rl.recommendation_id = r.id
         WHERE r.user_phone = ?
-          AND rl.phone <> r.user_phone
+          AND rl.phone COLLATE utf8mb4_general_ci <> r.user_phone COLLATE utf8mb4_general_ci
       `,
       [phone],
     ),
@@ -37,7 +37,7 @@ async function queryReceivedLikeCount(pool, phone) {
         FROM comment_likes cl
         JOIN comments c ON cl.comment_id = c.id
         WHERE c.user_phone = ?
-          AND cl.phone <> c.user_phone
+          AND cl.phone COLLATE utf8mb4_general_ci <> c.user_phone COLLATE utf8mb4_general_ci
       `,
       [phone],
     ),
@@ -53,7 +53,7 @@ async function queryForumCallCount(pool, phone) {
       FROM forum_post_calls fc
       JOIN forum_posts fp ON fc.post_id = fp.id
       WHERE fp.user_phone = ?
-        AND fc.user_phone <> fp.user_phone
+        AND fc.user_phone COLLATE utf8mb4_general_ci <> fp.user_phone COLLATE utf8mb4_general_ci
     `,
     [phone],
   );
