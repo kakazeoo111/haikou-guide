@@ -3,6 +3,16 @@ import { buildUserBadgeData } from "./badgesService.js";
 const PHONE_REGEX = /^1\d{10}$/;
 const POINTS_PER_VOTE = 10;
 const ACTIVE_WINDOW_DAYS = 30;
+const ACTIVE_SOURCE_TABLES = [
+  { tableName: "recommendations", phoneColumn: "user_phone" },
+  { tableName: "comments", phoneColumn: "user_phone" },
+  { tableName: "forum_posts", phoneColumn: "user_phone" },
+  { tableName: "forum_comments", phoneColumn: "user_phone" },
+  { tableName: "recommendation_likes", phoneColumn: "phone" },
+  { tableName: "comment_likes", phoneColumn: "phone" },
+  { tableName: "forum_post_calls", phoneColumn: "user_phone" },
+  { tableName: "place_likes", phoneColumn: "phone" },
+];
 
 async function queryCount(pool, sql, params) {
   const [rows] = await pool.execute(sql, params);
@@ -67,34 +77,42 @@ function formatLocalDate(date) {
   return `${year}-${month}-${day}`;
 }
 
+async function getTablesWithCreatedAt(pool, tableNames) {
+  if (!tableNames.length) return new Set();
+  const placeholders = tableNames.map(() => "?").join(",");
+  const [rows] = await pool.execute(
+    `
+      SELECT table_name
+      FROM information_schema.columns
+      WHERE table_schema = DATABASE()
+        AND column_name = 'created_at'
+        AND table_name IN (${placeholders})
+    `,
+    tableNames,
+  );
+  return new Set(rows.map((row) => String(row.table_name || "")));
+}
+
 async function queryRecentActiveDays(pool, phone, windowDays = ACTIVE_WINDOW_DAYS) {
   const thresholdDate = new Date();
   thresholdDate.setDate(thresholdDate.getDate() - (windowDays - 1));
   const threshold = formatLocalDate(thresholdDate);
+  const tableNames = ACTIVE_SOURCE_TABLES.map((item) => item.tableName);
+  const supportedTables = await getTablesWithCreatedAt(pool, tableNames);
+  const activeSources = ACTIVE_SOURCE_TABLES.filter((item) => supportedTables.has(item.tableName));
+  if (!activeSources.length) return 0;
+  const unionSql = activeSources
+    .map((item) => `SELECT DATE(created_at) AS active_day FROM ${item.tableName} WHERE ${item.phoneColumn} = ?`)
+    .join(" UNION ALL ");
+  const params = [...activeSources.map(() => phone), threshold];
   return queryCount(
     pool,
     `
       SELECT COUNT(DISTINCT active_day) AS count
-      FROM (
-        SELECT DATE(created_at) AS active_day FROM recommendations WHERE user_phone = ?
-        UNION ALL
-        SELECT DATE(created_at) AS active_day FROM comments WHERE user_phone = ?
-        UNION ALL
-        SELECT DATE(created_at) AS active_day FROM forum_posts WHERE user_phone = ?
-        UNION ALL
-        SELECT DATE(created_at) AS active_day FROM forum_comments WHERE user_phone = ?
-        UNION ALL
-        SELECT DATE(created_at) AS active_day FROM recommendation_likes WHERE phone = ?
-        UNION ALL
-        SELECT DATE(created_at) AS active_day FROM comment_likes WHERE phone = ?
-        UNION ALL
-        SELECT DATE(created_at) AS active_day FROM forum_post_calls WHERE user_phone = ?
-        UNION ALL
-        SELECT DATE(created_at) AS active_day FROM place_likes WHERE phone = ?
-      ) activity_days
+      FROM (${unionSql}) activity_days
       WHERE active_day >= ?
     `,
-    [phone, phone, phone, phone, phone, phone, phone, phone, threshold],
+    params,
   );
 }
 
