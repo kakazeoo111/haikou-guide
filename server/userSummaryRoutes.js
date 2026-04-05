@@ -2,6 +2,7 @@ import { buildUserBadgeData } from "./badgesService.js";
 
 const PHONE_REGEX = /^1\d{10}$/;
 const POINTS_PER_VOTE = 10;
+const ACTIVE_WINDOW_DAYS = 30;
 
 async function queryCount(pool, sql, params) {
   const [rows] = await pool.execute(sql, params);
@@ -59,6 +60,44 @@ async function queryForumCallCount(pool, phone) {
   );
 }
 
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+async function queryRecentActiveDays(pool, phone, windowDays = ACTIVE_WINDOW_DAYS) {
+  const thresholdDate = new Date();
+  thresholdDate.setDate(thresholdDate.getDate() - (windowDays - 1));
+  const threshold = formatLocalDate(thresholdDate);
+  return queryCount(
+    pool,
+    `
+      SELECT COUNT(DISTINCT active_day) AS count
+      FROM (
+        SELECT DATE(created_at) AS active_day FROM recommendations WHERE user_phone = ?
+        UNION ALL
+        SELECT DATE(created_at) AS active_day FROM comments WHERE user_phone = ?
+        UNION ALL
+        SELECT DATE(created_at) AS active_day FROM forum_posts WHERE user_phone = ?
+        UNION ALL
+        SELECT DATE(created_at) AS active_day FROM forum_comments WHERE user_phone = ?
+        UNION ALL
+        SELECT DATE(created_at) AS active_day FROM recommendation_likes WHERE phone = ?
+        UNION ALL
+        SELECT DATE(created_at) AS active_day FROM comment_likes WHERE phone = ?
+        UNION ALL
+        SELECT DATE(created_at) AS active_day FROM forum_post_calls WHERE user_phone = ?
+        UNION ALL
+        SELECT DATE(created_at) AS active_day FROM place_likes WHERE phone = ?
+      ) activity_days
+      WHERE active_day >= ?
+    `,
+    [phone, phone, phone, phone, phone, phone, phone, phone, threshold],
+  );
+}
+
 function pickActiveBadgeIcon(badgeData) {
   const catalog = Array.isArray(badgeData?.badgeCatalog) ? badgeData.badgeCatalog : [];
   const matched = catalog.find((item) => String(item?.name || "") === String(badgeData?.activeTitle || ""));
@@ -82,10 +121,11 @@ export function registerUserSummaryRoutes(app, { pool }) {
     try {
       const user = await queryUserBasicInfo(pool, phone);
       if (!user) return res.status(404).json({ ok: false, message: "用户不存在" });
-      const [badgeData, receivedLikes, forumCalls] = await Promise.all([
+      const [badgeData, receivedLikes, forumCalls, recentActiveDays] = await Promise.all([
         buildUserBadgeData(pool, phone),
         queryReceivedLikeCount(pool, phone),
         queryForumCallCount(pool, phone),
+        queryRecentActiveDays(pool, phone),
       ]);
       const totalVotes = receivedLikes + forumCalls;
       res.json({
@@ -98,6 +138,8 @@ export function registerUserSummaryRoutes(app, { pool }) {
           badgeIcon: pickActiveBadgeIcon(badgeData),
           points: totalVotes * POINTS_PER_VOTE,
           totalVotes,
+          recentActiveDays,
+          activeWindowDays: ACTIVE_WINDOW_DAYS,
         },
       });
     } catch (error) {
