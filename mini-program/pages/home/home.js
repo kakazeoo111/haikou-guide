@@ -7,7 +7,7 @@ const {
 } = require("../../utils/api");
 
 function normalizePrizeName(name) {
-  return String(name || "").trim() || "未知奖品";
+  return String(name || "").trim() || "Unknown Prize";
 }
 
 Page({
@@ -59,7 +59,7 @@ Page({
     const phone = this.data.user?.phone;
     if (!phone) return;
     if (this.data.signedToday) {
-      wx.showToast({ title: "今天已签到", icon: "none" });
+      wx.showToast({ title: "Checked in today", icon: "none" });
       return;
     }
     try {
@@ -70,7 +70,7 @@ Page({
         continuousDays: Number(result.data?.continuousDays || 0),
         drawChances: Number(result.data?.drawChances || 0),
       });
-      wx.showToast({ title: "签到成功 +1机会", icon: "success" });
+      wx.showToast({ title: "Check-in success +1", icon: "success" });
     } catch (error) {
       wx.showToast({ title: error.message, icon: "none" });
     }
@@ -79,11 +79,12 @@ Page({
   async handleSpin() {
     if (this.data.spinning) return;
     if (this.data.drawChances <= 0) {
-      wx.showToast({ title: "请先签到获取机会", icon: "none" });
+      wx.showToast({ title: "Check in first", icon: "none" });
       return;
     }
     const phone = this.data.user?.phone;
     if (!phone) return;
+
     this.setData({ spinning: true });
     try {
       const result = await spinLottery(phone);
@@ -95,18 +96,23 @@ Page({
       const centerAngle = index * segment + segment / 2;
       const targetAngle = 360 - centerAngle;
       const finalDeg = this.data.currentRotation + 2160 + targetAngle;
+
       this.setData({
         wheelDeg: finalDeg,
         currentRotation: finalDeg,
         latestPrizeName: normalizePrizeName(prize.name),
       });
+
       setTimeout(() => {
         wx.showModal({
-          title: "抽奖结果",
-          content: `恭喜获得：${normalizePrizeName(prize.name)}`,
+          title: "Draw Result",
+          content: `You won: ${normalizePrizeName(prize.name)}`,
           showCancel: false,
         });
-        this.setData({ spinning: false, drawChances: Number(result.data?.drawChances || 0) });
+        this.setData({
+          spinning: false,
+          drawChances: Number(result.data?.drawChances || 0),
+        });
         this.refreshLogs();
       }, 3400);
     } catch (error) {
@@ -122,7 +128,7 @@ Page({
       const logsResult = await fetchLotteryLogs(phone);
       this.setData({ logs: logsResult.data || [] });
     } catch (error) {
-      console.error("刷新抽奖记录失败:", error.message);
+      console.error("Refresh lottery logs failed:", error.message);
     }
   },
 

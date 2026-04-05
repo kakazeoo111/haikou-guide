@@ -15,25 +15,17 @@ function request(path, method = "GET", data = {}) {
           resolve(body);
           return;
         }
-        reject(new Error(body.message || "请求失败"));
+        reject(new Error(body.message || "Request failed"));
       },
       fail: (error) => {
-        reject(new Error(error.errMsg || "网络错误"));
+        reject(new Error(error.errMsg || "Network error"));
       },
     });
   });
 }
 
-function sendCode(phone) {
-  return request("/api/mp/auth/send-code", "POST", { phone });
-}
-
-function loginByCode(phone, code) {
-  return request("/api/mp/auth/login-by-code", "POST", { phone, code });
-}
-
-function loginByWxPhoneCode(wxCode) {
-  return request("/api/mp/auth/login-by-wx-phone", "POST", { wxCode });
+function loginByWechatCode(wxCode) {
+  return request("/api/mp/auth/login-by-wechat", "POST", { wxCode });
 }
 
 function fetchSignStatus(phone) {
@@ -57,9 +49,7 @@ function fetchLotteryLogs(phone) {
 }
 
 module.exports = {
-  sendCode,
-  loginByCode,
-  loginByWxPhoneCode,
+  loginByWechatCode,
   fetchSignStatus,
   checkin,
   fetchPrizes,

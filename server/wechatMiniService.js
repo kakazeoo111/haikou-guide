@@ -10,9 +10,17 @@ function readMiniEnv() {
   const appid = String(process.env.WECHAT_MINI_APPID || "").trim();
   const secret = String(process.env.WECHAT_MINI_APPSECRET || "").trim();
   if (!appid || !secret) {
-    throw new Error("缺少微信小程序环境变量：WECHAT_MINI_APPID 或 WECHAT_MINI_APPSECRET");
+    throw new Error("Missing mini program env: WECHAT_MINI_APPID or WECHAT_MINI_APPSECRET");
   }
   return { appid, secret };
+}
+
+async function requestJson(url, options = {}) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`WeChat API request failed: ${response.status}`);
+  }
+  return response.json();
 }
 
 function buildTokenUrl({ appid, secret }) {
@@ -24,12 +32,27 @@ function buildTokenUrl({ appid, secret }) {
   return `https://api.weixin.qq.com/cgi-bin/token?${query.toString()}`;
 }
 
-async function requestJson(url, options = {}) {
-  const response = await fetch(url, options);
-  if (!response.ok) {
-    throw new Error(`微信接口请求失败: ${response.status}`);
+export async function fetchOpenIdByLoginCode(wxLoginCode) {
+  const code = String(wxLoginCode || "").trim();
+  if (!code) throw new Error("wx.login code is required");
+  const { appid, secret } = readMiniEnv();
+  const query = new URLSearchParams({
+    appid,
+    secret,
+    js_code: code,
+    grant_type: "authorization_code",
+  });
+  const url = `https://api.weixin.qq.com/sns/jscode2session?${query.toString()}`;
+  const data = await requestJson(url);
+  const errCode = Number(data?.errcode || 0);
+  if (errCode !== 0) {
+    const error = new Error(String(data?.errmsg || "jscode2session failed"));
+    error.code = errCode;
+    throw error;
   }
-  return response.json();
+  const openId = String(data?.openid || "").trim();
+  if (!openId) throw new Error("openid missing from jscode2session");
+  return openId;
 }
 
 export async function getMiniAccessToken() {
@@ -41,8 +64,7 @@ export async function getMiniAccessToken() {
   const data = await requestJson(buildTokenUrl(env));
   const accessToken = String(data?.access_token || "").trim();
   if (!accessToken) {
-    const message = String(data?.errmsg || "获取微信 access_token 失败");
-    const error = new Error(message);
+    const error = new Error(String(data?.errmsg || "fetch access_token failed"));
     error.code = Number(data?.errcode || 0);
     throw error;
   }
@@ -50,32 +72,4 @@ export async function getMiniAccessToken() {
   wxTokenCache.accessToken = accessToken;
   wxTokenCache.expiresAt = now + Math.max(expiresIn - TOKEN_REFRESH_GAP_SECONDS, 60) * 1000;
   return accessToken;
-}
-
-export async function fetchPhoneByWxCode(wxCode) {
-  const normalizedCode = String(wxCode || "").trim();
-  if (!normalizedCode) {
-    throw new Error("微信手机号登录 code 不能为空");
-  }
-  const accessToken = await getMiniAccessToken();
-  const url = `https://api.weixin.qq.com/wxa/business/getuserphonenumber?access_token=${encodeURIComponent(accessToken)}`;
-  const data = await requestJson(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ code: normalizedCode }),
-  });
-  const errCode = Number(data?.errcode || 0);
-  if (errCode !== 0) {
-    const message = String(data?.errmsg || "微信手机号获取失败");
-    const error = new Error(message);
-    error.code = errCode;
-    throw error;
-  }
-  const phone = String(data?.phone_info?.phoneNumber || "").trim();
-  if (!phone) {
-    throw new Error("未获取到有效手机号");
-  }
-  return phone;
 }

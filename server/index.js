@@ -102,7 +102,7 @@ registerPlaceCommentRoutes(app, { pool, upload, addNotice });
 registerNotificationRoutes(app, { pool });
 registerMiscRoutes(app, { pool, upload, ADMIN_PHONE });
 registerUserSummaryRoutes(app, { pool });
-await registerMiniProgramRoutes(app, { pool, otpStore, smsClient });
+await registerMiniProgramRoutes(app, { pool });
 
 try {
   await registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE });

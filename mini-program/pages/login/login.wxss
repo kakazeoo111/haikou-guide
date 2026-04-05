@@ -1,90 +1,37 @@
 .container {
   min-height: 100vh;
-  padding: 60rpx 36rpx;
+  padding: 70rpx 36rpx;
   box-sizing: border-box;
-  background: linear-gradient(180deg, #e6f6ec 0%, #f7fbf8 60%, #f3faf6 100%);
+  background: linear-gradient(180deg, #e7f6ee 0%, #f5faf8 100%);
 }
 
 .hero {
-  margin-bottom: 40rpx;
+  margin-bottom: 36rpx;
 }
 
 .title {
-  font-size: 52rpx;
+  font-size: 50rpx;
   font-weight: 700;
-  color: #1f2a24;
+  color: #1d2a24;
 }
 
 .subtitle {
   margin-top: 12rpx;
   font-size: 26rpx;
-  color: #6d7b74;
+  color: #6f7c75;
 }
 
-.form-card {
+.login-card {
   padding: 36rpx 28rpx;
 }
 
-.label {
-  margin: 10rpx 0 14rpx;
-  color: #4f5e56;
-  font-size: 26rpx;
-  font-weight: 600;
-}
-
-.input {
-  height: 88rpx;
-  border-radius: 20rpx;
-  padding: 0 24rpx;
-  background: #f5faf7;
-  border: 2rpx solid #d8e9df;
-  font-size: 30rpx;
-  color: #1f2a24;
-  box-sizing: border-box;
-}
-
-.code-row {
-  display: flex;
-  gap: 16rpx;
-  align-items: center;
-}
-
-.code-input {
-  flex: 1;
-}
-
-.code-btn {
-  width: 210rpx;
-  height: 88rpx;
-  border: none;
-  border-radius: 20rpx;
-  background: #eaf6ef;
-  color: #2f7f57;
-  font-size: 26rpx;
-  font-weight: 600;
-  line-height: 88rpx;
-}
-
-.login-btn {
-  margin-top: 36rpx;
+.one-click-btn {
   height: 92rpx;
-  border: none;
   border-radius: 24rpx;
-  background: linear-gradient(135deg, #5aa77b 0%, #3f9267 100%);
+  border: none;
   color: #ffffff;
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 700;
   line-height: 92rpx;
-}
-
-.wx-phone-btn {
-  margin-top: 18rpx;
-  height: 86rpx;
-  border: 2rpx solid #cfe4d7;
-  border-radius: 22rpx;
-  background: #edf7f1;
-  color: #2f7f57;
-  font-size: 28rpx;
-  font-weight: 700;
-  line-height: 86rpx;
+  background: linear-gradient(135deg, #5aa77b 0%, #3f9267 100%);
 }
