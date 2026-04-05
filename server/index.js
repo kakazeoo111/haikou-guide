@@ -19,6 +19,7 @@ import { registerPlaceCommentRoutes } from "./placeCommentRoutes.js";
 import { registerNotificationRoutes } from "./notificationRoutes.js";
 import { registerMiscRoutes } from "./miscRoutes.js";
 import { registerUserSummaryRoutes } from "./userSummaryRoutes.js";
+import { registerMiniProgramRoutes } from "./miniProgramRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -101,6 +102,7 @@ registerPlaceCommentRoutes(app, { pool, upload, addNotice });
 registerNotificationRoutes(app, { pool });
 registerMiscRoutes(app, { pool, upload, ADMIN_PHONE });
 registerUserSummaryRoutes(app, { pool });
+await registerMiniProgramRoutes(app, { pool, otpStore, smsClient });
 
 try {
   await registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE });

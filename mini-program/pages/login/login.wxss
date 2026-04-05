@@ -1,0 +1,78 @@
+.container {
+  min-height: 100vh;
+  padding: 60rpx 36rpx;
+  box-sizing: border-box;
+  background: linear-gradient(180deg, #e6f6ec 0%, #f7fbf8 60%, #f3faf6 100%);
+}
+
+.hero {
+  margin-bottom: 40rpx;
+}
+
+.title {
+  font-size: 52rpx;
+  font-weight: 700;
+  color: #1f2a24;
+}
+
+.subtitle {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: #6d7b74;
+}
+
+.form-card {
+  padding: 36rpx 28rpx;
+}
+
+.label {
+  margin: 10rpx 0 14rpx;
+  color: #4f5e56;
+  font-size: 26rpx;
+  font-weight: 600;
+}
+
+.input {
+  height: 88rpx;
+  border-radius: 20rpx;
+  padding: 0 24rpx;
+  background: #f5faf7;
+  border: 2rpx solid #d8e9df;
+  font-size: 30rpx;
+  color: #1f2a24;
+  box-sizing: border-box;
+}
+
+.code-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+}
+
+.code-input {
+  flex: 1;
+}
+
+.code-btn {
+  width: 210rpx;
+  height: 88rpx;
+  border: none;
+  border-radius: 20rpx;
+  background: #eaf6ef;
+  color: #2f7f57;
+  font-size: 26rpx;
+  font-weight: 600;
+  line-height: 88rpx;
+}
+
+.login-btn {
+  margin-top: 36rpx;
+  height: 92rpx;
+  border: none;
+  border-radius: 24rpx;
+  background: linear-gradient(135deg, #5aa77b 0%, #3f9267 100%);
+  color: #ffffff;
+  font-size: 32rpx;
+  font-weight: 700;
+  line-height: 92rpx;
+}

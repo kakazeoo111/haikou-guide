@@ -1,0 +1,15 @@
+{
+  "pages": [
+    "pages/login/login",
+    "pages/home/home"
+  ],
+  "window": {
+    "navigationBarTitleText": "海口签到抽奖",
+    "navigationBarBackgroundColor": "#5aa77b",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f3faf6",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
