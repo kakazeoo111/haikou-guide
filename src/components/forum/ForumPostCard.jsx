@@ -81,6 +81,7 @@ function ForumPostCard({
   loadingComments,
   replyTarget,
   commentDraft,
+  commentImages,
   submittingComment,
   callingPost,
   onToggleComments,
@@ -89,11 +90,14 @@ function ForumPostCard({
   onReplySelect,
   onReplyCancel,
   onCommentDraftChange,
+  onSelectCommentImages,
+  onRemoveCommentImage,
   onSubmitComment,
   formatCommentTime,
 }) {
   const postId = Number(post.id);
   const postImages = parseForumImageUrls(post.image_url);
+  const commentImageInputId = `forum-comment-images-input-${postId}`;
   const commentMap = new Map((comments || []).map((item) => [Number(item.id), item]));
   const postBadge = getSelfBadge(post.user_phone, currentUser?.phone, activeBadgeTitle, badgeIcon);
 
@@ -145,6 +149,7 @@ function ForumPostCard({
           {!loadingComments && comments.map((comment) => {
             const parent = comment.parent_id ? commentMap.get(Number(comment.parent_id)) : null;
             const commentBadge = getSelfBadge(comment.user_phone, currentUser?.phone, activeBadgeTitle, badgeIcon);
+            const commentImages = parseForumImageUrls(comment.image_url);
             return (
               <div key={comment.id} style={{ borderBottom: "1px dashed #e5eeea", padding: "8px 0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
@@ -155,6 +160,19 @@ function ForumPostCard({
                   <span style={{ marginLeft: "auto", fontSize: "11px", color: "#a3b3ac" }}>{formatCommentTime(comment.created_at)}</span>
                 </div>
                 <div style={{ marginTop: "4px", fontSize: "13px", color: "#2d4439", whiteSpace: "pre-wrap" }}>{comment.content}</div>
+                {commentImages.length > 0 && (
+                  <div style={{ marginTop: "6px", display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "6px", maxWidth: "220px" }}>
+                    {commentImages.map((url, index) => (
+                      <img
+                        key={`${comment.id}-img-${index}`}
+                        src={url}
+                        alt="forum-comment-img"
+                        style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover", cursor: "zoom-in" }}
+                        onClick={() => onZoomImage(commentImages, index)}
+                      />
+                    ))}
+                  </div>
+                )}
                 <div style={{ marginTop: "4px" }}>
                   <span onClick={() => onReplySelect(postId, comment)} style={{ fontSize: "11px", color: "#5aa77b", cursor: "pointer" }}>回复</span>
                 </div>
@@ -168,6 +186,30 @@ function ForumPostCard({
               <span onClick={() => onReplyCancel(postId)} style={{ cursor: "pointer", color: "#8ea39a" }}>取消</span>
             </div>
           )}
+
+          {commentImages.length > 0 && (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "6px", marginTop: "8px", maxWidth: "240px" }}>
+              {commentImages.map((file, index) => (
+                <div key={`${postId}-comment-image-${file.name}-${index}`} style={{ position: "relative" }}>
+                  <img src={URL.createObjectURL(file)} alt="forum-comment-preview" style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover" }} />
+                  <span
+                    onClick={() => onRemoveCommentImage(postId, index)}
+                    style={{ position: "absolute", top: "-5px", right: "-5px", width: "18px", height: "18px", borderRadius: "50%", background: "#ff4d4f", color: "#fff", textAlign: "center", lineHeight: "18px", cursor: "pointer" }}
+                  >
+                    ×
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
+            <button onClick={() => document.getElementById(commentImageInputId)?.click()} style={{ ...btnMainStyle, marginTop: 0, width: "auto", padding: "7px 12px", borderRadius: "999px" }}>
+              图片
+            </button>
+            <span style={{ fontSize: "11px", color: "#7f968a" }}>已选 {commentImages.length}/9</span>
+            <input id={commentImageInputId} type="file" hidden accept="image/*" multiple onChange={(event) => onSelectCommentImages(postId, event)} />
+          </div>
 
           <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
             <input

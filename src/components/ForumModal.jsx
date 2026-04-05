@@ -3,63 +3,18 @@ import { btnMainStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import ForumPostCard from "./forum/ForumPostCard";
 import { useOnlineCount } from "../logic/useOnlineCount";
+import {
+  FORUM_IMAGE_TOO_LARGE_MESSAGE,
+  MAX_FORUM_IMAGES,
+  buildForumPostsUrl,
+  forumHeaderStyle,
+  forumOnlinePillStyle,
+  forumPageStyle,
+  normalizeForumPosts,
+  splitValidForumFiles,
+} from "../logic/forumModalUtils";
 
-const MAX_FORUM_IMAGES = 9;
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
-
-const pageStyle = {
-  position: "fixed",
-  top: 0,
-  left: 0,
-  width: "100vw",
-  height: "100vh",
-  zIndex: 3500,
-  background: "#f8fbf9",
-  display: "flex",
-  flexDirection: "column",
-};
-
-const headerStyle = {
-  height: "56px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "0 14px",
-  borderBottom: "1px solid #e8efe9",
-  background: "#fff",
-};
-
-const onlinePillStyle = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "5px",
-  padding: "4px 10px",
-  borderRadius: "999px",
-  fontSize: "12px",
-  fontWeight: 700,
-  background: "#eef8f2",
-  color: "#2e6a4a",
-  border: "1px solid #d6ecde",
-};
-
-function buildForumPostsUrl(authApiBase, phone, keyword, sortMode) {
-  const params = new URLSearchParams({
-    phone: String(phone || "").trim(),
-    search: String(keyword || "").trim(),
-    sort: sortMode,
-  });
-  return `${authApiBase}/api/forum/posts?${params.toString()}`;
-}
-
-function normalizeForumPosts(items) {
-  if (!Array.isArray(items)) return [];
-  return items.map((item) => ({
-    ...item,
-    call_count: Number(item.call_count || 0),
-    comment_count: Number(item.comment_count || 0),
-    is_called: Boolean(item.is_called),
-  }));
-}
 
 function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMeta, onBack, onZoomImage, formatCommentTime }) {
   const [posts, setPosts] = useState([]);
@@ -75,6 +30,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   const [submittingCommentPostIds, setSubmittingCommentPostIds] = useState([]);
   const [callingPostIds, setCallingPostIds] = useState([]);
   const [commentDraftMap, setCommentDraftMap] = useState({});
+  const [commentImagesMap, setCommentImagesMap] = useState({});
   const [replyTargetMap, setReplyTargetMap] = useState({});
 
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
@@ -134,18 +90,48 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   };
 
   const handleSelectPostImages = (event) => {
-    const files = Array.from(event.target.files || []);
-    if (!files.length) return;
+    const { validFiles, hasOversizedFile } = splitValidForumFiles(event.target.files);
+    if (hasOversizedFile) alert(FORUM_IMAGE_TOO_LARGE_MESSAGE);
+    if (!validFiles.length) {
+      event.target.value = "";
+      return;
+    }
     const remain = MAX_FORUM_IMAGES - postImages.length;
     if (remain <= 0) {
       alert(`最多上传 ${MAX_FORUM_IMAGES} 张图片`);
       event.target.value = "";
       return;
     }
-    const picked = files.slice(0, remain);
+    const picked = validFiles.slice(0, remain);
     setPostImages((prev) => [...prev, ...picked]);
-    if (files.length > remain) alert(`最多上传 ${MAX_FORUM_IMAGES} 张图片，已自动截取前 ${remain} 张`);
+    if (validFiles.length > remain) alert(`最多上传 ${MAX_FORUM_IMAGES} 张图片，已自动截取前 ${remain} 张`);
     event.target.value = "";
+  };
+
+  const handleSelectCommentImages = (postId, event) => {
+    const { validFiles, hasOversizedFile } = splitValidForumFiles(event.target.files);
+    if (hasOversizedFile) alert(FORUM_IMAGE_TOO_LARGE_MESSAGE);
+    const existing = commentImagesMap[postId] || [];
+    if (!validFiles.length) {
+      event.target.value = "";
+      return;
+    }
+    const remain = MAX_FORUM_IMAGES - existing.length;
+    if (remain <= 0) {
+      alert(`最多上传 ${MAX_FORUM_IMAGES} 张图片`);
+      event.target.value = "";
+      return;
+    }
+    const picked = validFiles.slice(0, remain);
+    setCommentImagesMap((prev) => ({ ...prev, [postId]: [...existing, ...picked] }));
+    if (validFiles.length > remain) alert(`最多上传 ${MAX_FORUM_IMAGES} 张图片，已自动截取前 ${remain} 张`);
+    event.target.value = "";
+  };
+
+  const handleRemoveCommentImage = (postId, index) => {
+    const existing = commentImagesMap[postId] || [];
+    const next = existing.filter((_, i) => i !== index);
+    setCommentImagesMap((prev) => ({ ...prev, [postId]: next }));
   };
 
   const handleSubmitPost = async () => {
@@ -173,18 +159,25 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
 
   const handleSubmitComment = async (postId) => {
     const content = String(commentDraftMap[postId] || "").trim();
-    if (!content) return alert("评论内容不能为空");
+    const commentImages = commentImagesMap[postId] || [];
+    if (!content && commentImages.length === 0) return alert("评论内容和图片不能同时为空");
     const replyTarget = replyTargetMap[postId];
     setSubmittingCommentPostIds((prev) => [...prev, postId]);
     try {
+      const formData = new FormData();
+      formData.append("phone", currentUser.phone);
+      formData.append("postId", String(postId));
+      formData.append("content", content);
+      formData.append("parentId", replyTarget ? String(replyTarget.id) : "");
+      commentImages.forEach((file) => formData.append("images", file));
       const res = await fetch(`${authApiBase}/api/forum/comment/add`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: currentUser.phone, postId, content, parentId: replyTarget ? replyTarget.id : null }),
+        body: formData,
       });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "评论发布失败");
       setCommentDraftMap((prev) => ({ ...prev, [postId]: "" }));
+      setCommentImagesMap((prev) => ({ ...prev, [postId]: [] }));
       setReplyTargetMap((prev) => ({ ...prev, [postId]: null }));
       await loadComments(postId);
       await loadPosts(searchKeyword, sortMode);
@@ -229,8 +222,8 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   };
 
   return (
-    <div style={pageStyle}>
-      <div style={headerStyle}>
+    <div style={forumPageStyle}>
+      <div style={forumHeaderStyle}>
         <span onClick={onBack} style={{ cursor: "pointer", fontSize: "18px" }}>&lt; 返回</span>
         <span style={{ fontWeight: 700, color: "#2e6a4a" }}>24小时论坛</span>
         <span style={{ width: "58px" }} />
@@ -270,7 +263,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
           <button onClick={handleToggleSortMode} style={{ border: "none", background: "transparent", color: sortMode === "chill" ? "#2e6a4a" : "#6f8b7e", cursor: "pointer", fontWeight: 700, fontSize: "13px", padding: 0 }}>
             {sortMode === "chill" ? "按最新排序" : "按chill排序"}
           </button>
-          <span style={onlinePillStyle}>
+          <span style={forumOnlinePillStyle}>
             <span style={{ fontSize: "10px" }}>●</span>
             <span>在线 {onlineCount}</span>
           </span>
@@ -292,6 +285,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
             loadingComments={loadingCommentPostIds.includes(Number(post.id))}
             replyTarget={replyTargetMap[Number(post.id)] || null}
             commentDraft={commentDraftMap[Number(post.id)] || ""}
+            commentImages={commentImagesMap[Number(post.id)] || []}
             submittingComment={submittingCommentPostIds.includes(Number(post.id))}
             callingPost={callingPostIds.includes(Number(post.id))}
             onToggleComments={handleToggleComments}
@@ -300,6 +294,8 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
             onReplySelect={(postId, comment) => setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }))}
             onReplyCancel={(postId) => setReplyTargetMap((prev) => ({ ...prev, [postId]: null }))}
             onCommentDraftChange={(postId, value) => setCommentDraftMap((prev) => ({ ...prev, [postId]: value }))}
+            onSelectCommentImages={handleSelectCommentImages}
+            onRemoveCommentImage={handleRemoveCommentImage}
             onSubmitComment={handleSubmitComment}
             formatCommentTime={formatCommentTime}
           />

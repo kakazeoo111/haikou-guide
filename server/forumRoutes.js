@@ -4,6 +4,8 @@ function normalizeForumImages(files) {
   return JSON.stringify(urls);
 }
 
+const FORUM_IMAGE_TOO_LARGE_MESSAGE = "发布的图片内存过大（不得超过5MB）";
+
 function parsePositiveInt(value) {
   const normalized = Number(value);
   if (!Number.isInteger(normalized) || normalized <= 0) return null;
@@ -12,6 +14,28 @@ function parsePositiveInt(value) {
 
 function parseForumSortMode(value) {
   return String(value || "").trim().toLowerCase() === "chill" ? "chill" : "latest";
+}
+
+async function ensureCommentImageColumn(pool) {
+  const [rows] = await pool.execute("SHOW COLUMNS FROM forum_comments LIKE 'image_url'");
+  if (rows.length > 0) return;
+  await pool.execute("ALTER TABLE forum_comments ADD COLUMN image_url LONGTEXT NULL AFTER content");
+}
+
+function handleMulterError(res, error) {
+  if (!error) return true;
+  if (error?.code === "LIMIT_FILE_SIZE") {
+    res.status(400).json({ ok: false, message: FORUM_IMAGE_TOO_LARGE_MESSAGE });
+    return false;
+  }
+  res.status(400).json({ ok: false, message: error.message || "图片上传失败" });
+  return false;
+}
+
+function runUploadArray(upload, field, maxCount, req, res) {
+  return new Promise((resolve) => {
+    upload.array(field, maxCount)(req, res, (error) => resolve(handleMulterError(res, error)));
+  });
 }
 
 async function ensureForumTables(pool) {
@@ -42,6 +66,7 @@ async function ensureForumTables(pool) {
       KEY idx_forum_comments_user_phone (user_phone)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
   );
+  await ensureCommentImageColumn(pool);
 
   await pool.execute(
     `CREATE TABLE IF NOT EXISTS forum_post_calls (
@@ -103,7 +128,9 @@ export async function registerForumRoutes(app, { pool, upload }) {
     }
   });
 
-  app.post("/api/forum/post/add", upload.array("images", 9), async (req, res) => {
+  app.post("/api/forum/post/add", async (req, res) => {
+    const uploadOk = await runUploadArray(upload, "images", 9, req, res);
+    if (!uploadOk) return;
     const { phone, content } = req.body;
     const normalizedPhone = String(phone || "").trim();
     const message = String(content || "").trim();
@@ -168,7 +195,7 @@ export async function registerForumRoutes(app, { pool, upload }) {
       const active = await isForumPostActive(pool, postId);
       if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
       const [rows] = await pool.execute(
-        `SELECT c.id, c.post_id, c.parent_id, c.user_phone, c.content, c.created_at, u.username, u.avatar_url
+        `SELECT c.id, c.post_id, c.parent_id, c.user_phone, c.content, c.image_url, c.created_at, u.username, u.avatar_url
          FROM forum_comments c
          JOIN users u ON c.user_phone = u.phone
          WHERE c.post_id = ?
@@ -184,14 +211,17 @@ export async function registerForumRoutes(app, { pool, upload }) {
   });
 
   app.post("/api/forum/comment/add", async (req, res) => {
+    const uploadOk = await runUploadArray(upload, "images", 9, req, res);
+    if (!uploadOk) return;
     const { phone, postId, parentId, content } = req.body;
     const normalizedPhone = String(phone || "").trim();
     const normalizedPostId = parsePositiveInt(postId);
     const normalizedParentId = parentId ? parsePositiveInt(parentId) : null;
     const message = String(content || "").trim();
+    const imageUrl = normalizeForumImages(req.files);
     if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
     if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
-    if (!message) return res.status(400).json({ ok: false, message: "评论内容不能为空" });
+    if (!message && !imageUrl) return res.status(400).json({ ok: false, message: "评论内容和图片不能同时为空" });
 
     try {
       const active = await isForumPostActive(pool, normalizedPostId);
@@ -201,8 +231,8 @@ export async function registerForumRoutes(app, { pool, upload }) {
         if (!parents.length) return res.status(400).json({ ok: false, message: "回复目标不存在" });
       }
       await pool.execute(
-        "INSERT INTO forum_comments (post_id, parent_id, user_phone, content) VALUES (?, ?, ?, ?)",
-        [normalizedPostId, normalizedParentId, normalizedPhone, message]
+        "INSERT INTO forum_comments (post_id, parent_id, user_phone, content, image_url) VALUES (?, ?, ?, ?, ?)",
+        [normalizedPostId, normalizedParentId, normalizedPhone, message, imageUrl]
       );
       res.json({ ok: true, message: "评论发布成功" });
     } catch (error) {
