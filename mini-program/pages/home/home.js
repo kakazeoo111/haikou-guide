@@ -7,7 +7,7 @@ const {
 } = require("../../utils/api");
 
 function normalizePrizeName(name) {
-  return String(name || "").trim() || "Unknown Prize";
+  return String(name || "").trim() || "未知奖品";
 }
 
 Page({
@@ -59,7 +59,7 @@ Page({
     const phone = this.data.user?.phone;
     if (!phone) return;
     if (this.data.signedToday) {
-      wx.showToast({ title: "Checked in today", icon: "none" });
+      wx.showToast({ title: "今日已签到", icon: "none" });
       return;
     }
     try {
@@ -70,7 +70,7 @@ Page({
         continuousDays: Number(result.data?.continuousDays || 0),
         drawChances: Number(result.data?.drawChances || 0),
       });
-      wx.showToast({ title: "Check-in success +1", icon: "success" });
+      wx.showToast({ title: "签到成功 +1", icon: "success" });
     } catch (error) {
       wx.showToast({ title: error.message, icon: "none" });
     }
@@ -79,7 +79,7 @@ Page({
   async handleSpin() {
     if (this.data.spinning) return;
     if (this.data.drawChances <= 0) {
-      wx.showToast({ title: "Check in first", icon: "none" });
+      wx.showToast({ title: "请先签到获取机会", icon: "none" });
       return;
     }
     const phone = this.data.user?.phone;
@@ -105,8 +105,8 @@ Page({
 
       setTimeout(() => {
         wx.showModal({
-          title: "Draw Result",
-          content: `You won: ${normalizePrizeName(prize.name)}`,
+          title: "抽奖结果",
+          content: `恭喜获得：${normalizePrizeName(prize.name)}`,
           showCancel: false,
         });
         this.setData({
@@ -128,7 +128,7 @@ Page({
       const logsResult = await fetchLotteryLogs(phone);
       this.setData({ logs: logsResult.data || [] });
     } catch (error) {
-      console.error("Refresh lottery logs failed:", error.message);
+      console.error("刷新抽奖记录失败:", error.message);
     }
   },
 

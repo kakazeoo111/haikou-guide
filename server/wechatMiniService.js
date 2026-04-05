@@ -10,7 +10,7 @@ function readMiniEnv() {
   const appid = String(process.env.WECHAT_MINI_APPID || "").trim();
   const secret = String(process.env.WECHAT_MINI_APPSECRET || "").trim();
   if (!appid || !secret) {
-    throw new Error("Missing mini program env: WECHAT_MINI_APPID or WECHAT_MINI_APPSECRET");
+    throw new Error("服务端未配置小程序环境变量 WECHAT_MINI_APPID 或 WECHAT_MINI_APPSECRET");
   }
   return { appid, secret };
 }
@@ -18,7 +18,7 @@ function readMiniEnv() {
 async function requestJson(url, options = {}) {
   const response = await fetch(url, options);
   if (!response.ok) {
-    throw new Error(`WeChat API request failed: ${response.status}`);
+    throw new Error(`微信接口请求失败: ${response.status}`);
   }
   return response.json();
 }
@@ -34,7 +34,7 @@ function buildTokenUrl({ appid, secret }) {
 
 export async function fetchOpenIdByLoginCode(wxLoginCode) {
   const code = String(wxLoginCode || "").trim();
-  if (!code) throw new Error("wx.login code is required");
+  if (!code) throw new Error("wx.login 凭证不能为空");
   const { appid, secret } = readMiniEnv();
   const query = new URLSearchParams({
     appid,
@@ -46,12 +46,12 @@ export async function fetchOpenIdByLoginCode(wxLoginCode) {
   const data = await requestJson(url);
   const errCode = Number(data?.errcode || 0);
   if (errCode !== 0) {
-    const error = new Error(String(data?.errmsg || "jscode2session failed"));
+    const error = new Error(String(data?.errmsg || "jscode2session 调用失败"));
     error.code = errCode;
     throw error;
   }
   const openId = String(data?.openid || "").trim();
-  if (!openId) throw new Error("openid missing from jscode2session");
+  if (!openId) throw new Error("微信返回缺少 openid");
   return openId;
 }
 
@@ -64,7 +64,7 @@ export async function getMiniAccessToken() {
   const data = await requestJson(buildTokenUrl(env));
   const accessToken = String(data?.access_token || "").trim();
   if (!accessToken) {
-    const error = new Error(String(data?.errmsg || "fetch access_token failed"));
+    const error = new Error(String(data?.errmsg || "获取 access_token 失败"));
     error.code = Number(data?.errcode || 0);
     throw error;
   }

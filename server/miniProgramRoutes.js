@@ -5,10 +5,10 @@ const PHONE_REGEX = /^1\d{10}$/;
 const DEFAULT_CHANCE_GAIN = 1;
 const VIRTUAL_PHONE_PREFIX = "17";
 const LOTTERY_PRIZES = [
-  { key: "coupon_5", name: "Coupon 5", weight: 35 },
-  { key: "coupon_10", name: "Coupon 10", weight: 15 },
-  { key: "points_88", name: "Points 88", weight: 25 },
-  { key: "try_again", name: "Try Again", weight: 25 },
+  { key: "coupon_5", name: "5元饮品券", weight: 35 },
+  { key: "coupon_10", name: "10元餐饮券", weight: 15 },
+  { key: "points_88", name: "88积分", weight: 25 },
+  { key: "try_again", name: "谢谢参与", weight: 25 },
 ];
 
 function isPhoneValid(phone) {
@@ -138,7 +138,7 @@ async function querySignSummary(pool, phone) {
 async function ensureUserByPhone(pool, phone) {
   const [rows] = await pool.execute("SELECT phone, username, avatar_url FROM users WHERE phone = ? LIMIT 1", [phone]);
   if (rows.length > 0) return rows[0];
-  const username = `user${String(phone).slice(-4)}`;
+  const username = `用户${String(phone).slice(-4)}`;
   const passwordHash = await bcrypt.hash(`mp-${phone}-${Date.now()}`, 10);
   await pool.execute("INSERT INTO users (username, phone, password_hash) VALUES (?, ?, ?)", [username, phone, passwordHash]);
   return { phone, username, avatar_url: "" };
@@ -161,7 +161,7 @@ async function findOrCreatePhoneByOpenId(pool, openId) {
       throw error;
     }
   }
-  throw new Error("Failed to allocate virtual phone");
+  throw new Error("虚拟手机号分配失败，请重试");
 }
 
 export async function registerMiniProgramRoutes(app, { pool }) {
@@ -169,7 +169,7 @@ export async function registerMiniProgramRoutes(app, { pool }) {
 
   app.post("/api/mp/auth/login-by-wechat", async (req, res) => {
     const wxCode = String(req.body?.wxCode || "").trim();
-    if (!wxCode) return res.status(400).json({ ok: false, message: "wxCode is required" });
+    if (!wxCode) return res.status(400).json({ ok: false, message: "wxCode 不能为空" });
     try {
       const openId = await fetchOpenIdByLoginCode(wxCode);
       const phone = await findOrCreatePhoneByOpenId(pool, openId);
@@ -178,27 +178,27 @@ export async function registerMiniProgramRoutes(app, { pool }) {
       const drawChances = await queryDrawChances(pool, phone);
       res.json({ ok: true, data: { phone: user.phone, username: user.username || phone, avatar_url: user.avatar_url || "", drawChances } });
     } catch (error) {
-      console.error("Mini program one-click login failed:", error.message);
-      res.status(500).json({ ok: false, message: `one-click login failed: ${error.message}` });
+      console.error("小程序一键登录失败:", error.message);
+      res.status(500).json({ ok: false, message: `一键登录失败: ${error.message}` });
     }
   });
 
   app.get("/api/mp/sign/status", async (req, res) => {
     const phone = String(req.query?.phone || "").trim();
-    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "Invalid user token" });
+    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "用户令牌无效" });
     try {
       await ensureAssetRow(pool, phone);
       const [signSummary, drawChances] = await Promise.all([querySignSummary(pool, phone), queryDrawChances(pool, phone)]);
       res.json({ ok: true, data: { ...signSummary, drawChances } });
     } catch (error) {
-      console.error("Mini program sign status failed:", error.message);
-      res.status(500).json({ ok: false, message: `sign status failed: ${error.message}` });
+      console.error("小程序签到状态查询失败:", error.message);
+      res.status(500).json({ ok: false, message: `签到状态查询失败: ${error.message}` });
     }
   });
 
   app.post("/api/mp/sign/checkin", async (req, res) => {
     const phone = String(req.body?.phone || "").trim();
-    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "Invalid user token" });
+    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "用户令牌无效" });
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
@@ -208,7 +208,7 @@ export async function registerMiniProgramRoutes(app, { pool }) {
       );
       if (signedRows.length > 0) {
         await connection.rollback();
-        return res.status(400).json({ ok: false, message: "Already checked in today" });
+        return res.status(400).json({ ok: false, message: "今天已经签到过了" });
       }
       await connection.execute("INSERT INTO mini_sign_logs (user_phone, sign_date) VALUES (?, CURDATE())", [phone]);
       await connection.execute(
@@ -217,11 +217,11 @@ export async function registerMiniProgramRoutes(app, { pool }) {
       );
       await connection.commit();
       const [signSummary, drawChances] = await Promise.all([querySignSummary(pool, phone), queryDrawChances(pool, phone)]);
-      res.json({ ok: true, message: "checkin ok", data: { ...signSummary, drawChances } });
+      res.json({ ok: true, message: "签到成功", data: { ...signSummary, drawChances } });
     } catch (error) {
       await connection.rollback();
-      console.error("Mini program checkin failed:", error.message);
-      res.status(500).json({ ok: false, message: `checkin failed: ${error.message}` });
+      console.error("小程序签到失败:", error.message);
+      res.status(500).json({ ok: false, message: `签到失败: ${error.message}` });
     } finally {
       connection.release();
     }
@@ -233,7 +233,7 @@ export async function registerMiniProgramRoutes(app, { pool }) {
 
   app.post("/api/mp/lottery/spin", async (req, res) => {
     const phone = String(req.body?.phone || "").trim();
-    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "Invalid user token" });
+    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "用户令牌无效" });
     const connection = await pool.getConnection();
     try {
       await connection.beginTransaction();
@@ -241,7 +241,7 @@ export async function registerMiniProgramRoutes(app, { pool }) {
       const currentChances = Number(assetRows?.[0]?.draw_chances || 0);
       if (currentChances <= 0) {
         await connection.rollback();
-        return res.status(400).json({ ok: false, message: "No draw chances" });
+        return res.status(400).json({ ok: false, message: "抽奖机会不足，请先签到" });
       }
       const prize = pickPrize();
       await connection.execute("UPDATE mini_user_assets SET draw_chances = draw_chances - 1 WHERE user_phone = ?", [phone]);
@@ -251,8 +251,8 @@ export async function registerMiniProgramRoutes(app, { pool }) {
       res.json({ ok: true, data: { prize, drawChances } });
     } catch (error) {
       await connection.rollback();
-      console.error("Mini program lottery spin failed:", error.message);
-      res.status(500).json({ ok: false, message: `spin failed: ${error.message}` });
+      console.error("小程序抽奖失败:", error.message);
+      res.status(500).json({ ok: false, message: `抽奖失败: ${error.message}` });
     } finally {
       connection.release();
     }
@@ -260,7 +260,7 @@ export async function registerMiniProgramRoutes(app, { pool }) {
 
   app.get("/api/mp/lottery/logs", async (req, res) => {
     const phone = String(req.query?.phone || "").trim();
-    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "Invalid user token" });
+    if (!isPhoneValid(phone)) return res.status(400).json({ ok: false, message: "用户令牌无效" });
     try {
       const [rows] = await pool.execute(
         `SELECT id, prize_key, prize_name, created_at
@@ -272,8 +272,8 @@ export async function registerMiniProgramRoutes(app, { pool }) {
       );
       res.json({ ok: true, data: rows });
     } catch (error) {
-      console.error("Mini program lottery logs failed:", error.message);
-      res.status(500).json({ ok: false, message: `logs failed: ${error.message}` });
+      console.error("小程序抽奖记录查询失败:", error.message);
+      res.status(500).json({ ok: false, message: `抽奖记录查询失败: ${error.message}` });
     }
   });
 }

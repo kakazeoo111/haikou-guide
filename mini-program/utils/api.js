@@ -15,10 +15,10 @@ function request(path, method = "GET", data = {}) {
           resolve(body);
           return;
         }
-        reject(new Error(body.message || "Request failed"));
+        reject(new Error(body.message || "请求失败"));
       },
       fail: (error) => {
-        reject(new Error(error.errMsg || "Network error"));
+        reject(new Error(error.errMsg || "网络错误"));
       },
     });
   });

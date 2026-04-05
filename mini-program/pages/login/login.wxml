@@ -1,12 +1,12 @@
 <view class="container">
   <view class="hero">
-    <view class="title">Haikou Daily Spin</view>
-    <view class="subtitle">One-click WeChat login, no phone input needed</view>
+    <view class="title">海口签到抽奖</view>
+    <view class="subtitle">点击按钮即可一键登录，无需手机号验证码</view>
   </view>
 
   <view class="card login-card">
     <button class="one-click-btn" loading="{{loading}}" bindtap="handleOneClickLogin">
-      WeChat One-click Login
+      微信一键登录
     </button>
   </view>
 </view>
