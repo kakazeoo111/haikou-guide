@@ -1,7 +1,40 @@
 export const suggestionListStyle = { position: "absolute", top: "45px", left: 0, width: "100%", background: "white", border: "1px solid #eee", borderRadius: "10px", boxShadow: "0 10px 20px rgba(0,0,0,0.1)", zIndex: 100, maxHeight: "200px", overflowY: "auto" };
 export const suggestionItemStyle = { padding: "10px 15px", borderBottom: "1px solid #f9f9f9", cursor: "pointer" };
 export const rankBadgeStyle = (idx) => ({ position: "absolute", top: "-5px", left: "-5px", width: "24px", height: "24px", background: idx === 0 ? "#FFD700" : idx === 1 ? "#C0C0C0" : idx === 2 ? "#CD7F32" : "#7dbf96", color: "white", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", fontWeight: "bold", zIndex: 1, boxShadow: "0 2px 5px rgba(0,0,0,0.1)" });
-export const placeLikeBtnStyle = (liked) => ({ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", padding: "5px 12px", borderRadius: "999px", border: liked ? "1px solid #ffbfd2" : "1px solid #e4e9e6", background: liked ? "linear-gradient(135deg, #ffe8f0, #ffdce8)" : "#f5f7f6", color: liked ? "#ff4f87" : "#7f8d87", fontSize: "12px", fontWeight: 600, lineHeight: 1, transition: "all 0.2s ease", boxShadow: liked ? "0 4px 10px rgba(255,79,135,0.18)" : "none", userSelect: "none" });
+const LIKE_ACTIVE_BORDER = "1px solid #ffb7ce";
+const LIKE_IDLE_BORDER = "1px solid #dfe9e3";
+const LIKE_ACTIVE_BACKGROUND = "linear-gradient(135deg, #ffe8f1 0%, #ffd9e9 100%)";
+const LIKE_IDLE_BACKGROUND = "linear-gradient(135deg, #f9fbfa 0%, #f2f7f4 100%)";
+const LIKE_ACTIVE_TEXT = "#ff2f75";
+const LIKE_IDLE_TEXT = "#7b8882";
+const LIKE_ACTIVE_SHADOW = "0 8px 18px rgba(255, 92, 150, 0.24)";
+const LIKE_IDLE_SHADOW = "0 2px 6px rgba(90, 167, 123, 0.08)";
+
+function getLikeButtonBaseStyle(liked, padding, minWidth, fontSize) {
+  return {
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "7px",
+    minWidth,
+    padding,
+    borderRadius: "999px",
+    border: liked ? LIKE_ACTIVE_BORDER : LIKE_IDLE_BORDER,
+    background: liked ? LIKE_ACTIVE_BACKGROUND : LIKE_IDLE_BACKGROUND,
+    color: liked ? LIKE_ACTIVE_TEXT : LIKE_IDLE_TEXT,
+    fontSize,
+    fontWeight: 700,
+    lineHeight: 1,
+    userSelect: "none",
+    fontVariantNumeric: "tabular-nums",
+    transition: "all 0.2s ease",
+    boxShadow: liked ? LIKE_ACTIVE_SHADOW : LIKE_IDLE_SHADOW,
+    transform: liked ? "translateY(-1px)" : "translateY(0)",
+  };
+}
+
+export const placeLikeBtnStyle = (liked) => getLikeButtonBaseStyle(liked, "6px 14px", "72px", "13px");
 export const fullPageOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100vw", height: "100%", background: "#f8fbf9", zIndex: 2000, display: "flex", flexDirection: "column" };
 export const navHeaderStyle = { background: "white", padding: "15px 20px", display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: "0 2px 10px rgba(0,0,0,0.05)", zIndex: 2100 };
 export const sortContainerStyle = { background: "white", padding: "8px 20px", display: "flex", gap: "15px", borderBottom: "1px solid #eee" };
@@ -13,7 +46,7 @@ export const bottomRealInput = { flex: 1, border: "none", background: "transpare
 export const commentCardStyle = { background: "white", padding: "16px", borderRadius: "16px", marginBottom: "16px", boxShadow: "0 2px 8px rgba(0,0,0,0.03)" };
 export const commentAvatarStyle = { width: "36px", height: "36px", borderRadius: "50%", objectFit: "cover" };
 export const commentImgStyle = { width: "160px", borderRadius: "10px", marginTop: "10px", display: "block", cursor: "zoom-in" };
-export const likeBtnStyle = (liked) => ({ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "6px", padding: "3px 10px", borderRadius: "999px", border: liked ? "1px solid #ffbfd2" : "1px solid #e4e9e6", background: liked ? "linear-gradient(135deg, #ffe8f0, #ffdce8)" : "#f5f7f6", color: liked ? "#ff4f87" : "#7f8d87", fontSize: "12px", fontWeight: 600, lineHeight: 1, transition: "all 0.2s ease", boxShadow: liked ? "0 4px 10px rgba(255,79,135,0.18)" : "none", userSelect: "none" });
+export const likeBtnStyle = (liked) => getLikeButtonBaseStyle(liked, "4px 11px", "58px", "12px");
 export const feedbackItemStyle = { padding: "10px", borderBottom: "1px solid #eee", background: "#f9fcf9", borderRadius: "10px", marginBottom: "10px" };
 export const zoomOverlayStyle = { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", background: "black", zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center" };
 export const zoomedImgStyle = { maxWidth: "100%", maxHeight: "100%", objectFit: "contain" };

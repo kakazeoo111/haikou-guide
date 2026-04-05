@@ -23,6 +23,7 @@ import {
 } from "../logic/commentsOverlayUtils";
 import { useUserPointsCard } from "../logic/useUserPointsCard";
 import UserPointsCardModal from "./UserPointsCardModal";
+import LikeHeartIcon from "./LikeHeartIcon";
 
 function CommentsOverlay({
   place,
@@ -165,8 +166,8 @@ function CommentsOverlay({
                       回复
                     </span>
                     <span onClick={() => onLikeComment(parent.id)} style={likeBtnStyle(parent.is_liked)}>
-                      <span style={{ fontSize: "13px" }}>{parent.is_liked ? "♥" : "♡"}</span>
-                      <span>{parent.like_count || 0}</span>
+                      <LikeHeartIcon liked={Boolean(parent.is_liked)} size={14} />
+                      <span>{Number(parent.like_count || 0)}</span>
                     </span>
                     {parent.user_phone === currentUser.phone && (
                       <span onClick={() => onDeleteComment(parent.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
@@ -240,8 +241,8 @@ function CommentsOverlay({
                               <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "11px", color: "#bbb", marginTop: "5px" }}>
                                 <span>{formatCommentTime(reply.created_at)}</span>
                                 <span onClick={() => onLikeComment(reply.id)} style={likeBtnStyle(reply.is_liked)}>
-                                  <span style={{ fontSize: "13px" }}>{reply.is_liked ? "♥" : "♡"}</span>
-                                  <span>{reply.like_count || 0}</span>
+                                  <LikeHeartIcon liked={Boolean(reply.is_liked)} size={14} />
+                                  <span>{Number(reply.like_count || 0)}</span>
                                 </span>
                               </div>
                             </div>

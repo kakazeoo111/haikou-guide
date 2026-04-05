@@ -15,6 +15,7 @@ import {
 } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { FILTER_ITEMS } from "../constants/homeFilters";
+import LikeHeartIcon from "./LikeHeartIcon";
 
 const UNREAD_BADGE_LIMIT = 99;
 const FAVORITE_ICON_SIZE = "32px";
@@ -261,8 +262,8 @@ function HomePanels({
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
                   <div style={{ fontSize: "12px", color: "#5aa77b" }}>📏 距你: {place.distVal} km</div>
                   <div onClick={(e) => (place.type === "recommend" ? onLikeRec(e, place.realId) : onLikePlace(e, place.id))} style={placeLikeBtnStyle(place.isPlaceLiked)}>
-                    <span style={{ fontSize: "13px" }}>{place.isPlaceLiked ? "❤️" : "🤍"}</span>
-                    <span>{place.likes}</span>
+                    <LikeHeartIcon liked={place.isPlaceLiked} size={15} />
+                    <span>{Number(place.likes || 0)}</span>
                   </div>
                 </div>
 
