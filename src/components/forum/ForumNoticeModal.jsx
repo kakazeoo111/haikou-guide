@@ -66,8 +66,11 @@ function ForumNoticeModal({ visible, dontShowAgain, onToggleDontShowAgain, onClo
               <div key={rule}>• {rule}</div>
             ))}
           </div>
-          <div style={{ marginTop: "6px", fontSize: "12px", color: "#d14f57", fontWeight: 700 }}>
-            违者将视情节采取删除内容、限流、禁言直至封禁账号处理。
+          <div style={{ marginTop: "6px", fontSize: "12px", color: "#4a6a5c", fontWeight: 600 }}>
+            祝大家玩得开心，交流友善。
+          </div>
+          <div style={{ marginTop: "4px", fontSize: "12px", color: "#d14f57", fontWeight: 700 }}>
+            违者将采取封禁账号处理。
           </div>
         </div>
 
