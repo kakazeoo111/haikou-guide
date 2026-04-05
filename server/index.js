@@ -24,6 +24,12 @@ import { registerMiniProgramRoutes } from "./miniProgramRoutes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, ".env") });
+const hasMiniAppId = Boolean(String(process.env.WECHAT_MINI_APPID || "").trim());
+const hasMiniAppSecret = Boolean(String(process.env.WECHAT_MINI_APPSECRET || "").trim());
+const miniProgramEnvReady = hasMiniAppId && hasMiniAppSecret;
+console.log(
+  `[小程序环境] ${miniProgramEnvReady ? "已就绪" : "缺失"} (WECHAT_MINI_APPID: ${hasMiniAppId ? "已配置" : "未配置"}, WECHAT_MINI_APPSECRET: ${hasMiniAppSecret ? "已配置" : "未配置"})`,
+);
 
 const app = express();
 const port = process.env.SMS_SERVER_PORT || 3001;
@@ -87,7 +93,7 @@ async function addNotice(receiver, sender, type, placeId, content = "") {
   }
 }
 
-app.get("/api/health", (req, res) => res.json({ ok: true, db: "connected" }));
+app.get("/api/health", (req, res) => res.json({ ok: true, db: "connected", miniProgramEnvReady }));
 
 try {
   await ensureBadgeGrantTable(pool);
