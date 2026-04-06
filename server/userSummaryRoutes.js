@@ -1,5 +1,4 @@
 import { buildUserBadgeData } from "./badgesService.js";
-
 const PHONE_REGEX = /^1\d{10}$/;
 const POINTS_PER_VOTE = 10;
 const ACTIVE_WINDOW_DAYS = 30;
@@ -84,10 +83,24 @@ function normalizeDateKey(value) {
   return normalized.slice(0, 10);
 }
 
+function normalizeColumnName(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
 function pickTimeColumn(columns) {
   if (!Array.isArray(columns) || !columns.length) return "";
-  const normalized = columns.map((column) => String(column || "").trim()).filter(Boolean);
-  return ACTIVE_TIME_COLUMN_CANDIDATES.find((candidate) => normalized.includes(candidate)) || "";
+  const columnMap = new Map();
+  columns.forEach((column) => {
+    const raw = String(column || "").trim();
+    const normalized = normalizeColumnName(raw);
+    if (!raw || !normalized || columnMap.has(normalized)) return;
+    columnMap.set(normalized, raw);
+  });
+  for (const candidate of ACTIVE_TIME_COLUMN_CANDIDATES) {
+    const normalizedCandidate = normalizeColumnName(candidate);
+    if (columnMap.has(normalizedCandidate)) return columnMap.get(normalizedCandidate);
+  }
+  return "";
 }
 
 function toHttpsUrl(url) {
@@ -123,32 +136,28 @@ async function getActiveSourceColumns(pool, tableNames) {
   const now = Date.now();
   if (activeTableCache.sourceColumns.size > 0 && now < activeTableCache.expiresAt) return activeTableCache.sourceColumns;
   if (activeTableCache.pending) return activeTableCache.pending;
-  const placeholders = tableNames.map(() => "?").join(",");
-  const timeColumnPlaceholders = ACTIVE_TIME_COLUMN_CANDIDATES.map(() => "?").join(",");
-  activeTableCache.pending = pool
-    .execute(
-      `
-        SELECT table_name, column_name
-        FROM information_schema.columns
-        WHERE table_schema = DATABASE()
-          AND column_name IN (${timeColumnPlaceholders})
-          AND table_name IN (${placeholders})
-      `,
-      [...ACTIVE_TIME_COLUMN_CANDIDATES, ...tableNames],
-    )
-    .then(([rows]) => {
-      const groupedColumns = new Map();
-      rows.forEach((row) => {
-        const tableName = String(row.table_name || "");
-        const columnName = String(row.column_name || "");
-        if (!tableName || !columnName) return;
-        if (!groupedColumns.has(tableName)) groupedColumns.set(tableName, []);
-        groupedColumns.get(tableName).push(columnName);
-      });
+  activeTableCache.pending = Promise.all(
+    tableNames.map(async (tableName) => {
+      const normalizedTableName = String(tableName || "").trim();
+      if (!normalizedTableName) return { tableName: "", timeColumn: "" };
+      if (!/^[a-zA-Z0-9_]+$/.test(normalizedTableName)) {
+        console.error("活跃统计表名非法:", normalizedTableName);
+        return { tableName: normalizedTableName, timeColumn: "" };
+      }
+      try {
+        const [rows] = await pool.execute(`SHOW COLUMNS FROM \`${normalizedTableName}\``);
+        const columns = rows.map((row) => String(row.Field || row.field || "").trim()).filter(Boolean);
+        return { tableName: normalizedTableName, timeColumn: pickTimeColumn(columns) };
+      } catch (error) {
+        console.error(`读取表字段失败: ${normalizedTableName}`, error.message);
+        return { tableName: normalizedTableName, timeColumn: "" };
+      }
+    }),
+  )
+    .then((results) => {
       const nextColumns = new Map();
-      tableNames.forEach((tableName) => {
-        const picked = pickTimeColumn(groupedColumns.get(tableName) || []);
-        if (picked) nextColumns.set(tableName, picked);
+      results.forEach(({ tableName, timeColumn }) => {
+        if (tableName && timeColumn) nextColumns.set(tableName, timeColumn);
       });
       activeTableCache.sourceColumns = nextColumns;
       activeTableCache.expiresAt = Date.now() + ACTIVE_TABLE_CACHE_TTL_MS;
