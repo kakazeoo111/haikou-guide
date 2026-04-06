@@ -13,6 +13,12 @@ const ACTIVE_SOURCE_TABLES = [
   { tableName: "forum_post_calls", phoneColumn: "user_phone" },
   { tableName: "place_likes", phoneColumn: "phone" },
 ];
+const ACTIVE_TABLE_CACHE_TTL_MS = 5 * 60 * 1000;
+const activeTableCache = {
+  expiresAt: 0,
+  tables: new Set(),
+  pending: null,
+};
 
 async function queryCount(pool, sql, params) {
   const [rows] = await pool.execute(sql, params);
@@ -79,18 +85,31 @@ function formatLocalDate(date) {
 
 async function getTablesWithCreatedAt(pool, tableNames) {
   if (!tableNames.length) return new Set();
+  const now = Date.now();
+  if (activeTableCache.tables.size > 0 && now < activeTableCache.expiresAt) return activeTableCache.tables;
+  if (activeTableCache.pending) return activeTableCache.pending;
   const placeholders = tableNames.map(() => "?").join(",");
-  const [rows] = await pool.execute(
-    `
-      SELECT table_name
-      FROM information_schema.columns
-      WHERE table_schema = DATABASE()
-        AND column_name = 'created_at'
-        AND table_name IN (${placeholders})
-    `,
-    tableNames,
-  );
-  return new Set(rows.map((row) => String(row.table_name || "")));
+  activeTableCache.pending = pool
+    .execute(
+      `
+        SELECT table_name
+        FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+          AND column_name = 'created_at'
+          AND table_name IN (${placeholders})
+      `,
+      tableNames,
+    )
+    .then(([rows]) => {
+      const nextTables = new Set(rows.map((row) => String(row.table_name || "")));
+      activeTableCache.tables = nextTables;
+      activeTableCache.expiresAt = Date.now() + ACTIVE_TABLE_CACHE_TTL_MS;
+      return nextTables;
+    })
+    .finally(() => {
+      activeTableCache.pending = null;
+    });
+  return activeTableCache.pending;
 }
 
 async function queryRecentActiveDays(pool, phone, windowDays = ACTIVE_WINDOW_DAYS) {

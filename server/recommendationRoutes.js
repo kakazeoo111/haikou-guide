@@ -33,25 +33,38 @@ async function ensureRecommendationTables(pool) {
   );
 }
 
+const RECOMMENDATION_LIST_SQL = `
+  SELECT r.*, u.username, u.avatar_url,
+         COALESCE(all_likes.like_count, 0) AS like_count,
+         COALESCE(my_likes.is_liked, 0) AS is_liked
+  FROM recommendations r
+  JOIN users u ON r.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
+  LEFT JOIN (
+    SELECT recommendation_id, COUNT(*) AS like_count
+    FROM recommendation_likes
+    GROUP BY recommendation_id
+  ) all_likes ON all_likes.recommendation_id = r.id
+  LEFT JOIN (
+    SELECT recommendation_id, 1 AS is_liked
+    FROM recommendation_likes
+    WHERE phone COLLATE utf8mb4_general_ci = ?
+    GROUP BY recommendation_id
+  ) my_likes ON my_likes.recommendation_id = r.id
+  ORDER BY r.created_at DESC
+`;
+
 export async function registerRecommendationRoutes(app, { pool, upload, addNotice }) {
   await ensureRecommendationTables(pool);
 
   app.get("/api/recommendations", async (req, res) => {
     const { phone } = req.query;
     try {
-      const sql = `
-        SELECT r.*, u.username, u.avatar_url,
-        (SELECT COUNT(*) FROM recommendation_likes WHERE recommendation_id = r.id) as like_count,
-        (SELECT COUNT(*) FROM recommendation_likes WHERE recommendation_id = r.id AND phone COLLATE utf8mb4_general_ci = ?) as is_liked
-        FROM recommendations r
-        JOIN users u ON r.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
-        ORDER BY r.created_at DESC`;
-      const [rows] = await pool.execute(sql, [phone || ""]);
+      const [rows] = await pool.execute(RECOMMENDATION_LIST_SQL, [phone || ""]);
       const data = rows.map((row) => ({ ...row, is_liked: row.is_liked > 0 }));
       res.json({ ok: true, data });
     } catch (error) {
-      console.error("è·å–æ¨èå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `è·å–æ¨èå¤±è´¥: ${error.message}` });
+      console.error("»ñÈ¡ÍÆ¼öÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `»ñÈ¡ÍÆ¼öÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -63,10 +76,10 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
         "INSERT INTO recommendations (user_phone, place_name, description, lat, lng, image_url) VALUES (?, ?, ?, ?, ?, ?)",
         [phone, place_name, description || "", lat, lng, JSON.stringify(imageUrls)]
       );
-      res.json({ ok: true, message: "æ¨èæˆåŠŸ" });
+      res.json({ ok: true, message: "ÍÆ¼ö³É¹¦" });
     } catch (error) {
-      console.error("æäº¤æ¨èå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `æäº¤æ¨èå¤±è´¥: ${error.message}` });
+      console.error("Ìá½»ÍÆ¼öÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `Ìá½»ÍÆ¼öÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -87,8 +100,8 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
       if (owner.length > 0) await addNotice(owner[0].user_phone, phone, "like_place", `rec_${id}`);
       res.json({ ok: true, action: "liked" });
     } catch (error) {
-      console.error("æ¨èç‚¹èµå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `æ¨èç‚¹èµå¤±è´¥: ${error.message}` });
+      console.error("ÍÆ¼öµãÔŞÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `ÍÆ¼öµãÔŞÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -101,8 +114,8 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
       );
       res.json({ ok: result.affectedRows > 0 });
     } catch (error) {
-      console.error("åˆ é™¤æ¨èå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `åˆ é™¤æ¨èå¤±è´¥: ${error.message}` });
+      console.error("É¾³ıÍÆ¼öÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `É¾³ıÍÆ¼öÊ§°Ü: ${error.message}` });
     }
   });
 }

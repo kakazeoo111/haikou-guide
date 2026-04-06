@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import AuthPanel from "./components/AuthPanel";
 import AppLayout from "./components/AppLayout";
 import { places as placesData } from "./data/places";
@@ -122,17 +122,24 @@ function App() {
     fetchComments: generalHandlers.fetchComments,
   });
 
-  const filteredPlaces = getFilteredPlaces({
-    places,
-    recommendations,
-    placeStats,
-    myLikedPlaceIds,
-    userLocation,
-    search,
-    filter,
-    favoriteIds,
-  });
-  const currentPlaceComments = viewingCommentsPlace ? activeComments[viewingCommentsPlace.id] || [] : [];
+  const filteredPlaces = useMemo(
+    () =>
+      getFilteredPlaces({
+        places,
+        recommendations,
+        placeStats,
+        myLikedPlaceIds,
+        userLocation,
+        search,
+        filter,
+        favoriteIds,
+      }),
+    [places, recommendations, placeStats, myLikedPlaceIds, userLocation, search, filter, favoriteIds],
+  );
+  const currentPlaceComments = useMemo(
+    () => (viewingCommentsPlace ? activeComments[viewingCommentsPlace.id] || [] : []),
+    [viewingCommentsPlace, activeComments],
+  );
   const handleDismissAnnouncement = () => {
     if (!currentUser?.phone) return setShowNotice(false);
     localStorage.setItem(getNoticeDismissKey(currentUser.phone), "1");

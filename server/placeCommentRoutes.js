@@ -46,22 +46,48 @@ async function ensurePlaceCommentTables(pool) {
   );
 }
 
+const COMMENT_LIST_SQL = `
+  SELECT c.*, u.username, u.avatar_url,
+         COALESCE(all_likes.like_count, 0) AS like_count,
+         COALESCE(my_likes.is_liked, 0) AS is_liked
+  FROM comments c
+  JOIN users u ON c.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
+  LEFT JOIN (
+    SELECT comment_id, COUNT(*) AS like_count
+    FROM comment_likes
+    GROUP BY comment_id
+  ) all_likes ON all_likes.comment_id = c.id
+  LEFT JOIN (
+    SELECT comment_id, 1 AS is_liked
+    FROM comment_likes
+    WHERE phone COLLATE utf8mb4_general_ci = ?
+    GROUP BY comment_id
+  ) my_likes ON my_likes.comment_id = c.id
+  WHERE c.place_id = ?
+  ORDER BY c.created_at DESC, c.id DESC
+`;
+
 export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice }) {
   await ensurePlaceCommentTables(pool);
 
   app.get("/api/places/stats", async (req, res) => {
     const { phone } = req.query;
     try {
-      const [statsRows] = await pool.execute("SELECT place_id, COUNT(*) as count FROM place_likes GROUP BY place_id");
-      const [myLikes] = await pool.execute("SELECT place_id FROM place_likes WHERE phone COLLATE utf8mb4_general_ci = ?", [phone || ""]);
+      const statsPromise = pool.execute("SELECT place_id, COUNT(*) as count FROM place_likes GROUP BY place_id");
+      const myLikesPromise = phone
+        ? pool.execute("SELECT place_id FROM place_likes WHERE phone COLLATE utf8mb4_general_ci = ?", [phone])
+        : Promise.resolve([[]]);
+      const [statsResult, myLikesResult] = await Promise.all([statsPromise, myLikesPromise]);
+      const [statsRows] = statsResult;
+      const [myLikes] = myLikesResult;
       const stats = {};
       statsRows.forEach((row) => {
         stats[row.place_id] = row.count;
       });
       res.json({ ok: true, stats, myLikedIds: myLikes.map((row) => row.place_id) });
     } catch (error) {
-      console.error("è·å–æ™¯ç‚¹èµç»Ÿè®¡å¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `è·å–æ™¯ç‚¹ç‚¹èµç»Ÿè®¡å¤±è´¥: ${error.message}` });
+      console.error("»ñÈ¡¾°µãÔŞÍ³¼ÆÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `»ñÈ¡¾°µãÔŞÍ³¼ÆÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -86,8 +112,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       const [countRow] = await pool.execute("SELECT COUNT(*) as count FROM place_likes WHERE place_id = ?", [placeId]);
       res.json({ ok: true, action, newCount: countRow[0].count });
     } catch (error) {
-      console.error("æ™¯ç‚¹ç‚¹èµå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `æ™¯ç‚¹ç‚¹èµå¤±è´¥: ${error.message}` });
+      console.error("¾°µãµãÔŞÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `¾°µãµãÔŞÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -95,18 +121,11 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     const { phone } = req.query;
     const placeId = req.params.placeId;
     try {
-      const sql = `SELECT c.*, u.username, u.avatar_url,
-                  (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id) as like_count,
-                  (SELECT COUNT(*) FROM comment_likes WHERE comment_id = c.id AND phone COLLATE utf8mb4_general_ci = ?) as is_liked
-                  FROM comments c
-                  JOIN users u ON c.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
-                  WHERE c.place_id = ?
-                  ORDER BY c.created_at DESC, c.id DESC`;
-      const [rows] = await pool.execute(sql, [phone || "", placeId]);
+      const [rows] = await pool.execute(COMMENT_LIST_SQL, [phone || "", placeId]);
       res.json({ ok: true, comments: rows.map((row) => ({ ...row, is_liked: row.is_liked > 0 })) });
     } catch (error) {
-      console.error("è·å–è¯„è®ºå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `è·å–è¯„è®ºå¤±è´¥: ${error.message}` });
+      console.error("»ñÈ¡ÆÀÂÛÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `»ñÈ¡ÆÀÂÛÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -126,8 +145,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       }
       res.json({ ok: true });
     } catch (error) {
-      console.error("è¯„è®ºç‚¹èµå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `è¯„è®ºç‚¹èµå¤±è´¥: ${error.message}` });
+      console.error("ÆÀÂÛµãÔŞÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `ÆÀÂÛµãÔŞÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -145,8 +164,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       }
       res.json({ ok: true });
     } catch (error) {
-      console.error("å‘å¸ƒè¯„è®ºå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `å‘å¸ƒè¯„è®ºå¤±è´¥: ${error.message}` });
+      console.error("·¢²¼ÆÀÂÛÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `·¢²¼ÆÀÂÛÊ§°Ü: ${error.message}` });
     }
   });
 
@@ -156,8 +175,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       await pool.execute("DELETE FROM comments WHERE id = ? AND user_phone COLLATE utf8mb4_general_ci = ?", [commentId, phone]);
       res.json({ ok: true });
     } catch (error) {
-      console.error("åˆ é™¤è¯„è®ºå¤±è´¥:", error.message);
-      res.status(500).json({ ok: false, message: `åˆ é™¤è¯„è®ºå¤±è´¥: ${error.message}` });
+      console.error("É¾³ıÆÀÂÛÊ§°Ü:", error.message);
+      res.status(500).json({ ok: false, message: `É¾³ıÆÀÂÛÊ§°Ü: ${error.message}` });
     }
   });
 }
