@@ -4,6 +4,7 @@ const PHONE_REGEX = /^1\d{10}$/;
 const POINTS_PER_VOTE = 10;
 const ACTIVE_WINDOW_DAYS = 30;
 const RECOMMENDED_PLACE_LIMIT = 6;
+const ACTIVE_TIME_COLUMN_CANDIDATES = ["created_at", "create_time", "createdAt"];
 const ACTIVE_SOURCE_TABLES = [
   { tableName: "recommendations", phoneColumn: "user_phone" },
   { tableName: "comments", phoneColumn: "user_phone" },
@@ -17,7 +18,7 @@ const ACTIVE_SOURCE_TABLES = [
 const ACTIVE_TABLE_CACHE_TTL_MS = 5 * 60 * 1000;
 const activeTableCache = {
   expiresAt: 0,
-  tables: new Set(),
+  sourceColumns: new Map(),
   pending: null,
 };
 
@@ -83,28 +84,75 @@ function normalizeDateKey(value) {
   return normalized.slice(0, 10);
 }
 
-async function getTablesWithCreatedAt(pool, tableNames) {
-  if (!tableNames.length) return new Set();
+function pickTimeColumn(columns) {
+  if (!Array.isArray(columns) || !columns.length) return "";
+  const normalized = columns.map((column) => String(column || "").trim()).filter(Boolean);
+  return ACTIVE_TIME_COLUMN_CANDIDATES.find((candidate) => normalized.includes(candidate)) || "";
+}
+
+function toHttpsUrl(url) {
+  const normalized = String(url || "").trim();
+  if (!normalized) return "";
+  if (normalized.startsWith("http://")) return normalized.replace("http://", "https://");
+  if (normalized.startsWith("https://")) return normalized;
+  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
+  return "";
+}
+
+function parseRecommendationImageUrls(imageValue) {
+  if (!imageValue || imageValue === "null" || imageValue === "[]") return [];
+  const sanitize = (items) => items.map((item) => toHttpsUrl(item)).filter(Boolean);
+  if (Array.isArray(imageValue)) return sanitize(imageValue);
+  const normalized = String(imageValue || "").trim();
+  if (!normalized) return [];
+  if (normalized.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(normalized);
+      return Array.isArray(parsed) ? sanitize(parsed) : [];
+    } catch (error) {
+      console.error("解析推荐图片失败:", error.message);
+      return [];
+    }
+  }
+  const single = toHttpsUrl(normalized);
+  return single ? [single] : [];
+}
+
+async function getActiveSourceColumns(pool, tableNames) {
+  if (!tableNames.length) return new Map();
   const now = Date.now();
-  if (activeTableCache.tables.size > 0 && now < activeTableCache.expiresAt) return activeTableCache.tables;
+  if (activeTableCache.sourceColumns.size > 0 && now < activeTableCache.expiresAt) return activeTableCache.sourceColumns;
   if (activeTableCache.pending) return activeTableCache.pending;
   const placeholders = tableNames.map(() => "?").join(",");
+  const timeColumnPlaceholders = ACTIVE_TIME_COLUMN_CANDIDATES.map(() => "?").join(",");
   activeTableCache.pending = pool
     .execute(
       `
-        SELECT table_name
+        SELECT table_name, column_name
         FROM information_schema.columns
         WHERE table_schema = DATABASE()
-          AND column_name = 'created_at'
+          AND column_name IN (${timeColumnPlaceholders})
           AND table_name IN (${placeholders})
       `,
-      tableNames,
+      [...ACTIVE_TIME_COLUMN_CANDIDATES, ...tableNames],
     )
     .then(([rows]) => {
-      const nextTables = new Set(rows.map((row) => String(row.table_name || "")));
-      activeTableCache.tables = nextTables;
+      const groupedColumns = new Map();
+      rows.forEach((row) => {
+        const tableName = String(row.table_name || "");
+        const columnName = String(row.column_name || "");
+        if (!tableName || !columnName) return;
+        if (!groupedColumns.has(tableName)) groupedColumns.set(tableName, []);
+        groupedColumns.get(tableName).push(columnName);
+      });
+      const nextColumns = new Map();
+      tableNames.forEach((tableName) => {
+        const picked = pickTimeColumn(groupedColumns.get(tableName) || []);
+        if (picked) nextColumns.set(tableName, picked);
+      });
+      activeTableCache.sourceColumns = nextColumns;
       activeTableCache.expiresAt = Date.now() + ACTIVE_TABLE_CACHE_TTL_MS;
-      return nextTables;
+      return nextColumns;
     })
     .finally(() => {
       activeTableCache.pending = null;
@@ -116,39 +164,57 @@ async function queryRecentActiveDays(pool, phone, windowDays = ACTIVE_WINDOW_DAY
   const safeWindowDays = Math.max(1, Number.parseInt(windowDays, 10) || ACTIVE_WINDOW_DAYS);
   const historyWindowDays = safeWindowDays - 1;
   const tableNames = ACTIVE_SOURCE_TABLES.map((item) => item.tableName);
-  const supportedTables = await getTablesWithCreatedAt(pool, tableNames);
-  const activeSources = ACTIVE_SOURCE_TABLES.filter((item) => supportedTables.has(item.tableName));
-  if (!activeSources.length) return 0;
-  const activeDateRows = await Promise.all(
-    activeSources.map(({ tableName, phoneColumn }) =>
+  const sourceColumns = await getActiveSourceColumns(pool, tableNames);
+  const activeSources = ACTIVE_SOURCE_TABLES.map((item) => ({
+    ...item,
+    timeColumn: sourceColumns.get(item.tableName) || "",
+  })).filter((item) => item.timeColumn);
+  if (!activeSources.length) {
+    throw new Error(`活跃统计失败：未找到可用时间字段（支持 ${ACTIVE_TIME_COLUMN_CANDIDATES.join("/")})`);
+  }
+  const sourceRows = await Promise.all(
+    activeSources.map(({ tableName, phoneColumn, timeColumn }) =>
       pool
         .execute(
           `
-            SELECT DISTINCT DATE_FORMAT(created_at, '%Y-%m-%d') AS active_day
+            SELECT DISTINCT DATE_FORMAT(${timeColumn}, '%Y-%m-%d') AS active_day
             FROM ${tableName}
             WHERE ${phoneColumn} COLLATE utf8mb4_general_ci = ?
-              AND created_at >= DATE_SUB(CURDATE(), INTERVAL ${historyWindowDays} DAY)
+              AND ${timeColumn} >= DATE_SUB(CURDATE(), INTERVAL ${historyWindowDays} DAY)
           `,
           [phone],
         )
-        .then(([rows]) => rows),
+        .then(([rows]) => ({ tableName, timeColumn, rows })),
     ),
   );
   const activeDaySet = new Set();
-  activeDateRows.forEach((rows) => {
+  const sourceBreakdown = [];
+  sourceRows.forEach(({ tableName, timeColumn, rows }) => {
+    const tableDaySet = new Set();
     rows.forEach((row) => {
       const activeDay = normalizeDateKey(row.active_day);
-      if (activeDay) activeDaySet.add(activeDay);
+      if (!activeDay) return;
+      tableDaySet.add(activeDay);
+      activeDaySet.add(activeDay);
+    });
+    sourceBreakdown.push({
+      tableName,
+      timeColumn,
+      dayCount: tableDaySet.size,
     });
   });
-  return activeDaySet.size;
+  return {
+    days: activeDaySet.size,
+    sourceBreakdown,
+    missingTables: tableNames.filter((tableName) => !sourceColumns.has(tableName)),
+  };
 }
 
 async function queryRecommendedPlaces(pool, phone, limit = RECOMMENDED_PLACE_LIMIT) {
   const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || RECOMMENDED_PLACE_LIMIT, 1), 20);
   const [rows] = await pool.execute(
     `
-      SELECT id, place_name
+      SELECT id, place_name, description, image_url, created_at, lat, lng
       FROM recommendations
       WHERE user_phone COLLATE utf8mb4_general_ci = ?
       ORDER BY created_at DESC, id DESC
@@ -160,6 +226,11 @@ async function queryRecommendedPlaces(pool, phone, limit = RECOMMENDED_PLACE_LIM
     .map((row) => ({
       id: Number(row.id || 0),
       name: String(row.place_name || "").trim(),
+      description: String(row.description || "").trim(),
+      images: parseRecommendationImageUrls(row.image_url),
+      createdAt: row.created_at || null,
+      lat: row.lat == null ? null : Number(row.lat),
+      lng: row.lng == null ? null : Number(row.lng),
     }))
     .filter((item) => item.id > 0 && item.name);
 }
@@ -187,7 +258,7 @@ export function registerUserSummaryRoutes(app, { pool }) {
     try {
       const user = await queryUserBasicInfo(pool, phone);
       if (!user) return res.status(404).json({ ok: false, message: "用户不存在" });
-      const [badgeData, receivedLikes, forumCalls, recentActiveDays, recommendedPlaces] = await Promise.all([
+      const [badgeData, receivedLikes, forumCalls, activityResult, recommendedPlaces] = await Promise.all([
         buildUserBadgeData(pool, phone),
         queryReceivedLikeCount(pool, phone),
         queryForumCallCount(pool, phone),
@@ -205,8 +276,10 @@ export function registerUserSummaryRoutes(app, { pool }) {
           badgeIcon: pickActiveBadgeIcon(badgeData),
           points: totalVotes * POINTS_PER_VOTE,
           totalVotes,
-          recentActiveDays,
+          recentActiveDays: activityResult.days,
           activeWindowDays: ACTIVE_WINDOW_DAYS,
+          activityBreakdown: activityResult.sourceBreakdown,
+          activityMissingTables: activityResult.missingTables,
           recommendedPlaces,
         },
       });
