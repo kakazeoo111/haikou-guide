@@ -1,13 +1,13 @@
 ﻿import React, { useEffect, useMemo, useRef, useState } from "react";
 import AuthPanel from "./components/AuthPanel";
 import AppLayout from "./components/AppLayout";
+import { JUMP_TO_RECOMMEND_EVENT } from "./constants/jumpEvents";
 import { places as placesData } from "./data/places";
 import { createGeneralHandlers } from "./logic/createGeneralHandlers";
 import { createInteractionHandlers } from "./logic/createInteractionHandlers";
 import { getFilteredPlaces } from "./logic/placeUtils";
+import { scrollToRecommendCard } from "./logic/recommendJump";
 import { useBadgeCenter } from "./logic/useBadgeCenter";
-
-const JUMP_TO_RECOMMEND_EVENT = "haikou:jump-to-recommend";
 
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -223,11 +223,12 @@ function App() {
 
   useEffect(() => {
     const handleJumpToRecommend = (event) => {
-      const placeName = String(event?.detail?.placeName || "").trim();
+      const recommendationId = Number.parseInt(event?.detail?.recommendationId, 10) || 0;
       setViewingCommentsPlace(null);
       setActiveTab("home");
       setFilter("recommend");
-      if (placeName) setSearch(placeName);
+      setSearch("");
+      if (recommendationId > 0) scrollToRecommendCard(recommendationId);
     };
     window.addEventListener(JUMP_TO_RECOMMEND_EVENT, handleJumpToRecommend);
     return () => window.removeEventListener(JUMP_TO_RECOMMEND_EVENT, handleJumpToRecommend);

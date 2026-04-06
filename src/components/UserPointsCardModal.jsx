@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { JUMP_TO_RECOMMEND_EVENT } from "../constants/jumpEvents";
 
 const CARD_OVERLAY_Z_INDEX = 4100;
 const AVATAR_PREVIEW_Z_INDEX = 4200;
 const CARD_MAX_WIDTH = 360;
-const JUMP_TO_RECOMMEND_EVENT = "haikou:jump-to-recommend";
-
 function AvatarPreview({ visible, avatarUrl, onClose }) {
   if (!visible) return null;
   return (

@@ -15,6 +15,7 @@ import {
 } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { FILTER_ITEMS } from "../constants/homeFilters";
+import { getRecommendCardDomId } from "../logic/recommendJump";
 import LikeHeartIcon from "./LikeHeartIcon";
 
 const UNREAD_BADGE_LIMIT = 99;
@@ -200,8 +201,9 @@ function HomePanels({
             const isMarked = targetPlaces.some((target) => target.id === place.id);
             const isFav = favoriteIds.includes(String(place.id));
             const coverImage = (place.album && place.album[0]) || "https://api.suzcore.top/uploads/default_place.jpg";
+            const recommendCardId = place.type === "recommend" ? getRecommendCardDomId(place.realId) : "";
             return (
-              <div key={place.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
+              <div id={recommendCardId || undefined} key={place.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
                 {filter === "top10" && <div style={rankBadgeStyle(index)}>{index + 1}</div>}
 
                 {place.type === "recommend" && (
