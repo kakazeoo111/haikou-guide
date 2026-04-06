@@ -3,6 +3,7 @@ import { buildUserBadgeData } from "./badgesService.js";
 const PHONE_REGEX = /^1\d{10}$/;
 const POINTS_PER_VOTE = 10;
 const ACTIVE_WINDOW_DAYS = 30;
+const RECOMMENDED_PLACE_LIMIT = 6;
 const ACTIVE_SOURCE_TABLES = [
   { tableName: "recommendations", phoneColumn: "user_phone" },
   { tableName: "comments", phoneColumn: "user_phone" },
@@ -76,11 +77,10 @@ async function queryForumCallCount(pool, phone) {
   );
 }
 
-function formatLocalDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+function normalizeDateKey(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  return normalized.slice(0, 10);
 }
 
 async function getTablesWithCreatedAt(pool, tableNames) {
@@ -113,26 +113,55 @@ async function getTablesWithCreatedAt(pool, tableNames) {
 }
 
 async function queryRecentActiveDays(pool, phone, windowDays = ACTIVE_WINDOW_DAYS) {
-  const thresholdDate = new Date();
-  thresholdDate.setDate(thresholdDate.getDate() - (windowDays - 1));
-  const threshold = formatLocalDate(thresholdDate);
+  const safeWindowDays = Math.max(1, Number.parseInt(windowDays, 10) || ACTIVE_WINDOW_DAYS);
+  const historyWindowDays = safeWindowDays - 1;
   const tableNames = ACTIVE_SOURCE_TABLES.map((item) => item.tableName);
   const supportedTables = await getTablesWithCreatedAt(pool, tableNames);
   const activeSources = ACTIVE_SOURCE_TABLES.filter((item) => supportedTables.has(item.tableName));
   if (!activeSources.length) return 0;
-  const unionSql = activeSources
-    .map((item) => `SELECT DATE(created_at) AS active_day FROM ${item.tableName} WHERE ${item.phoneColumn} = ?`)
-    .join(" UNION ALL ");
-  const params = [...activeSources.map(() => phone), threshold];
-  return queryCount(
-    pool,
-    `
-      SELECT COUNT(DISTINCT active_day) AS count
-      FROM (${unionSql}) activity_days
-      WHERE active_day >= ?
-    `,
-    params,
+  const activeDateRows = await Promise.all(
+    activeSources.map(({ tableName, phoneColumn }) =>
+      pool
+        .execute(
+          `
+            SELECT DISTINCT DATE_FORMAT(created_at, '%Y-%m-%d') AS active_day
+            FROM ${tableName}
+            WHERE ${phoneColumn} COLLATE utf8mb4_general_ci = ?
+              AND created_at >= DATE_SUB(CURDATE(), INTERVAL ${historyWindowDays} DAY)
+          `,
+          [phone],
+        )
+        .then(([rows]) => rows),
+    ),
   );
+  const activeDaySet = new Set();
+  activeDateRows.forEach((rows) => {
+    rows.forEach((row) => {
+      const activeDay = normalizeDateKey(row.active_day);
+      if (activeDay) activeDaySet.add(activeDay);
+    });
+  });
+  return activeDaySet.size;
+}
+
+async function queryRecommendedPlaces(pool, phone, limit = RECOMMENDED_PLACE_LIMIT) {
+  const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || RECOMMENDED_PLACE_LIMIT, 1), 20);
+  const [rows] = await pool.execute(
+    `
+      SELECT id, place_name
+      FROM recommendations
+      WHERE user_phone COLLATE utf8mb4_general_ci = ?
+      ORDER BY created_at DESC, id DESC
+      LIMIT ${safeLimit}
+    `,
+    [phone],
+  );
+  return rows
+    .map((row) => ({
+      id: Number(row.id || 0),
+      name: String(row.place_name || "").trim(),
+    }))
+    .filter((item) => item.id > 0 && item.name);
 }
 
 function pickActiveBadgeIcon(badgeData) {
@@ -158,11 +187,12 @@ export function registerUserSummaryRoutes(app, { pool }) {
     try {
       const user = await queryUserBasicInfo(pool, phone);
       if (!user) return res.status(404).json({ ok: false, message: "用户不存在" });
-      const [badgeData, receivedLikes, forumCalls, recentActiveDays] = await Promise.all([
+      const [badgeData, receivedLikes, forumCalls, recentActiveDays, recommendedPlaces] = await Promise.all([
         buildUserBadgeData(pool, phone),
         queryReceivedLikeCount(pool, phone),
         queryForumCallCount(pool, phone),
         queryRecentActiveDays(pool, phone),
+        queryRecommendedPlaces(pool, phone),
       ]);
       const totalVotes = receivedLikes + forumCalls;
       res.json({
@@ -177,6 +207,7 @@ export function registerUserSummaryRoutes(app, { pool }) {
           totalVotes,
           recentActiveDays,
           activeWindowDays: ACTIVE_WINDOW_DAYS,
+          recommendedPlaces,
         },
       });
     } catch (error) {
