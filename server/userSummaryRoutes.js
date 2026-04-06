@@ -5,22 +5,13 @@ const ACTIVE_WINDOW_DAYS = 30;
 const RECOMMENDED_PLACE_LIMIT = 6;
 const ACTIVE_TIME_COLUMN_CANDIDATES = ["created_at", "create_time", "createdAt"];
 const ACTIVE_SOURCE_TABLES = [
-  { tableName: "recommendations", phoneColumn: "user_phone" },
-  { tableName: "comments", phoneColumn: "user_phone" },
-  { tableName: "forum_posts", phoneColumn: "user_phone" },
-  { tableName: "forum_comments", phoneColumn: "user_phone" },
-  { tableName: "recommendation_likes", phoneColumn: "phone" },
-  { tableName: "comment_likes", phoneColumn: "phone" },
-  { tableName: "forum_post_calls", phoneColumn: "user_phone" },
-  { tableName: "place_likes", phoneColumn: "phone" },
+  { tableName: "recommendations", phoneColumn: "user_phone" }, { tableName: "comments", phoneColumn: "user_phone" },
+  { tableName: "forum_posts", phoneColumn: "user_phone" }, { tableName: "forum_comments", phoneColumn: "user_phone" },
+  { tableName: "recommendation_likes", phoneColumn: "phone" }, { tableName: "comment_likes", phoneColumn: "phone" },
+  { tableName: "forum_post_calls", phoneColumn: "user_phone" }, { tableName: "place_likes", phoneColumn: "phone" },
 ];
 const ACTIVE_TABLE_CACHE_TTL_MS = 5 * 60 * 1000;
-const activeTableCache = {
-  expiresAt: 0,
-  sourceColumns: new Map(),
-  pending: null,
-};
-
+const activeTableCache = { expiresAt: 0, sourceColumns: new Map(), pending: null };
 async function queryCount(pool, sql, params) {
   const [rows] = await pool.execute(sql, params);
   const count = Number(rows?.[0]?.count || 0);
@@ -82,7 +73,6 @@ function normalizeDateKey(value) {
   if (!normalized) return "";
   return normalized.slice(0, 10);
 }
-
 function normalizeColumnName(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -102,7 +92,6 @@ function pickTimeColumn(columns) {
   }
   return "";
 }
-
 function toHttpsUrl(url) {
   const normalized = String(url || "").trim();
   if (!normalized) return "";
@@ -130,7 +119,6 @@ function parseRecommendationImageUrls(imageValue) {
   const single = toHttpsUrl(normalized);
   return single ? [single] : [];
 }
-
 async function getActiveSourceColumns(pool, tableNames) {
   if (!tableNames.length) return new Map();
   const now = Date.now();
@@ -168,7 +156,6 @@ async function getActiveSourceColumns(pool, tableNames) {
     });
   return activeTableCache.pending;
 }
-
 async function queryRecentActiveDays(pool, phone, windowDays = ACTIVE_WINDOW_DAYS) {
   const safeWindowDays = Math.max(1, Number.parseInt(windowDays, 10) || ACTIVE_WINDOW_DAYS);
   const historyWindowDays = safeWindowDays - 1;
@@ -218,15 +205,32 @@ async function queryRecentActiveDays(pool, phone, windowDays = ACTIVE_WINDOW_DAY
     missingTables: tableNames.filter((tableName) => !sourceColumns.has(tableName)),
   };
 }
-
 async function queryRecommendedPlaces(pool, phone, limit = RECOMMENDED_PLACE_LIMIT) {
   const safeLimit = Math.min(Math.max(Number.parseInt(limit, 10) || RECOMMENDED_PLACE_LIMIT, 1), 20);
   const [rows] = await pool.execute(
     `
-      SELECT id, place_name, description, image_url, created_at, lat, lng
-      FROM recommendations
-      WHERE user_phone COLLATE utf8mb4_general_ci = ?
-      ORDER BY created_at DESC, id DESC
+      SELECT
+        r.id,
+        r.place_name,
+        r.description,
+        r.image_url,
+        r.created_at,
+        r.lat,
+        r.lng,
+        COALESCE(rl.like_count, 0) AS like_count,
+        (
+          SELECT COUNT(*)
+          FROM comments c
+          WHERE c.place_id = CONCAT('rec_', r.id)
+        ) AS comment_count
+      FROM recommendations r
+      LEFT JOIN (
+        SELECT recommendation_id, COUNT(*) AS like_count
+        FROM recommendation_likes
+        GROUP BY recommendation_id
+      ) rl ON rl.recommendation_id = r.id
+      WHERE r.user_phone COLLATE utf8mb4_general_ci = ?
+      ORDER BY r.created_at DESC, r.id DESC
       LIMIT ${safeLimit}
     `,
     [phone],
@@ -240,16 +244,16 @@ async function queryRecommendedPlaces(pool, phone, limit = RECOMMENDED_PLACE_LIM
       createdAt: row.created_at || null,
       lat: row.lat == null ? null : Number(row.lat),
       lng: row.lng == null ? null : Number(row.lng),
+      likeCount: Number(row.like_count || 0),
+      commentCount: Number(row.comment_count || 0),
     }))
     .filter((item) => item.id > 0 && item.name);
 }
-
 function pickActiveBadgeIcon(badgeData) {
   const catalog = Array.isArray(badgeData?.badgeCatalog) ? badgeData.badgeCatalog : [];
   const matched = catalog.find((item) => String(item?.name || "") === String(badgeData?.activeTitle || ""));
   return matched?.icon || "🏅";
 }
-
 function normalizeAvatarUrl(url, phone) {
   const normalized = String(url || "").trim();
   if (!normalized) return `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || "user"}`;
@@ -257,7 +261,6 @@ function normalizeAvatarUrl(url, phone) {
   if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || "user"}`;
 }
-
 export function registerUserSummaryRoutes(app, { pool }) {
   app.get("/api/users/:phone/summary", async (req, res) => {
     const phone = String(req.params.phone || "").trim();

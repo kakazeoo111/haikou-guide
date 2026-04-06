@@ -1,15 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import UserRecommendedPlaceReadonly from "./UserRecommendedPlaceReadonly";
 
 const CARD_OVERLAY_Z_INDEX = 4100;
 const AVATAR_PREVIEW_Z_INDEX = 4200;
 const CARD_MAX_WIDTH = 360;
-
-function formatDateTime(value) {
-  if (!value) return "刚刚更新";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "刚刚更新";
-  return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
 
 function AvatarPreview({ visible, avatarUrl, onClose }) {
   if (!visible) return null;
@@ -81,7 +75,6 @@ function SummaryHeader({ data, onAvatarClick }) {
           <span>{data.badgeIcon || "🏅"}</span>
           <span>{data.badgeTitle || "未解锁称号"}</span>
         </div>
-        <div style={{ fontSize: "11px", color: "#6d9181", marginTop: "7px" }}>点击头像查看大图</div>
       </div>
     </div>
   );
@@ -101,21 +94,6 @@ function StatsGrid({ data }) {
       </div>
     </div>
   );
-}
-
-function ActivityDebugHint({ data }) {
-  const list = Array.isArray(data?.activityBreakdown) ? data.activityBreakdown : [];
-  const previewText = list
-    .filter((item) => Number(item.dayCount || 0) > 0)
-    .slice(0, 3)
-    .map((item) => `${item.tableName}:${item.dayCount}天`)
-    .join(" · ");
-  if (previewText) {
-    return <div style={{ fontSize: "11px", color: "#6d8c80" }}>活跃来源 {previewText}</div>;
-  }
-  const missingTables = Array.isArray(data?.activityMissingTables) ? data.activityMissingTables : [];
-  if (!missingTables.length) return null;
-  return <div style={{ fontSize: "11px", color: "#c63f3f" }}>活跃统计字段异常：{missingTables.join("、")}</div>;
 }
 
 function PlaceChip({ place, active, onClick }) {
@@ -144,31 +122,6 @@ function PlaceChip({ place, active, onClick }) {
   );
 }
 
-function PlaceDetail({ place }) {
-  if (!place) {
-    return <div style={{ fontSize: "12px", color: "#7e9b8d", padding: "12px 0 4px" }}>点击上方景点标签展开详情</div>;
-  }
-  return (
-    <div style={{ marginTop: "10px", borderRadius: "16px", border: "1px solid #d3eadf", background: "rgba(255,255,255,0.82)", padding: "10px" }}>
-      <div style={{ fontSize: "14px", fontWeight: 800, color: "#214638" }}>{place.name}</div>
-      <div style={{ fontSize: "11px", color: "#6d8f81", marginTop: "4px" }}>推荐时间：{formatDateTime(place.createdAt)}</div>
-      <div style={{ fontSize: "12px", color: "#355e4c", marginTop: "7px", lineHeight: 1.5 }}>{place.description || "这位用户暂未填写推荐说明。"}</div>
-      {place.images?.length > 0 && (
-        <div style={{ display: "flex", gap: "6px", overflowX: "auto", marginTop: "9px", paddingBottom: "2px" }}>
-          {place.images.map((url, index) => (
-            <img
-              key={`${place.id}-img-${index}`}
-              src={url}
-              alt="recommended-place"
-              style={{ width: "90px", height: "64px", borderRadius: "10px", objectFit: "cover", border: "1px solid #d8ece2", flexShrink: 0, background: "#eef7f2" }}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function RecommendedPlacesSection({ places, expandedId, onToggle }) {
   if (!places.length) {
     return (
@@ -187,7 +140,7 @@ function RecommendedPlacesSection({ places, expandedId, onToggle }) {
           <PlaceChip key={`${place.id}-${place.name}`} place={place} active={Number(expandedId) === Number(place.id)} onClick={() => onToggle(place.id)} />
         ))}
       </div>
-      <PlaceDetail place={expandedPlace} />
+      <UserRecommendedPlaceReadonly place={expandedPlace} visible={Boolean(expandedPlace)} />
     </div>
   );
 }
@@ -210,7 +163,6 @@ function SummaryPanel({ loading, data, recommendedPlaces, expandedPlaceId, onAva
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <SummaryHeader data={data} onAvatarClick={onAvatarClick} />
           <StatsGrid data={data} />
-          <ActivityDebugHint data={data} />
           <RecommendedPlacesSection places={recommendedPlaces} expandedId={expandedPlaceId} onToggle={onTogglePlace} />
         </div>
       )}
