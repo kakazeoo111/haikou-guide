@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import UserRecommendedPlaceReadonly from "./UserRecommendedPlaceReadonly";
 
 const CARD_OVERLAY_Z_INDEX = 4100;
 const AVATAR_PREVIEW_Z_INDEX = 4200;
 const CARD_MAX_WIDTH = 360;
+const JUMP_TO_RECOMMEND_EVENT = "haikou:jump-to-recommend";
 
 function AvatarPreview({ visible, avatarUrl, onClose }) {
   if (!visible) return null;
@@ -101,19 +101,19 @@ function PlaceChip({ place, active, onClick }) {
     <button
       onClick={onClick}
       style={{
-        border: active ? "1px solid #57a77a" : "1px solid #cde6da",
-        background: active ? "linear-gradient(135deg, #dff9ec, #edf8ff)" : "#f7fffb",
-        color: active ? "#166348" : "#2f6a52",
+        border: "1px solid #cde6da",
+        background: "#f7fffb",
+        color: "#2f6a52",
         borderRadius: "999px",
         padding: "7px 12px",
         maxWidth: "100%",
         fontSize: "12px",
-        fontWeight: active ? 800 : 600,
+        fontWeight: active ? 800 : 700,
         cursor: "pointer",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
-        boxShadow: active ? "0 6px 18px rgba(60,156,120,0.24)" : "none",
+        boxShadow: active ? "0 6px 18px rgba(60,156,120,0.22)" : "none",
         transition: "all .18s ease",
       }}
     >
@@ -122,7 +122,15 @@ function PlaceChip({ place, active, onClick }) {
   );
 }
 
-function RecommendedPlacesSection({ places, expandedId, onToggle }) {
+function jumpToRecommendList(place, onClose) {
+  const recommendationId = Number(place?.id || 0);
+  const placeName = String(place?.name || "").trim();
+  if (!recommendationId || !placeName) return;
+  window.dispatchEvent(new CustomEvent(JUMP_TO_RECOMMEND_EVENT, { detail: { recommendationId, placeName } }));
+  onClose?.();
+}
+
+function RecommendedPlacesSection({ places, onJump }) {
   if (!places.length) {
     return (
       <div style={{ borderRadius: "20px", border: "1px solid #d9ece2", background: "linear-gradient(145deg, #fcfffd, #f7fffb)", padding: "12px" }}>
@@ -131,21 +139,20 @@ function RecommendedPlacesSection({ places, expandedId, onToggle }) {
       </div>
     );
   }
-  const expandedPlace = places.find((item) => Number(item.id) === Number(expandedId)) || null;
   return (
     <div style={{ borderRadius: "20px", border: "1px solid #d9ece2", background: "linear-gradient(145deg, #fcfffd, #f1fff8)", padding: "12px" }}>
       <div style={{ fontSize: "13px", color: "#4f7465", fontWeight: 800, marginBottom: "8px" }}>推荐过的景点</div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
         {places.map((place) => (
-          <PlaceChip key={`${place.id}-${place.name}`} place={place} active={Number(expandedId) === Number(place.id)} onClick={() => onToggle(place.id)} />
+          <PlaceChip key={`${place.id}-${place.name}`} place={place} active={false} onClick={() => onJump(place)} />
         ))}
       </div>
-      <UserRecommendedPlaceReadonly place={expandedPlace} visible={Boolean(expandedPlace)} />
+      <div style={{ fontSize: "12px", color: "#7e9b8d", padding: "10px 0 2px" }}>点击地点名称，跳转到推荐列表中的对应地点</div>
     </div>
   );
 }
 
-function SummaryPanel({ loading, data, recommendedPlaces, expandedPlaceId, onAvatarClick, onTogglePlace }) {
+function SummaryPanel({ loading, data, recommendedPlaces, onAvatarClick, onJumpPlace }) {
   return (
     <div
       style={{
@@ -163,7 +170,7 @@ function SummaryPanel({ loading, data, recommendedPlaces, expandedPlaceId, onAva
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           <SummaryHeader data={data} onAvatarClick={onAvatarClick} />
           <StatsGrid data={data} />
-          <RecommendedPlacesSection places={recommendedPlaces} expandedId={expandedPlaceId} onToggle={onTogglePlace} />
+          <RecommendedPlacesSection places={recommendedPlaces} onJump={onJumpPlace} />
         </div>
       )}
     </div>
@@ -193,7 +200,6 @@ function ModalShell({ visible, onClose, children }) {
 
 function UserPointsCardModal({ visible, loading, data, onClose }) {
   const [avatarPreviewVisible, setAvatarPreviewVisible] = useState(false);
-  const [expandedPlaceId, setExpandedPlaceId] = useState(null);
 
   const recommendedPlaces = useMemo(() => {
     if (!Array.isArray(data?.recommendedPlaces)) return [];
@@ -203,13 +209,8 @@ function UserPointsCardModal({ visible, loading, data, onClose }) {
   useEffect(() => {
     if (!visible) {
       setAvatarPreviewVisible(false);
-      setExpandedPlaceId(null);
     }
   }, [visible]);
-
-  useEffect(() => {
-    setExpandedPlaceId(null);
-  }, [data?.phone]);
 
   return (
     <>
@@ -218,9 +219,8 @@ function UserPointsCardModal({ visible, loading, data, onClose }) {
           loading={loading}
           data={data}
           recommendedPlaces={recommendedPlaces}
-          expandedPlaceId={expandedPlaceId}
           onAvatarClick={() => setAvatarPreviewVisible(true)}
-          onTogglePlace={(nextId) => setExpandedPlaceId((currentId) => (Number(currentId) === Number(nextId) ? null : nextId))}
+          onJumpPlace={(place) => jumpToRecommendList(place, onClose)}
         />
       </ModalShell>
       <AvatarPreview visible={avatarPreviewVisible} avatarUrl={data?.avatarUrl} onClose={() => setAvatarPreviewVisible(false)} />

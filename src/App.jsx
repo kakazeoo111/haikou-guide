@@ -7,6 +7,8 @@ import { createInteractionHandlers } from "./logic/createInteractionHandlers";
 import { getFilteredPlaces } from "./logic/placeUtils";
 import { useBadgeCenter } from "./logic/useBadgeCenter";
 
+const JUMP_TO_RECOMMEND_EVENT = "haikou:jump-to-recommend";
+
 function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -218,6 +220,18 @@ function App() {
     if (activeTab !== "profile") return;
     generalHandlers.fetchNotices();
   }, [activeTab]);
+
+  useEffect(() => {
+    const handleJumpToRecommend = (event) => {
+      const placeName = String(event?.detail?.placeName || "").trim();
+      setViewingCommentsPlace(null);
+      setActiveTab("home");
+      setFilter("recommend");
+      if (placeName) setSearch(placeName);
+    };
+    window.addEventListener(JUMP_TO_RECOMMEND_EVENT, handleJumpToRecommend);
+    return () => window.removeEventListener(JUMP_TO_RECOMMEND_EVENT, handleJumpToRecommend);
+  }, []);
 
   if (!currentUser) {
     return (
