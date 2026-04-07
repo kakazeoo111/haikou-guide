@@ -130,17 +130,15 @@ function HomePanels({
               alt="avatar"
             />
             <input type="file" id="avatar-input" hidden accept="image/*" onChange={onAvatarUpload} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ height: "50px", display: "flex", alignItems: "center" }}>
-                <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content", lineHeight: 1 }}>
-                  <span>{currentUser.username}</span>
-                  {unreadCount > 0 && <span style={unreadBadgeStyle}>{unreadBadgeText}</span>}
-                  <span style={{ fontSize: "12px", color: "#ccc" }}>▶</span>
-                </h3>
-              </div>
-              <div style={{ ...userBadgeStyle, marginTop: "-4px", padding: "3px 8px", gap: "4px", borderRadius: "14px" }}>
-                <span style={{ fontSize: "11px" }}>{badgeIcon}</span>
-                <span style={{ fontSize: "11px", color: badgeTheme.textColor, fontWeight: 800 }}>{activeBadgeTitle || "未解锁称号"}</span>
+            <div style={{ flex: 1, minHeight: "50px", display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+              <h3 onClick={onOpenProfile} style={{ margin: 0, fontSize: "16px", color: "#333", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px", width: "fit-content", lineHeight: 1 }}>
+                <span>{currentUser.username}</span>
+                {unreadCount > 0 && <span style={unreadBadgeStyle}>{unreadBadgeText}</span>}
+                <span style={{ fontSize: "12px", color: "#ccc" }}>▶</span>
+              </h3>
+              <div style={{ ...userBadgeStyle, marginTop: 0 }}>
+                <span style={{ fontSize: "13px" }}>{badgeIcon}</span>
+                <span style={{ fontSize: "12px", color: badgeTheme.textColor, fontWeight: 800 }}>{activeBadgeTitle || "未解锁称号"}</span>
               </div>
             </div>
           </div>
