@@ -1,4 +1,4 @@
-import { buildUserBadgeData, saveSelectedBadge, updateManualBadgeGrant } from "./badgesService.js";
+﻿import { buildUserBadgeData, saveSelectedBadge, updateManualBadgeGrant } from "./badgesService.js";
 
 const PHONE_REGEX = /^1\d{10}$/;
 const BADGE_NAME_MAX_LENGTH = 20;
@@ -32,6 +32,14 @@ function validateSelectPayload({ phone, badgeName }) {
   if (!PHONE_REGEX.test(phone)) return "手机号格式错误";
   if (!badgeName) return "称号名称不能为空";
   return "";
+}
+
+function buildSelectedBadgeResponse(badgeData, badgeName) {
+  return {
+    ...badgeData,
+    selectedTitle: badgeName,
+    activeTitle: badgeName,
+  };
 }
 
 export function registerBadgeRoutes(app, { pool, ADMIN_PHONE }) {
@@ -78,8 +86,7 @@ export function registerBadgeRoutes(app, { pool, ADMIN_PHONE }) {
         return res.status(400).json({ ok: false, message: "只能切换为已拥有称号" });
       }
       await saveSelectedBadge(pool, parsed);
-      const nextData = await buildUserBadgeData(pool, parsed.phone);
-      res.json({ ok: true, message: "称号切换成功", data: nextData });
+      res.json({ ok: true, message: "称号切换成功", data: buildSelectedBadgeResponse(badgeData, parsed.badgeName) });
     } catch (error) {
       console.error("切换称号失败:", error.message);
       res.status(500).json({ ok: false, message: `切换称号失败: ${error.message}` });

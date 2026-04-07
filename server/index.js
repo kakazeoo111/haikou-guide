@@ -29,6 +29,7 @@ const port = process.env.SMS_SERVER_PORT || 3001;
 const ADMIN_PHONE = "13707584213";
 const otpStore = new Map();
 
+app.disable("x-powered-by");
 app.use(cors());
 app.use(express.json());
 
@@ -56,6 +57,16 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+function getPositiveIntEnv(name, fallback) {
+  const value = Number.parseInt(process.env[name] || "", 10);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+function getNonNegativeIntEnv(name, fallback) {
+  const value = Number.parseInt(process.env[name] || "", 10);
+  return Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "localhost",
   user: process.env.DB_USER,
@@ -63,7 +74,12 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
-  connectionLimit: 10,
+  connectionLimit: getPositiveIntEnv("DB_POOL_CONNECTION_LIMIT", 6),
+  maxIdle: getPositiveIntEnv("DB_POOL_MAX_IDLE", 4),
+  idleTimeout: getPositiveIntEnv("DB_POOL_IDLE_TIMEOUT_MS", 60000),
+  queueLimit: getNonNegativeIntEnv("DB_POOL_QUEUE_LIMIT", 0),
+  enableKeepAlive: true,
+  keepAliveInitialDelay: getNonNegativeIntEnv("DB_POOL_KEEPALIVE_DELAY_MS", 10000),
 });
 
 const smsClient = new DypnsapiClient.default(
