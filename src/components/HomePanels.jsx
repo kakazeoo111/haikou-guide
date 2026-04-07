@@ -84,6 +84,7 @@ function HomePanels({
   onShowFeedback,
   onShowAnnouncement,
   onShowForum,
+  onOpenRoutePlanner,
   onManageBadge,
   onFetchAllFeedbacks,
   onSearchChange,
@@ -150,6 +151,9 @@ function HomePanels({
             </span>
             <span onClick={onShowForum} style={{ color: "#5aa77b", cursor: "pointer" }}>
               论坛
+            </span>
+            <span onClick={onOpenRoutePlanner} style={{ color: "#5aa77b", cursor: "pointer" }}>
+              规划路线
             </span>
             <span onClick={onShowAnnouncement} style={{ color: "#5aa77b", cursor: "pointer" }}>
               公告

@@ -2,6 +2,7 @@ import CommentsOverlay from "./CommentsOverlay";
 import ProfileOverlay from "./ProfileOverlay";
 import NoticeListModal from "./NoticeListModal";
 import RecommendModal from "./RecommendModal";
+import RoutePlannerModal from "./RoutePlannerModal";
 import AdminFeedbackModal from "./AdminFeedbackModal";
 import ZoomOverlay from "./ZoomOverlay";
 import AnnouncementModal, { AnnouncementEditorModal } from "./AnnouncementModal";
@@ -70,6 +71,8 @@ function AppLayout({
   feedbackImages,
   setFeedbackImages,
   setShowFeedback,
+  showRoutePlanner,
+  setShowRoutePlanner,
   showNoticeList,
   authApiBase,
   userLocation,
@@ -78,6 +81,7 @@ function AppLayout({
   setSearch,
   filter,
   favoriteIds,
+  favoritePlacesForRoute,
   filteredPlaces,
   setTargetPlaces,
   onManageBadge,
@@ -240,6 +244,8 @@ function AppLayout({
         formatCommentTime={formatCommentTime}
       />
 
+      <RoutePlannerModal visible={showRoutePlanner} favoritePlaces={favoritePlacesForRoute} userLocation={userLocation} onClose={() => setShowRoutePlanner(false)} />
+
       {activeTab === "forum" && (
         <ForumModal
           currentUser={currentUser}
@@ -276,6 +282,7 @@ function AppLayout({
         onShowFeedback={() => setShowFeedback(true)}
         onShowAnnouncement={onOpenAnnouncement}
         onShowForum={() => setActiveTab("forum")}
+        onOpenRoutePlanner={() => setShowRoutePlanner(true)}
         onManageBadge={onManageBadge}
         onFetchAllFeedbacks={generalHandlers.fetchAllFeedbacks}
         onSearchChange={setSearch}

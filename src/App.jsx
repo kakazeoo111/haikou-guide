@@ -4,10 +4,10 @@ import AppLayout from "./components/AppLayout";
 import { places as placesData } from "./data/places";
 import { createGeneralHandlers } from "./logic/createGeneralHandlers";
 import { createInteractionHandlers } from "./logic/createInteractionHandlers";
-import { getFilteredPlaces } from "./logic/placeUtils";
+import { getAllSourcePlaces, getFilteredPlaces } from "./logic/placeUtils";
 import { useCountdown, useInitClientState, useRecommendJumpListener, useValidateEnv } from "./logic/useAppBootstraps";
 import { useBadgeCenter } from "./logic/useBadgeCenter";
-
+function hasValidRouteCoordinate(place) { return Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)); }
 function App() {
   const [userLocation, setUserLocation] = useState(null);
   const [filter, setFilter] = useState("all");
@@ -49,9 +49,9 @@ function App() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackContent, setFeedbackContent] = useState("");
   const [feedbackImages, setFeedbackImages] = useState([]);
+  const [showRoutePlanner, setShowRoutePlanner] = useState(false);
   const [showAdminFeedback, setShowAdminFeedback] = useState(false);
   const [allFeedbacks, setAllFeedbacks] = useState([]);
-
   const ADMIN_PHONE = import.meta.env.VITE_ADMIN_PHONE;
   const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
   const places = placesData;
@@ -75,7 +75,6 @@ function App() {
     currentUser,
     adminPhone: ADMIN_PHONE,
   });
-
   const generalHandlers = createGeneralHandlers({
     authApiBase,
     currentUser,
@@ -155,15 +154,20 @@ function App() {
     () => (viewingCommentsPlace ? activeComments[viewingCommentsPlace.id] || [] : []),
     [viewingCommentsPlace, activeComments],
   );
+  const favoritePlacesForRoute = useMemo(() => {
+    const favoriteOrderMap = new Map(favoriteIds.map((id, index) => [String(id), index]));
+    return getAllSourcePlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation })
+      .filter((place) => favoriteOrderMap.has(String(place.id)))
+      .filter(hasValidRouteCoordinate)
+      .sort((a, b) => favoriteOrderMap.get(String(a.id)) - favoriteOrderMap.get(String(b.id)));
+  }, [places, recommendations, placeStats, myLikedPlaceIds, userLocation, favoriteIds]);
+
   const handleDismissAnnouncement = () => {
     if (!currentUser?.phone) return setShowNotice(false);
     localStorage.setItem(getNoticeDismissKey(currentUser.phone), "1");
     setShowNotice(false);
   };
   const handleOpenAnnouncement = () => setShowNotice(true);
-
-
-
   useEffect(() => {
     if (!zoomMode || !scrollContainerRef.current) return;
     scrollContainerRef.current.scrollLeft = window.innerWidth * initialSlide;
@@ -196,14 +200,10 @@ function App() {
       })
       .catch((error) => console.error("获取公告失败:", error));
   }, [currentUser, authApiBase]);
-
-
   useEffect(() => {
     if (activeTab !== "profile") return;
     generalHandlers.fetchNotices();
   }, [activeTab]);
-
-
   if (!currentUser) {
     return (
       <AuthPanel
@@ -285,6 +285,8 @@ function App() {
       feedbackImages={feedbackImages}
       setFeedbackImages={setFeedbackImages}
       setShowFeedback={setShowFeedback}
+      showRoutePlanner={showRoutePlanner}
+      setShowRoutePlanner={setShowRoutePlanner}
       showNoticeList={showNoticeList}
       authApiBase={authApiBase}
       userLocation={userLocation}
@@ -293,6 +295,7 @@ function App() {
       setSearch={setSearch}
       filter={filter}
       favoriteIds={favoriteIds}
+      favoritePlacesForRoute={favoritePlacesForRoute}
       filteredPlaces={filteredPlaces}
       setTargetPlaces={setTargetPlaces}
     />

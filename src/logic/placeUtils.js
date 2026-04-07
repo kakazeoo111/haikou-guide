@@ -35,8 +35,8 @@ function shouldDisplayPlace(placeId) {
   return !TEMP_HIDDEN_PLACE_IDS.has(String(placeId));
 }
 
-export function getFilteredPlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation, search, filter, favoriteIds }) {
-  const allSource = [
+function buildAllSourcePlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation }) {
+  return [
     ...places.map((p) => ({
       ...p,
       id: String(p.id),
@@ -57,8 +57,14 @@ export function getFilteredPlaces({ places, recommendations, placeStats, myLiked
       album: parseRecommendationAlbum(r.image_url),
     })),
   ];
+}
 
-  let list = allSource.filter((p) => shouldDisplayPlace(p.id)).filter((p) => p.name.includes(search));
+export function getAllSourcePlaces(params) {
+  return buildAllSourcePlaces(params).filter((p) => shouldDisplayPlace(p.id));
+}
+
+export function getFilteredPlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation, search, filter, favoriteIds }) {
+  let list = getAllSourcePlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation }).filter((p) => p.name.includes(search));
   if (filter === "favorite") return list.filter((p) => favoriteIds.includes(p.id)).sort((a, b) => parseFloat(a.distVal) - parseFloat(b.distVal));
   if (filter === "top10") return list.sort((a, b) => b.likes - a.likes).slice(0, 10);
   if (filter === "photo") list = list.filter((p) => p.isPhotoReady);
