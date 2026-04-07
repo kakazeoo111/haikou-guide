@@ -207,7 +207,12 @@ function AppLayout({
         place={zoomMode ? null : detailPlace}
         onClose={() => setDetailPlace(null)}
         onPreviewAlbum={(index) => {
-          setZoomedSingleImage(null);
+          const albumImages = Array.isArray(detailPlace?.album) ? detailPlace.album : [];
+          if (albumImages.length === 0) {
+            console.error("Detail preview failed: album is empty", { placeId: detailPlace?.id, index });
+            return;
+          }
+          setZoomedSingleImage({ images: albumImages, index });
           setInitialSlide(index);
           setZoomMode(true);
         }}

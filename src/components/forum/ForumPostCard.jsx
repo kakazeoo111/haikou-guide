@@ -159,6 +159,12 @@ function ForumPostCard({
             return (
               <div key={comment.id} style={{ borderBottom: "1px dashed #e5eeea", padding: "8px 0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                  <img
+                    src={getAvatarSrc(comment.user_phone, comment.avatar_url)}
+                    alt="forum-comment-avatar"
+                    onClick={() => userPointsCard.openByPhone(comment.user_phone)}
+                    style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover", cursor: "pointer" }}
+                  />
                   <span style={{ fontSize: "12px", color: "#39664f", fontWeight: 700 }}>{comment.username}</span>
                   {commentBadge && <span style={{ fontSize: "12px" }}>{commentBadge.icon}</span>}
                   {commentBadge && <span style={selfBadgeStyle(badgeTheme.textColor)}>{commentBadge.title}</span>}
