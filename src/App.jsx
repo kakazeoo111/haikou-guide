@@ -1,12 +1,11 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import AuthPanel from "./components/AuthPanel";
 import AppLayout from "./components/AppLayout";
-import { JUMP_TO_RECOMMEND_EVENT } from "./constants/jumpEvents";
 import { places as placesData } from "./data/places";
 import { createGeneralHandlers } from "./logic/createGeneralHandlers";
 import { createInteractionHandlers } from "./logic/createInteractionHandlers";
 import { getFilteredPlaces } from "./logic/placeUtils";
-import { scrollToRecommendCard } from "./logic/recommendJump";
+import { useCountdown, useInitClientState, useRecommendJumpListener, useValidateEnv } from "./logic/useAppBootstraps";
 import { useBadgeCenter } from "./logic/useBadgeCenter";
 
 function App() {
@@ -57,6 +56,20 @@ function App() {
   const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
   const places = placesData;
   const getNoticeDismissKey = (phone) => `haikou_notice_dismissed_${phone}`;
+  useValidateEnv(ADMIN_PHONE, authApiBase);
+  useInitClientState({
+    setCurrentUser,
+    setActiveTab,
+    setIsMobile,
+    setUserLocation,
+  });
+  useCountdown(countdown, setCountdown);
+  useRecommendJumpListener({
+    setViewingCommentsPlace,
+    setActiveTab,
+    setFilter,
+    setSearch,
+  });
   const { activeBadgeTitle, activeBadgeMeta, badgeSummary, showBadgePicker, showBadgeGrantModal, openBadgePicker, closeBadgePicker, handleSelectBadge, handleManageBadge, closeManageBadgeModal, submitManageBadge } = useBadgeCenter({
     authApiBase,
     currentUser,
@@ -149,33 +162,7 @@ function App() {
   };
   const handleOpenAnnouncement = () => setShowNotice(true);
 
-  useEffect(() => {
-    if (!ADMIN_PHONE || !authApiBase) {
-      console.error("缺少环境变量：VITE_ADMIN_PHONE 或 VITE_AUTH_API_BASE");
-      alert("环境配置缺失：请在前端 .env 文件中配置 VITE_ADMIN_PHONE 和 VITE_AUTH_API_BASE");
-    }
-  }, [ADMIN_PHONE, authApiBase]);
 
-  useEffect(() => {
-    try {
-      const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
-      if (savedUser) setCurrentUser(savedUser);
-      const savedTab = localStorage.getItem("haikou_active_tab");
-      if (["home", "profile", "forum"].includes(savedTab)) setActiveTab(savedTab);
-    } catch (error) {
-      console.error("用户缓存解析失败:", error);
-    }
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener("resize", onResize);
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (error) => console.error("定位失败:", error),
-        { enableHighAccuracy: true }
-      );
-    }
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
 
   useEffect(() => {
     if (!zoomMode || !scrollContainerRef.current) return;
@@ -210,29 +197,12 @@ function App() {
       .catch((error) => console.error("获取公告失败:", error));
   }, [currentUser, authApiBase]);
 
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    return () => clearTimeout(timer);
-  }, [countdown]);
 
   useEffect(() => {
     if (activeTab !== "profile") return;
     generalHandlers.fetchNotices();
   }, [activeTab]);
 
-  useEffect(() => {
-    const handleJumpToRecommend = (event) => {
-      const recommendationId = Number.parseInt(event?.detail?.recommendationId, 10) || 0;
-      setViewingCommentsPlace(null);
-      setActiveTab("home");
-      setFilter("recommend");
-      setSearch("");
-      if (recommendationId > 0) scrollToRecommendCard(recommendationId);
-    };
-    window.addEventListener(JUMP_TO_RECOMMEND_EVENT, handleJumpToRecommend);
-    return () => window.removeEventListener(JUMP_TO_RECOMMEND_EVENT, handleJumpToRecommend);
-  }, []);
 
   if (!currentUser) {
     return (

@@ -1,4 +1,5 @@
 import { parseRecommendationAlbum } from "./placeUtils";
+import { uploadAvatar } from "./avatarUploadHandler";
 
 export function createGeneralHandlers(ctx) {
   const {
@@ -78,21 +79,19 @@ export function createGeneralHandlers(ctx) {
 
   const handleAvatarUpload = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    const formData = new FormData();
-    formData.append("avatar", file);
-    formData.append("phone", currentUser.phone);
     try {
-      const res = await fetch(`${authApiBase}/api/user/upload-avatar`, { method: "POST", body: formData });
-      const data = await res.json();
-      if (!data.ok) return alert(`上传失败：${data.message || "未知错误"}`);
-      const updatedUser = { ...currentUser, avatar_url: data.avatarUrl };
-      setCurrentUser(updatedUser);
-      localStorage.setItem("haikouUser", JSON.stringify(updatedUser));
+      await uploadAvatar({
+        authApiBase,
+        currentUser,
+        file,
+        setCurrentUser,
+      });
       alert("头像更换成功！");
     } catch (error) {
       console.error("头像上传出错:", error);
-      alert("网络错误，请稍后再试");
+      alert(error?.message || "网络错误，请稍后再试");
     }
   };
 

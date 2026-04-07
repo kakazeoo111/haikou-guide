@@ -1,4 +1,6 @@
 export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
+  const UPLOAD_BASE_URL = "https://api.suzcore.top/uploads/";
+
   app.get("/api/announcement", async (req, res) => {
     try {
       const [rows] = await pool.execute("SELECT content FROM announcements WHERE id = 1");
@@ -43,13 +45,16 @@ export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
   });
 
   app.post("/api/user/upload-avatar", upload.single("avatar"), async (req, res) => {
+    const { phone } = req.body || {};
+    if (!phone) return res.status(400).json({ ok: false, message: "缺少手机号" });
+    if (!req.file?.filename) return res.status(400).json({ ok: false, message: "未检测到头像文件" });
     try {
-      const { phone } = req.body;
-      const imageUrl = `https://api.suzcore.top/uploads/${req.file.filename}`;
+      const imageUrl = `${UPLOAD_BASE_URL}${req.file.filename}`;
       await pool.execute("UPDATE users SET avatar_url = ? WHERE phone = ?", [imageUrl, phone]);
       res.json({ ok: true, avatarUrl: imageUrl });
     } catch (error) {
-      res.status(500).json({ ok: false });
+      console.error("头像上传失败:", error);
+      res.status(500).json({ ok: false, message: "头像上传失败" });
     }
   });
 
