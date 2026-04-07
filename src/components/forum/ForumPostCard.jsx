@@ -1,4 +1,5 @@
 import { btnMainStyle } from "../../styles/appStyles";
+import { BADGE_ANIMATION_STYLE, buildBadgePresentation } from "../../logic/commentsOverlayUtils";
 import { parseForumImageUrls } from "../../logic/forumImageUtils";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
@@ -20,21 +21,6 @@ const selfBadgeStyle = (textColor) => ({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
 });
-
-const avatarBubbleStyle = {
-  position: "absolute",
-  right: "-3px",
-  bottom: "-4px",
-  width: "15px",
-  height: "15px",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  fontSize: "12px",
-  lineHeight: 1,
-  pointerEvents: "none",
-  filter: "drop-shadow(0 1px 1px rgba(255,255,255,0.85))",
-};
 
 const callBtnStyle = (active, disabled) => ({
   display: "inline-flex",
@@ -72,6 +58,16 @@ function getSelfBadge(userPhone, currentUserPhone, activeBadgeTitle, badgeIcon) 
   return { title: activeBadgeTitle || DEFAULT_BADGE_TITLE, icon: badgeIcon };
 }
 
+function getMotionIconStyle(baseStyle, isExplorerBadge) {
+  if (!isExplorerBadge) return baseStyle;
+  return {
+    ...baseStyle,
+    color: "#ffcc3a",
+    textShadow: "0 1px 0 rgba(255,255,255,0.95), 0 0 8px rgba(255, 204, 58, 0.72)",
+    filter: "drop-shadow(0 1px 2px rgba(255, 186, 46, 0.45))",
+  };
+}
+
 function ForumPostCard({
   post,
   currentUser,
@@ -103,16 +99,30 @@ function ForumPostCard({
   const commentImageInputId = `forum-comment-images-input-${postId}`;
   const commentMap = new Map((comments || []).map((item) => [Number(item.id), item]));
   const postBadge = getSelfBadge(post.user_phone, currentUser?.phone, activeBadgeTitle, badgeIcon);
+  const { motionBadgeVariant, parentBadgeBubbleStyle, replyBadgeBubbleStyle, parentMotionIconStyle, replyMotionIconStyle } = buildBadgePresentation(
+    currentUser,
+    activeBadgeTitle,
+    { icon: badgeIcon },
+  );
+  const isExplorerBadge = String(activeBadgeTitle || "") === "探店能手";
+  const badgeGlyph = isExplorerBadge ? "✨" : motionBadgeVariant.glyph;
+  const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
+  const replyMotionStyle = getMotionIconStyle(replyMotionIconStyle, isExplorerBadge);
 
   return (
     <div style={{ border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
+      <style>{BADGE_ANIMATION_STYLE}</style>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
         <div
           onClick={() => userPointsCard.openByPhone(post.user_phone)}
           style={{ width: "32px", height: "32px", position: "relative", cursor: "pointer" }}
         >
           <img src={getAvatarSrc(post.user_phone, post.avatar_url)} alt="forum-user-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
-          {postBadge && <span style={avatarBubbleStyle}>{postBadge.icon}</span>}
+          {postBadge && (
+            <div style={parentBadgeBubbleStyle}>
+              <span style={postMotionStyle}>{badgeGlyph}</span>
+            </div>
+          )}
         </div>
         <div style={{ fontSize: "13px", color: "#456a56", fontWeight: 700 }}>{post.username}</div>
         {postBadge && <span style={selfBadgeStyle(badgeTheme.textColor)}>{postBadge.title}</span>}
@@ -159,14 +169,15 @@ function ForumPostCard({
             return (
               <div key={comment.id} style={{ borderBottom: "1px dashed #e5eeea", padding: "8px 0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  <img
-                    src={getAvatarSrc(comment.user_phone, comment.avatar_url)}
-                    alt="forum-comment-avatar"
-                    onClick={() => userPointsCard.openByPhone(comment.user_phone)}
-                    style={{ width: "22px", height: "22px", borderRadius: "50%", objectFit: "cover", cursor: "pointer" }}
-                  />
+                  <div onClick={() => userPointsCard.openByPhone(comment.user_phone)} style={{ width: "22px", height: "22px", position: "relative", cursor: "pointer" }}>
+                    <img src={getAvatarSrc(comment.user_phone, comment.avatar_url)} alt="forum-comment-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                    {commentBadge && (
+                      <div style={replyBadgeBubbleStyle}>
+                        <span style={replyMotionStyle}>{badgeGlyph}</span>
+                      </div>
+                    )}
+                  </div>
                   <span style={{ fontSize: "12px", color: "#39664f", fontWeight: 700 }}>{comment.username}</span>
-                  {commentBadge && <span style={{ fontSize: "12px" }}>{commentBadge.icon}</span>}
                   {commentBadge && <span style={selfBadgeStyle(badgeTheme.textColor)}>{commentBadge.title}</span>}
                   {parent && <span style={{ fontSize: "11px", color: "#7f968a" }}>回复 @{parent.username}</span>}
                   <span style={{ marginLeft: "auto", fontSize: "11px", color: "#a3b3ac" }}>{formatCommentTime(comment.created_at)}</span>
