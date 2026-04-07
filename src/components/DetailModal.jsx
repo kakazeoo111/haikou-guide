@@ -5,7 +5,7 @@ function DetailModal({ place, onClose, onPreviewAlbum }) {
 
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
-      <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
+      <div style={modalContentStyle}>
         <div style={{ display: "flex", justifyContent: "space-between" }}>
           <h2 style={{ margin: 0, color: "#2e6a4a" }}>{place.name}</h2>
           <span style={{ cursor: "pointer", fontSize: "28px" }} onClick={onClose}>
