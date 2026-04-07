@@ -244,7 +244,7 @@ function AppLayout({
         formatCommentTime={formatCommentTime}
       />
 
-      <RoutePlannerModal visible={showRoutePlanner} favoritePlaces={favoritePlacesForRoute} userLocation={userLocation} onClose={() => setShowRoutePlanner(false)} />
+      <RoutePlannerModal visible={showRoutePlanner} favoritePlaces={favoritePlacesForRoute} userLocation={userLocation} isMobile={isMobile} onClose={() => setShowRoutePlanner(false)} />
 
       {activeTab === "forum" && (
         <ForumModal
