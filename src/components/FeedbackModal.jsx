@@ -1,6 +1,8 @@
-import { btnCancelStyle, btnIconStyle, btnMainStyle, modalContentStyle, modalOverlayStyle, textAreaStyle } from "../styles/appStyles";
+import { btnCancelStyle, btnMainStyle, modalContentStyle, modalOverlayStyle, textAreaStyle } from "../styles/appStyles";
+import XhsImageUploadButton from "./common/XhsImageUploadButton";
 
 const MAX_FEEDBACK_IMAGES = 9;
+const FEEDBACK_IMAGE_INPUT_ID = "feedback-images-input";
 
 function FeedbackModal({ visible, feedbackContent, feedbackImages, onContentChange, onImageChange, onImageRemove, onCancel, onSubmit }) {
   const imageCount = feedbackImages.length;
@@ -55,10 +57,14 @@ function FeedbackModal({ visible, feedbackContent, feedbackImages, onContentChan
         )}
         <div style={{ marginTop: "8px", fontSize: "12px", color: "#7a8c82" }}>已选 {imageCount}/{MAX_FEEDBACK_IMAGES} 张</div>
         <div style={{ display: "flex", gap: "10px", marginTop: "15px" }}>
-          <button onClick={() => document.getElementById("feedback-images-input").click()} style={btnIconStyle}>
-            🖼️
-          </button>
-          <input type="file" id="feedback-images-input" hidden accept="image/*" multiple onChange={handleSelectImages} />
+          <XhsImageUploadButton
+            onClick={() => document.getElementById(FEEDBACK_IMAGE_INPUT_ID)?.click()}
+            ariaLabel="upload-feedback-images"
+            size={46}
+            radius={14}
+            iconSize={22}
+          />
+          <input type="file" id={FEEDBACK_IMAGE_INPUT_ID} hidden accept="image/*" multiple onChange={handleSelectImages} />
           <button onClick={onCancel} style={btnCancelStyle}>
             取消
           </button>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { btnMainStyle, feedbackItemStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 import { parseFeedbackImageUrls } from "../logic/feedbackImageUtils";
+import XhsImageUploadButton from "./common/XhsImageUploadButton";
 
 const MAX_REPLY_IMAGES = 9;
 const actionBtnStyle = {
@@ -187,17 +188,18 @@ function AdminFeedbackModal({
 	                      ))}
 	                    </div>
 	                  )}
-	                  <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-	                    <button
-	                      onClick={() => document.getElementById(`admin-reply-images-${item.id}`)?.click()}
-	                      disabled={isPending}
-	                      style={{ ...actionBtnStyle, padding: "6px 12px" }}
-	                    >
-	                      添加照片
-	                    </button>
-	                    <span style={{ fontSize: "12px", color: "#7c9187" }}>已选 {replyImages.length}/{MAX_REPLY_IMAGES}</span>
-	                    <input id={`admin-reply-images-${item.id}`} type="file" hidden accept="image/*" multiple onChange={handleSelectReplyImages} />
-	                  </div>
+		                  <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
+		                    <XhsImageUploadButton
+		                      onClick={() => document.getElementById(`admin-reply-images-${item.id}`)?.click()}
+		                      disabled={isPending}
+		                      ariaLabel={`upload-admin-reply-images-${item.id}`}
+		                      size={40}
+		                      radius={13}
+		                      iconSize={20}
+		                    />
+		                    <span style={{ fontSize: "12px", color: "#7c9187" }}>已选 {replyImages.length}/{MAX_REPLY_IMAGES}</span>
+		                    <input id={`admin-reply-images-${item.id}`} type="file" hidden accept="image/*" multiple onChange={handleSelectReplyImages} />
+		                  </div>
 	                  <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
 	                    <button onClick={() => handleSendReply(item)} disabled={isPending} style={{ ...btnMainStyle, marginTop: 0, flex: 1 }}>
 	                      发送回信

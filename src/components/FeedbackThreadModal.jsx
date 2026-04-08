@@ -1,10 +1,12 @@
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 import { parseFeedbackImageUrls } from "../logic/feedbackImageUtils";
+import XhsImageUploadButton from "./common/XhsImageUploadButton";
 
 const MESSAGE_WRAP_RADIUS = "14px";
 const USER_CARD_BG = "#f4fbf6";
 const ADMIN_CARD_BG = "#f7fffb";
 const MAX_FOLLOWUP_IMAGES = 9;
+const FOLLOWUP_IMAGE_INPUT_ID = "followup-images-input";
 
 function renderReplyPair(item, formatCommentTime) {
   const imageUrls = parseFeedbackImageUrls(item.image_url);
@@ -152,15 +154,16 @@ function FeedbackThreadModal({
             </div>
           )}
           <div style={{ marginTop: "8px", display: "flex", alignItems: "center", gap: "8px" }}>
-            <button
-              onClick={() => document.getElementById("followup-images-input")?.click()}
+            <XhsImageUploadButton
+              onClick={() => document.getElementById(FOLLOWUP_IMAGE_INPUT_ID)?.click()}
               disabled={submitting}
-              style={{ ...btnMainStyle, marginTop: 0, width: "auto", padding: "8px 14px", borderRadius: "999px" }}
-            >
-              添加照片
-            </button>
+              ariaLabel="upload-followup-images"
+              size={40}
+              radius={13}
+              iconSize={20}
+            />
             <span style={{ fontSize: "12px", color: "#7c9187" }}>已选 {followupImages.length}/{MAX_FOLLOWUP_IMAGES}</span>
-            <input id="followup-images-input" type="file" hidden accept="image/*" multiple onChange={handleSelectFollowupImages} />
+            <input id={FOLLOWUP_IMAGE_INPUT_ID} type="file" hidden accept="image/*" multiple onChange={handleSelectFollowupImages} />
           </div>
           <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
             <button onClick={onSubmit} disabled={submitting} style={{ ...btnMainStyle, marginTop: 0, flex: 1 }}>

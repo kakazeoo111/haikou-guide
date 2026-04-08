@@ -9,6 +9,7 @@ import {
   suggestionListStyle,
   textAreaStyle,
 } from "../styles/appStyles";
+import XhsImageUploadButton from "./common/XhsImageUploadButton";
 
 const RECOMMEND_IMAGE_LIMIT = 9;
 const RECOMMEND_IMAGE_UPLOAD_ID = "recommend-image-upload";
@@ -28,47 +29,13 @@ const uploadHeadStyle = {
   marginBottom: "12px",
 };
 
-const uploadTriggerStyle = {
-  width: "52px",
-  height: "52px",
-  border: "1.5px solid #d8ddd9",
-  borderRadius: "16px",
-  background: "#fff",
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  cursor: "pointer",
-  flexShrink: 0,
-  boxShadow: "0 6px 16px rgba(31, 61, 50, 0.05)",
-};
-
 const previewGridStyle = {
   display: "flex",
   flexWrap: "wrap",
   gap: "8px",
 };
 
-const previewItemStyle = {
-  position: "relative",
-  width: "60px",
-  height: "60px",
-};
-
-function PhotoUploadIcon() {
-  return (
-    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="3.25" y="4.25" width="17.5" height="15.5" rx="4.5" stroke="#4c534f" strokeWidth="1.7" />
-      <circle cx="16.3" cy="8.3" r="1.45" stroke="#4c534f" strokeWidth="1.5" />
-      <path
-        d="M6.4 16.35 10.15 12.4c.31-.33.84-.34 1.17-.03l1.9 1.8c.34.32.87.3 1.18-.04l1.77-1.95c.32-.35.88-.36 1.21-.02l1.22 1.28"
-        stroke="#4c534f"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const previewItemStyle = { position: "relative", width: "60px", height: "60px" };
 
 function RecommendModal({
   visible,
@@ -131,17 +98,12 @@ function RecommendModal({
 
         <div style={uploadCardStyle}>
           <div style={uploadHeadStyle}>
-            <button
-              type="button"
+            <XhsImageUploadButton
               onClick={() => document.getElementById(RECOMMEND_IMAGE_UPLOAD_ID).click()}
-              style={uploadTriggerStyle}
               aria-label="upload-recommend-images"
-            >
-              <PhotoUploadIcon />
-            </button>
+            />
             <div>
               <div style={{ fontSize: "14px", color: "#2d3732", fontWeight: 700, lineHeight: 1.2 }}>上传实拍图</div>
-              <div style={{ fontSize: "12px", color: "#8d9891", marginTop: "4px" }}>改成了更接近小红书的细线图片按钮</div>
             </div>
             <div style={{ marginLeft: "auto", fontSize: "12px", color: "#5aa77b", fontWeight: 700 }}>
               {recImages.length}/{RECOMMEND_IMAGE_LIMIT}

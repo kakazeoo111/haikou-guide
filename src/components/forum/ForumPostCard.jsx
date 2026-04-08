@@ -4,6 +4,7 @@ import { parseForumImageUrls } from "../../logic/forumImageUtils";
 import { buildImageLoadingProps } from "../../logic/imageProps";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
+import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const DEFAULT_BADGE_TITLE = "未解锁称号";
 
@@ -230,9 +231,13 @@ function ForumPostCard({
           )}
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-            <button onClick={() => document.getElementById(commentImageInputId)?.click()} style={{ ...btnMainStyle, marginTop: 0, width: "auto", padding: "7px 12px", borderRadius: "999px" }}>
-              图片
-            </button>
+            <XhsImageUploadButton
+              onClick={() => document.getElementById(commentImageInputId)?.click()}
+              ariaLabel="upload-forum-comment-images"
+              size={34}
+              radius={11}
+              iconSize={18}
+            />
             <span style={{ fontSize: "11px", color: "#7f968a" }}>已选 {commentImages.length}/9</span>
             <input id={commentImageInputId} type="file" hidden accept="image/*" multiple onChange={(event) => onSelectCommentImages(postId, event)} />
           </div>

@@ -1,30 +1,9 @@
-import {
-  bottomInputContainer,
-  bottomRealInput,
-  btnSendStyle,
-  fixedBottomBarStyle,
-  fullPageOverlayStyle,
-  likeBtnStyle,
-  navHeaderStyle,
-  scrollContentStyle,
-  sortBtnStyle,
-  sortContainerStyle,
-} from "../styles/appStyles";
-import {
-  BADGE_ANIMATION_STYLE,
-  PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH,
-  REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH,
-  buildBadgePresentation,
-  getAvatarSrc,
-  getSelfBadge,
-  handleAvatarLoadError,
-  parseCommentImageUrls,
-  sortAndFilterComments,
-} from "../logic/commentsOverlayUtils";
+import { bottomInputContainer, bottomRealInput, btnSendStyle, fixedBottomBarStyle, fullPageOverlayStyle, likeBtnStyle, navHeaderStyle, scrollContentStyle, sortBtnStyle, sortContainerStyle } from "../styles/appStyles";
+import { BADGE_ANIMATION_STYLE, PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH, REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH, buildBadgePresentation, getAvatarSrc, getSelfBadge, handleAvatarLoadError, parseCommentImageUrls, sortAndFilterComments } from "../logic/commentsOverlayUtils";
 import { useUserPointsCard } from "../logic/useUserPointsCard";
 import UserPointsCardModal from "./UserPointsCardModal";
 import LikeHeartIcon from "./LikeHeartIcon";
-
+import XhsImageUploadButton from "./common/XhsImageUploadButton";
 function CommentsOverlay({
   place,
   comments,
@@ -51,6 +30,7 @@ function CommentsOverlay({
   formatCommentTime,
 }) {
   const userPointsCard = useUserPointsCard();
+  const COMMENT_IMAGE_INPUT_ID = "comment-image-input-overlay";
   if (!place) return null;
   const sorted = sortAndFilterComments(comments, commentSort, showOnlyImages);
   const parents = sorted.filter((c) => !c.parent_id);
@@ -66,7 +46,6 @@ function CommentsOverlay({
         <span style={{ fontWeight: "bold" }}>{place.name}的点评</span>
         <span style={{ width: "40px" }}></span>
       </div>
-
       <div style={{ ...sortContainerStyle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", gap: "15px" }}>
           <button onClick={() => onCommentSortChange("latest")} style={sortBtnStyle(commentSort === "latest")}>
@@ -92,10 +71,8 @@ function CommentsOverlay({
           {showOnlyImages ? "✅ 仅看图片" : "🖼️ 仅看图片"}
         </div>
       </div>
-
       <div style={scrollContentStyle}>
         {parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>💬 暂无相关点评...</div>}
-
         {parents.map((parent) => {
           const replies = children
             .filter((child) => String(child.parent_id) === String(parent.id))
@@ -177,7 +154,6 @@ function CommentsOverlay({
                   </div>
                 </div>
               </div>
-
               {replies.length > 0 && (
                 <div style={{ marginLeft: "46px", marginTop: "10px" }}>
                   {!isExpanded && (
@@ -261,7 +237,6 @@ function CommentsOverlay({
         })}
         <div style={{ height: "120px" }}></div>
       </div>
-
       <div style={fixedBottomBarStyle}>
         {replyTo && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 10px 8px", fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>
@@ -271,7 +246,6 @@ function CommentsOverlay({
             </span>
           </div>
         )}
-
         <div style={bottomInputContainer}>
           <input
             id="comment-input-overlay"
@@ -280,12 +254,17 @@ function CommentsOverlay({
             placeholder={replyTo ? `回复 @${replyTo.username}...` : "写点评..."}
             style={bottomRealInput}
           />
-          <div onClick={() => document.getElementById("comment-image-input-overlay").click()} style={{ cursor: "pointer", fontSize: "20px" }}>
-            🖼️
-          </div>
+          <XhsImageUploadButton
+            onClick={() => document.getElementById(COMMENT_IMAGE_INPUT_ID)?.click()}
+            ariaLabel="upload-comment-images"
+            size={32}
+            radius={10}
+            iconSize={16}
+            style={{ boxShadow: "none", borderWidth: "1px" }}
+          />
           <input
             type="file"
-            id="comment-image-input-overlay"
+            id={COMMENT_IMAGE_INPUT_ID}
             hidden
             multiple
             accept="image/*"
@@ -295,7 +274,6 @@ function CommentsOverlay({
             发布
           </button>
         </div>
-
         {commentImages.length > 0 && (
           <div style={{ fontSize: "10px", color: "#5aa77b", marginTop: "5px", fontWeight: "bold" }}>
             📸 已选择 {commentImages.length} 张照片 (最多9张)

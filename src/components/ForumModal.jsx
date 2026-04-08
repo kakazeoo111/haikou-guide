@@ -3,6 +3,7 @@ import { btnMainStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import ForumPostCard from "./forum/ForumPostCard";
 import ForumNoticeModal from "./forum/ForumNoticeModal";
+import XhsImageUploadButton from "./common/XhsImageUploadButton";
 import { useOnlineCount } from "../logic/useOnlineCount";
 import { useForumNotice } from "../logic/useForumNotice";
 import {
@@ -18,7 +19,6 @@ import {
 } from "../logic/forumModalUtils";
 
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
-
 function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMeta, onBack, onZoomImage, formatCommentTime }) {
   const [posts, setPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
@@ -35,13 +35,11 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   const [commentDraftMap, setCommentDraftMap] = useState({});
   const [commentImagesMap, setCommentImagesMap] = useState({});
   const [replyTargetMap, setReplyTargetMap] = useState({});
-
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
   const badgeTheme = getBadgeTheme(badgeSeed);
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
   const onlineCount = useOnlineCount({ enabled: Boolean(currentUser?.phone), authApiBase, phone: currentUser?.phone });
   const { showNotice, openNotice, closeNotice, dontShowAgain, updateDontShowAgain } = useForumNotice(currentUser?.phone);
-
   const loadPosts = async (keyword = searchKeyword, nextSortMode = sortMode) => {
     if (!currentUser?.phone) return;
     setLoadingPosts(true);
@@ -252,7 +250,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
             </div>
           )}
           <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-            <button onClick={() => document.getElementById(FORUM_POST_INPUT_ID)?.click()} style={{ ...btnMainStyle, marginTop: 0, width: "auto", padding: "8px 14px", borderRadius: "999px" }}>添加图片</button>
+            <XhsImageUploadButton onClick={() => document.getElementById(FORUM_POST_INPUT_ID)?.click()} ariaLabel="upload-forum-post-images" size={42} radius={13} iconSize={21} />
             <span style={{ fontSize: "12px", color: "#6e867a" }}>已选 {postImages.length}/{MAX_FORUM_IMAGES}</span>
             <input id={FORUM_POST_INPUT_ID} type="file" hidden accept="image/*" multiple onChange={handleSelectPostImages} />
             <button onClick={handleSubmitPost} disabled={submittingPost} style={{ ...btnMainStyle, marginTop: 0, marginLeft: "auto", width: "auto", padding: "8px 16px" }}>{submittingPost ? "发布中..." : "发布"}</button>
@@ -281,30 +279,14 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
 
         {!loadingPosts && posts.map((post) => (
           <ForumPostCard
-            key={post.id}
-            post={post}
-            currentUser={currentUser}
-            activeBadgeTitle={activeBadgeTitle}
-            badgeIcon={badgeIcon}
-            badgeTheme={badgeTheme}
-            expanded={expandedPostIds.includes(Number(post.id))}
-            comments={commentsMap[Number(post.id)] || []}
-            loadingComments={loadingCommentPostIds.includes(Number(post.id))}
-            replyTarget={replyTargetMap[Number(post.id)] || null}
-            commentDraft={commentDraftMap[Number(post.id)] || ""}
-            commentImages={commentImagesMap[Number(post.id)] || []}
-            submittingComment={submittingCommentPostIds.includes(Number(post.id))}
-            callingPost={callingPostIds.includes(Number(post.id))}
-            onToggleComments={handleToggleComments}
-            onToggleCall={handleToggleCall}
-            onZoomImage={onZoomImage}
-            onReplySelect={(postId, comment) => setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }))}
-            onReplyCancel={(postId) => setReplyTargetMap((prev) => ({ ...prev, [postId]: null }))}
-            onCommentDraftChange={(postId, value) => setCommentDraftMap((prev) => ({ ...prev, [postId]: value }))}
-            onSelectCommentImages={handleSelectCommentImages}
-            onRemoveCommentImage={handleRemoveCommentImage}
-            onSubmitComment={handleSubmitComment}
-            formatCommentTime={formatCommentTime}
+            key={post.id} post={post} currentUser={currentUser} activeBadgeTitle={activeBadgeTitle} badgeIcon={badgeIcon} badgeTheme={badgeTheme}
+            expanded={expandedPostIds.includes(Number(post.id))} comments={commentsMap[Number(post.id)] || []} loadingComments={loadingCommentPostIds.includes(Number(post.id))}
+            replyTarget={replyTargetMap[Number(post.id)] || null} commentDraft={commentDraftMap[Number(post.id)] || ""} commentImages={commentImagesMap[Number(post.id)] || []}
+            submittingComment={submittingCommentPostIds.includes(Number(post.id))} callingPost={callingPostIds.includes(Number(post.id))}
+            onToggleComments={handleToggleComments} onToggleCall={handleToggleCall} onZoomImage={onZoomImage}
+            onReplySelect={(postId, comment) => setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }))} onReplyCancel={(postId) => setReplyTargetMap((prev) => ({ ...prev, [postId]: null }))}
+            onCommentDraftChange={(postId, value) => setCommentDraftMap((prev) => ({ ...prev, [postId]: value }))} onSelectCommentImages={handleSelectCommentImages} onRemoveCommentImage={handleRemoveCommentImage}
+            onSubmitComment={handleSubmitComment} formatCommentTime={formatCommentTime}
           />
         ))}
       </div>
