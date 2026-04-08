@@ -2,6 +2,7 @@ import { parseRecommendationAlbum } from "./placeUtils";
 import { uploadAvatar } from "./avatarUploadHandler";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./clientCache";
 import { optimizeUploadImages } from "./uploadImageOptimizer";
+import { warmCommentImages, warmRecommendationImages } from "./imageWarmup";
 const GEOLOCATION_REFRESH_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 export function createGeneralHandlers(ctx) {
   const {
@@ -20,10 +21,7 @@ export function createGeneralHandlers(ctx) {
     }
     const res = await fetch(`${authApiBase}/api/recommendations?phone=${phone}`);
     const data = await res.json();
-    if (data.ok) {
-      setRecommendations(data.data);
-      writeCachedValue(cacheKey, data);
-    }
+    if (data.ok) { setRecommendations(data.data); writeCachedValue(cacheKey, data); warmRecommendationImages(data.data); }
     return data;
   };
 
@@ -46,7 +44,7 @@ export function createGeneralHandlers(ctx) {
   const fetchComments = async (id) => {
     const res = await fetch(`${authApiBase}/api/comments/${id}?phone=${currentUser.phone}`);
     const data = await res.json();
-    if (data.ok) setActiveComments((prev) => ({ ...prev, [id]: data.comments }));
+    if (data.ok) { setActiveComments((prev) => ({ ...prev, [id]: data.comments })); warmCommentImages(data.comments); }
   };
 
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
