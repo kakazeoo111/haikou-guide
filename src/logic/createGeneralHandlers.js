@@ -1,5 +1,6 @@
 import { parseRecommendationAlbum } from "./placeUtils";
 import { uploadAvatar } from "./avatarUploadHandler";
+import { normalizeAvatarUrl } from "./avatarFallback";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./clientCache";
 import { optimizeUploadImages } from "./uploadImageOptimizer";
 import { warmCommentAvatars, warmCommentImages, warmRecommendationImages } from "./imageWarmup";
@@ -11,7 +12,6 @@ export function createGeneralHandlers(ctx) {
     setAllFeedbacks, setShowAdminFeedback, setFeedbackContent, setFeedbackImages, setShowFeedback, setIsEditingNotice, setCountdown, setLoginError,
     setFavoriteIds, setCommentSort, setReplyTo, setShowOnlyImages, setInitialSlide, setZoomMode, setZoomedSingleImage, setDetailPlace, setAuthMode,
   } = ctx;
-
   const fetchRecommendations = async (preferCache = true) => {
     const phone = currentUser?.phone || "";
     const cacheKey = `recommendations_${phone || "guest"}`;
@@ -21,7 +21,17 @@ export function createGeneralHandlers(ctx) {
     }
     const res = await fetch(`${authApiBase}/api/recommendations?phone=${phone}`);
     const data = await res.json();
-    if (data.ok) { setRecommendations(data.data); writeCachedValue(cacheKey, data); warmRecommendationImages(data.data); }
+    if (data.ok) {
+      setRecommendations(data.data);
+      writeCachedValue(cacheKey, data);
+      warmRecommendationImages(data.data);
+      const ownAvatarUrl = normalizeAvatarUrl(data.data?.find((item) => String(item?.user_phone || "") === String(phone))?.avatar_url || "");
+      if (ownAvatarUrl && ownAvatarUrl !== String(currentUser?.avatar_url || "")) {
+        const nextUser = { ...currentUser, avatar_url: ownAvatarUrl };
+        setCurrentUser(nextUser);
+        localStorage.setItem("haikouUser", JSON.stringify(nextUser));
+      }
+    }
     return data;
   };
 
@@ -50,7 +60,6 @@ export function createGeneralHandlers(ctx) {
       warmCommentAvatars(data.comments);
     }
   };
-
   const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
   const handleRefreshLocation = () => {

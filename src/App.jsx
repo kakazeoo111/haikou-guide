@@ -59,7 +59,7 @@ function App() {
   const places = placesData;
   const getNoticeDismissKey = (phone) => `haikou_notice_dismissed_${phone}`;
   useValidateEnv(ADMIN_PHONE, authApiBase);
-  useInitClientState({ setCurrentUser, setActiveTab, setIsMobile, setUserLocation });
+  useInitClientState({ authApiBase, setCurrentUser, setActiveTab, setIsMobile, setUserLocation });
   useCountdown(countdown, setCountdown);
   useRecommendJumpListener({ setViewingCommentsPlace, setActiveTab, setFilter, setSearch });
   const { activeBadgeTitle, activeBadgeMeta, badgeSummary, showBadgePicker, showBadgeGrantModal, openBadgePicker, closeBadgePicker, handleSelectBadge, handleManageBadge, closeManageBadgeModal, submitManageBadge } =

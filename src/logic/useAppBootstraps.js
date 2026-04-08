@@ -5,6 +5,49 @@ import { scrollToRecommendCard } from "./recommendJump";
 const MOBILE_BREAKPOINT = 768;
 const COUNTDOWN_STEP = 1;
 const COUNTDOWN_INTERVAL_MS = 1000;
+const PHONE_PATTERN = /^1\d{10}$/;
+
+function normalizeProfileAvatarUrl(url) {
+  const normalized = String(url || "").trim();
+  if (!normalized) return "";
+  if (normalized.startsWith("http://")) return normalized.replace("http://", "https://");
+  if (normalized.startsWith("https://")) return normalized;
+  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
+  return normalized;
+}
+
+function warmAvatar(url) {
+  const normalized = normalizeProfileAvatarUrl(url);
+  if (!normalized || normalized.startsWith("data:image/")) return;
+  const image = new Image();
+  image.decoding = "async";
+  image.fetchPriority = "high";
+  image.src = normalized;
+}
+
+async function syncCachedUserProfile({ authApiBase, savedUser, setCurrentUser }) {
+  const phone = String(savedUser?.phone || "").trim();
+  if (!authApiBase || !PHONE_PATTERN.test(phone)) return;
+  try {
+    const response = await fetch(`${authApiBase}/api/auth/user/${phone}`, { cache: "no-store" });
+    const data = await response.json();
+    if (!data?.ok || !data.user) {
+      console.error("登录态用户资料同步失败:", data?.message || "invalid profile response");
+      return;
+    }
+    const nextUser = {
+      ...savedUser,
+      ...data.user,
+      avatar_url: normalizeProfileAvatarUrl(data.user.avatar_url),
+    };
+    if (nextUser.username === savedUser.username && nextUser.avatar_url === String(savedUser.avatar_url || "")) return;
+    setCurrentUser(nextUser);
+    localStorage.setItem("haikouUser", JSON.stringify(nextUser));
+    warmAvatar(nextUser.avatar_url);
+  } catch (error) {
+    console.error("登录态用户资料同步请求失败:", error);
+  }
+}
 
 export function useValidateEnv(ADMIN_PHONE, authApiBase) {
   useEffect(() => {
@@ -14,11 +57,15 @@ export function useValidateEnv(ADMIN_PHONE, authApiBase) {
   }, [ADMIN_PHONE, authApiBase]);
 }
 
-export function useInitClientState({ setCurrentUser, setActiveTab, setIsMobile, setUserLocation }) {
+export function useInitClientState({ authApiBase, setCurrentUser, setActiveTab, setIsMobile, setUserLocation }) {
   useEffect(() => {
     try {
       const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
-      if (savedUser) setCurrentUser(savedUser);
+      if (savedUser) {
+        setCurrentUser(savedUser);
+        warmAvatar(savedUser.avatar_url);
+        syncCachedUserProfile({ authApiBase, savedUser, setCurrentUser });
+      }
       const savedTab = localStorage.getItem("haikou_active_tab");
       if (["home", "profile", "forum"].includes(savedTab)) setActiveTab(savedTab);
     } catch (error) {
@@ -35,7 +82,7 @@ export function useInitClientState({ setCurrentUser, setActiveTab, setIsMobile, 
       );
     }
     return () => window.removeEventListener("resize", onResize);
-  }, [setActiveTab, setCurrentUser, setIsMobile, setUserLocation]);
+  }, [authApiBase, setActiveTab, setCurrentUser, setIsMobile, setUserLocation]);
 }
 
 export function useCountdown(countdown, setCountdown) {

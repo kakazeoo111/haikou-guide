@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import DypnsapiClient from "@alicloud/dypnsapi20170525";
+const PHONE_PATTERN = /^1\d{10}$/;
 
 function createSmsCode() {
   return Math.floor(100000 + Math.random() * 899999).toString();
@@ -75,6 +76,32 @@ export function registerAuthRoutes(app, { pool, otpStore, smsClient }) {
       });
     } catch (error) {
       res.status(500).json({ ok: false });
+    }
+  });
+
+  app.get("/api/auth/user/:phone", async (req, res) => {
+    const phone = String(req.params.phone || "").trim();
+    if (!PHONE_PATTERN.test(phone)) {
+      return res.status(400).json({ ok: false, message: "手机号格式错误" });
+    }
+    try {
+      const [rows] = await pool.execute(
+        "SELECT username, phone, avatar_url FROM users WHERE phone = ? LIMIT 1",
+        [phone],
+      );
+      if (!rows.length) return res.status(404).json({ ok: false, message: "用户不存在" });
+      res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+      res.json({
+        ok: true,
+        user: {
+          username: rows[0].username,
+          phone: rows[0].phone,
+          avatar_url: rows[0].avatar_url,
+        },
+      });
+    } catch (error) {
+      console.error("获取用户资料失败:", error.message);
+      res.status(500).json({ ok: false, message: "获取用户资料失败" });
     }
   });
 
