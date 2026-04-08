@@ -60,7 +60,7 @@ const listCardPerformanceStyle = { contentVisibility: "auto", containIntrinsicSi
 
 function formatPlaceTypeTag(type) {
   if (type === "food") return "🍱 美食";
-  if (type === "view") return "🗼 景点";
+  if (type === "view") return "📸 景点";
   if (type === "cafe") return "🍮 咖啡";
   if (type === "recommend") return "✨ 推荐";
   return "👜 商圈";
