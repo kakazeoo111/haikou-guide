@@ -1,9 +1,8 @@
 import { parseRecommendationAlbum } from "./placeUtils";
 import { uploadAvatar } from "./avatarUploadHandler";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./clientCache";
-
+import { optimizeUploadImages } from "./uploadImageOptimizer";
 const GEOLOCATION_REFRESH_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
-
 export function createGeneralHandlers(ctx) {
   const {
     authApiBase, currentUser, places, recommendations, loginForm, authMode, noticeContent, feedbackContent, feedbackImages, favoriteIds,
@@ -50,10 +49,7 @@ export function createGeneralHandlers(ctx) {
     if (data.ok) setActiveComments((prev) => ({ ...prev, [id]: data.comments }));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("haikouUser");
-    window.location.reload();
-  };
+  const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
 
   const handleRefreshLocation = () => {
     if (!navigator.geolocation) {
@@ -155,38 +151,51 @@ export function createGeneralHandlers(ctx) {
   };
 
   const handleFeedbackReply = async ({ feedbackId, letter, markResolved, images }) => {
-    const formData = new FormData();
-    formData.append("phone", currentUser.phone);
-    formData.append("feedbackId", feedbackId);
-    formData.append("letter", letter);
-    formData.append("markResolved", markResolved ? "true" : "false");
-    (images || []).forEach((file) => formData.append("images", file));
-    const res = await fetch(`${authApiBase}/api/feedback/reply`, {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
-    if (!data.ok) {
-      alert(data.message || "发送回信失败");
+    try {
+      const optimizedImages = await optimizeUploadImages(images || []);
+      const formData = new FormData();
+      formData.append("phone", currentUser.phone);
+      formData.append("feedbackId", feedbackId);
+      formData.append("letter", letter);
+      formData.append("markResolved", markResolved ? "true" : "false");
+      optimizedImages.forEach((file) => formData.append("images", file));
+      const res = await fetch(`${authApiBase}/api/feedback/reply`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.ok) {
+        alert(data.message || "发送回信失败");
+        return false;
+      }
+      await fetchAdminFeedbacks();
+      return true;
+    } catch (error) {
+      console.error("回信图片处理失败:", error);
+      alert(error?.message || "图片处理失败，请稍后重试");
       return false;
     }
-    await fetchAdminFeedbacks();
-    return true;
   };
 
   const handleFeedbackSubmit = async () => {
     if (!currentUser?.phone) return alert("请先登录后再提交反馈");
-    const formData = new FormData();
-    formData.append("phone", currentUser.phone);
-    formData.append("content", feedbackContent);
-    (feedbackImages || []).forEach((file) => formData.append("images", file));
-    const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (!data.ok) return;
-    alert(data.message);
-    setFeedbackContent("");
-    setFeedbackImages([]);
-    setShowFeedback(false);
+    try {
+      const optimizedImages = await optimizeUploadImages(feedbackImages || []);
+      const formData = new FormData();
+      formData.append("phone", currentUser.phone);
+      formData.append("content", feedbackContent);
+      optimizedImages.forEach((file) => formData.append("images", file));
+      const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.ok) return;
+      alert(data.message);
+      setFeedbackContent("");
+      setFeedbackImages([]);
+      setShowFeedback(false);
+    } catch (error) {
+      console.error("反馈图片处理失败:", error);
+      alert(error?.message || "图片处理失败，请稍后重试");
+    }
   };
 
   const handleUpdateNotice = async () => {

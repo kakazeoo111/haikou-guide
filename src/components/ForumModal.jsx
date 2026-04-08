@@ -4,6 +4,7 @@ import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import ForumPostCard from "./forum/ForumPostCard";
 import ForumNoticeModal from "./forum/ForumNoticeModal";
 import XhsImageUploadButton from "./common/XhsImageUploadButton";
+import { optimizeUploadImages } from "../logic/uploadImageOptimizer";
 import { useOnlineCount } from "../logic/useOnlineCount";
 import { useForumNotice } from "../logic/useForumNotice";
 import {
@@ -141,10 +142,11 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
     if (!content && postImages.length === 0) return alert("发布内容不能为空");
     setSubmittingPost(true);
     try {
+      const optimizedPostImages = await optimizeUploadImages(postImages);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("content", content);
-      postImages.forEach((file) => formData.append("images", file));
+      optimizedPostImages.forEach((file) => formData.append("images", file));
       const res = await fetch(`${authApiBase}/api/forum/post/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "发帖失败");
@@ -166,12 +168,13 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
     const replyTarget = replyTargetMap[postId];
     setSubmittingCommentPostIds((prev) => [...prev, postId]);
     try {
+      const optimizedCommentImages = await optimizeUploadImages(commentImages);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("postId", String(postId));
       formData.append("content", content);
       formData.append("parentId", replyTarget ? String(replyTarget.id) : "");
-      commentImages.forEach((file) => formData.append("images", file));
+      optimizedCommentImages.forEach((file) => formData.append("images", file));
       const res = await fetch(`${authApiBase}/api/forum/comment/add`, {
         method: "POST",
         body: formData,

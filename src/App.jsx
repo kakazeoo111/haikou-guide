@@ -8,6 +8,7 @@ import { getAllSourcePlaces, getFilteredPlaces } from "./logic/placeUtils";
 import { useCountdown, useInitClientState, useRecommendJumpListener, useValidateEnv } from "./logic/useAppBootstraps";
 import { useBadgeCenter } from "./logic/useBadgeCenter";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./logic/clientCache";
+import { setupWechatAggressiveLazyLoading } from "./logic/wechatImageLazyPatch";
 function hasValidRouteCoordinate(place) { return Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)); }
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -107,6 +108,10 @@ function App() {
     setShowNotice(false);
   };
   const handleOpenAnnouncement = () => setShowNotice(true);
+  useEffect(() => {
+    const cleanupWechatLazyPatch = setupWechatAggressiveLazyLoading();
+    return cleanupWechatLazyPatch;
+  }, []);
   useEffect(() => {
     if (!zoomMode || !scrollContainerRef.current) return;
     scrollContainerRef.current.scrollLeft = window.innerWidth * initialSlide;

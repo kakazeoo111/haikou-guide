@@ -28,6 +28,7 @@ const app = express();
 const port = process.env.SMS_SERVER_PORT || 3001;
 const ADMIN_PHONE = "13707584213";
 const otpStore = new Map();
+const UPLOAD_CACHE_MAX_AGE_SECONDS = 31536000;
 
 app.disable("x-powered-by");
 app.use(cors());
@@ -38,10 +39,10 @@ if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 app.use(
   "/uploads",
   express.static(uploadDir, {
-    maxAge: "30d",
+    maxAge: "365d",
     immutable: true,
     setHeaders: (res) => {
-      res.setHeader("Cache-Control", "public, max-age=2592000, immutable");
+      res.setHeader("Cache-Control", `public, max-age=${UPLOAD_CACHE_MAX_AGE_SECONDS}, immutable, stale-while-revalidate=86400`);
     },
   }),
 );

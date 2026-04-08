@@ -1,3 +1,5 @@
+import { optimizeUploadImages } from "./uploadImageOptimizer";
+
 export function createInteractionHandlers(ctx) {
   const {
     authApiBase,
@@ -120,40 +122,52 @@ export function createInteractionHandlers(ctx) {
 
   const handleSubmitRec = async () => {
     if (!newRec.name || !newRec.lat) return alert("请先在建议列表中选择一个精确地点");
-    const formData = new FormData();
-    formData.append("phone", currentUser.phone);
-    formData.append("place_name", newRec.name);
-    formData.append("description", newRec.desc);
-    formData.append("lat", newRec.lat);
-    formData.append("lng", newRec.lng);
-    recImages.forEach((file) => formData.append("images", file));
-    const res = await fetch(`${authApiBase}/api/recommendations/add`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (!data.ok) return;
-    alert("发布成功！");
-    setShowAddRecommend(false);
-    setNewRec({ name: "", desc: "", lat: null, lng: null });
-    setRecImages([]);
-    fetchRecommendations(false);
-    setFilter("recommend");
+    try {
+      const optimizedImages = await optimizeUploadImages(recImages);
+      const formData = new FormData();
+      formData.append("phone", currentUser.phone);
+      formData.append("place_name", newRec.name);
+      formData.append("description", newRec.desc);
+      formData.append("lat", newRec.lat);
+      formData.append("lng", newRec.lng);
+      optimizedImages.forEach((file) => formData.append("images", file));
+      const res = await fetch(`${authApiBase}/api/recommendations/add`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.ok) return;
+      alert("发布成功！");
+      setShowAddRecommend(false);
+      setNewRec({ name: "", desc: "", lat: null, lng: null });
+      setRecImages([]);
+      fetchRecommendations(false);
+      setFilter("recommend");
+    } catch (error) {
+      console.error("推荐图片提交失败:", error);
+      alert(error?.message || "图片处理失败，请稍后重试");
+    }
   };
 
   const handleAddComment = async () => {
     if (!viewingCommentsPlace) return;
     if (!newComment.trim() && commentImages.length === 0) return;
-    const formData = new FormData();
-    formData.append("phone", currentUser.phone);
-    formData.append("placeId", viewingCommentsPlace.id);
-    formData.append("content", newComment);
-    if (replyTo) formData.append("parentId", replyTo.id);
-    commentImages.forEach((file) => formData.append("images", file));
-    const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (!data.ok) return;
-    setNewComment("");
-    setCommentImages([]);
-    setReplyTo(null);
-    fetchComments(viewingCommentsPlace.id);
+    try {
+      const optimizedImages = await optimizeUploadImages(commentImages);
+      const formData = new FormData();
+      formData.append("phone", currentUser.phone);
+      formData.append("placeId", viewingCommentsPlace.id);
+      formData.append("content", newComment);
+      if (replyTo) formData.append("parentId", replyTo.id);
+      optimizedImages.forEach((file) => formData.append("images", file));
+      const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!data.ok) return;
+      setNewComment("");
+      setCommentImages([]);
+      setReplyTo(null);
+      fetchComments(viewingCommentsPlace.id);
+    } catch (error) {
+      console.error("评论图片提交失败:", error);
+      alert(error?.message || "图片处理失败，请稍后重试");
+    }
   };
 
   const handleDeleteComment = async (commentId) => {
