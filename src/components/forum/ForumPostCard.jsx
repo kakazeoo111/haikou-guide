@@ -1,6 +1,7 @@
 import { btnMainStyle } from "../../styles/appStyles";
 import { BADGE_ANIMATION_STYLE, buildBadgePresentation } from "../../logic/commentsOverlayUtils";
 import { parseForumImageUrls } from "../../logic/forumImageUtils";
+import { buildImageLoadingProps } from "../../logic/imageProps";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
 
@@ -110,14 +111,14 @@ function ForumPostCard({
   const replyMotionStyle = getMotionIconStyle(replyMotionIconStyle, isExplorerBadge);
 
   return (
-    <div style={{ border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
+    <div style={{ contentVisibility: "auto", containIntrinsicSize: "320px", border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
       <style>{BADGE_ANIMATION_STYLE}</style>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
         <div
           onClick={() => userPointsCard.openByPhone(post.user_phone)}
           style={{ width: "32px", height: "32px", position: "relative", cursor: "pointer" }}
         >
-          <img src={getAvatarSrc(post.user_phone, post.avatar_url)} alt="forum-user-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+          <img src={getAvatarSrc(post.user_phone, post.avatar_url)} {...buildImageLoadingProps()} alt="forum-user-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
           {postBadge && (
             <div style={parentBadgeBubbleStyle}>
               <span style={postMotionStyle}>{badgeGlyph}</span>
@@ -137,6 +138,7 @@ function ForumPostCard({
             <img
               key={`${post.id}-${index}`}
               src={url}
+              {...buildImageLoadingProps()}
               alt="forum-post-img"
               style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover", cursor: "zoom-in" }}
               onClick={() => onZoomImage(postImages, index)}
@@ -170,7 +172,7 @@ function ForumPostCard({
               <div key={comment.id} style={{ borderBottom: "1px dashed #e5eeea", padding: "8px 0" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                   <div onClick={() => userPointsCard.openByPhone(comment.user_phone)} style={{ width: "22px", height: "22px", position: "relative", cursor: "pointer" }}>
-                    <img src={getAvatarSrc(comment.user_phone, comment.avatar_url)} alt="forum-comment-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+                    <img src={getAvatarSrc(comment.user_phone, comment.avatar_url)} {...buildImageLoadingProps()} alt="forum-comment-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
                     {commentBadge && (
                       <div style={replyBadgeBubbleStyle}>
                         <span style={replyMotionStyle}>{badgeGlyph}</span>
@@ -189,6 +191,7 @@ function ForumPostCard({
                       <img
                         key={`${comment.id}-img-${index}`}
                         src={url}
+                        {...buildImageLoadingProps()}
                         alt="forum-comment-img"
                         style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover", cursor: "zoom-in" }}
                         onClick={() => onZoomImage(commentImages, index)}

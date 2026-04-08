@@ -7,6 +7,7 @@ import { createInteractionHandlers } from "./logic/createInteractionHandlers";
 import { getAllSourcePlaces, getFilteredPlaces } from "./logic/placeUtils";
 import { useCountdown, useInitClientState, useRecommendJumpListener, useValidateEnv } from "./logic/useAppBootstraps";
 import { useBadgeCenter } from "./logic/useBadgeCenter";
+import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./logic/clientCache";
 function hasValidRouteCoordinate(place) { return Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)); }
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -57,83 +58,21 @@ function App() {
   const places = placesData;
   const getNoticeDismissKey = (phone) => `haikou_notice_dismissed_${phone}`;
   useValidateEnv(ADMIN_PHONE, authApiBase);
-  useInitClientState({
-    setCurrentUser,
-    setActiveTab,
-    setIsMobile,
-    setUserLocation,
-  });
+  useInitClientState({ setCurrentUser, setActiveTab, setIsMobile, setUserLocation });
   useCountdown(countdown, setCountdown);
-  useRecommendJumpListener({
-    setViewingCommentsPlace,
-    setActiveTab,
-    setFilter,
-    setSearch,
-  });
-  const { activeBadgeTitle, activeBadgeMeta, badgeSummary, showBadgePicker, showBadgeGrantModal, openBadgePicker, closeBadgePicker, handleSelectBadge, handleManageBadge, closeManageBadgeModal, submitManageBadge } = useBadgeCenter({
-    authApiBase,
-    currentUser,
-    adminPhone: ADMIN_PHONE,
-  });
+  useRecommendJumpListener({ setViewingCommentsPlace, setActiveTab, setFilter, setSearch });
+  const { activeBadgeTitle, activeBadgeMeta, badgeSummary, showBadgePicker, showBadgeGrantModal, openBadgePicker, closeBadgePicker, handleSelectBadge, handleManageBadge, closeManageBadgeModal, submitManageBadge } =
+    useBadgeCenter({ authApiBase, currentUser, adminPhone: ADMIN_PHONE });
   const generalHandlers = createGeneralHandlers({
-    authApiBase,
-    currentUser,
-    places,
-    recommendations,
-    loginForm,
-    authMode,
-    noticeContent,
-    feedbackContent,
-    feedbackImages,
-    favoriteIds,
-    setRecommendations,
-    setNotifications,
-    setActiveComments,
-    setShowNoticeList,
-    setActiveTab,
-    setViewingCommentsPlace,
-    setCurrentUser,
-    setAllFeedbacks,
-    setShowAdminFeedback,
-    setFeedbackContent,
-    setFeedbackImages,
-    setShowFeedback,
-    setIsEditingNotice,
-    setCountdown,
-    setLoginError,
-    setFavoriteIds,
-    setCommentSort,
-    setReplyTo,
-    setShowOnlyImages,
-    setInitialSlide,
-    setZoomMode,
-    setZoomedSingleImage,
-    setDetailPlace,
-    setAuthMode,
+    authApiBase, currentUser, places, recommendations, loginForm, authMode, noticeContent, feedbackContent, feedbackImages, favoriteIds,
+    setRecommendations, setNotifications, setActiveComments, setShowNoticeList, setActiveTab, setViewingCommentsPlace, setCurrentUser, setUserLocation,
+    setAllFeedbacks, setShowAdminFeedback, setFeedbackContent, setFeedbackImages, setShowFeedback, setIsEditingNotice, setCountdown, setLoginError,
+    setFavoriteIds, setCommentSort, setReplyTo, setShowOnlyImages, setInitialSlide, setZoomMode, setZoomedSingleImage, setDetailPlace, setAuthMode,
   });
-
   const interactionHandlers = createInteractionHandlers({
-    authApiBase,
-    currentUser,
-    newRec,
-    recImages,
-    viewingCommentsPlace,
-    newComment,
-    commentImages,
-    replyTo,
-    setExpandedParentIds,
-    setPlaceStats,
-    setMyLikedPlaceIds,
-    setNewRec,
-    setRecommendSuggestions,
-    setShowAddRecommend,
-    setRecImages,
-    setFilter,
-    setNewComment,
-    setCommentImages,
-    setReplyTo,
-    fetchRecommendations: generalHandlers.fetchRecommendations,
-    fetchComments: generalHandlers.fetchComments,
+    authApiBase, currentUser, newRec, recImages, viewingCommentsPlace, newComment, commentImages, replyTo, setExpandedParentIds, setPlaceStats, setMyLikedPlaceIds,
+    setNewRec, setRecommendSuggestions, setShowAddRecommend, setRecImages, setFilter, setNewComment, setCommentImages, setReplyTo,
+    fetchRecommendations: generalHandlers.fetchRecommendations, fetchComments: generalHandlers.fetchComments,
   });
 
   const filteredPlaces = useMemo(
@@ -175,17 +114,35 @@ function App() {
   useEffect(() => localStorage.setItem("haikou_active_tab", activeTab), [activeTab]);
 
   useEffect(() => {
-    if (!currentUser) return;
-    fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
+    const phone = currentUser?.phone;
+    if (!phone) return;
+    const cachedFavorites = readCachedValue(`favorites_${phone}`, APP_CACHE_TTL_MS.favorites);
+    const cachedStats = readCachedValue(`place_stats_${phone}`, APP_CACHE_TTL_MS.placeStats);
+    const cachedAnnouncement = readCachedValue("announcement", APP_CACHE_TTL_MS.announcement);
+    if (cachedFavorites?.ok) setFavoriteIds((cachedFavorites.favIds || []).map((id) => String(id)));
+    if (cachedStats?.ok) {
+      setPlaceStats(cachedStats.stats || {});
+      setMyLikedPlaceIds((cachedStats.myLikedIds || []).map((id) => String(id)));
+    }
+    if (cachedAnnouncement?.ok && cachedAnnouncement.content) {
+      setNoticeContent(cachedAnnouncement.content);
+      setShowNotice(localStorage.getItem(getNoticeDismissKey(phone)) !== "1");
+    }
+    fetch(`${authApiBase}/api/favorites/${phone}`)
       .then((res) => res.json())
-      .then((data) => data.ok && setFavoriteIds((data.favIds || []).map((id) => String(id))))
+      .then((data) => {
+        if (!data.ok) return;
+        setFavoriteIds((data.favIds || []).map((id) => String(id)));
+        writeCachedValue(`favorites_${phone}`, data);
+      })
       .catch((error) => console.error("获取收藏失败:", error));
-    fetch(`${authApiBase}/api/places/stats?phone=${currentUser.phone}`)
+    fetch(`${authApiBase}/api/places/stats?phone=${phone}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.ok) return;
         setPlaceStats(data.stats || {});
         setMyLikedPlaceIds((data.myLikedIds || []).map((id) => String(id)));
+        writeCachedValue(`place_stats_${phone}`, data);
       })
       .catch((error) => console.error("获取点赞统计失败:", error));
     generalHandlers.fetchRecommendations();
@@ -195,11 +152,11 @@ function App() {
       .then((data) => {
         if (!data.ok || !data.content) return;
         setNoticeContent(data.content);
-        const dismissed = localStorage.getItem(getNoticeDismissKey(currentUser.phone)) === "1";
-        setShowNotice(!dismissed);
+        writeCachedValue("announcement", data);
+        setShowNotice(localStorage.getItem(getNoticeDismissKey(phone)) !== "1");
       })
       .catch((error) => console.error("获取公告失败:", error));
-  }, [currentUser, authApiBase]);
+  }, [currentUser?.phone, authApiBase]);
   useEffect(() => {
     if (activeTab !== "profile") return;
     generalHandlers.fetchNotices();
@@ -221,83 +178,21 @@ function App() {
 
   return (
     <AppLayout
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      currentUser={currentUser}
-      notifications={notifications}
-      activeBadgeTitle={activeBadgeTitle}
-      activeBadgeMeta={activeBadgeMeta}
-      badgeSummary={badgeSummary}
-      showBadgePicker={showBadgePicker}
-      setShowNoticeList={setShowNoticeList}
-      setFilter={setFilter}
-      viewingCommentsPlace={viewingCommentsPlace}
-      currentPlaceComments={currentPlaceComments}
-      commentSort={commentSort}
-      setCommentSort={setCommentSort}
-      showOnlyImages={showOnlyImages}
-      setShowOnlyImages={setShowOnlyImages}
-      expandedParentIds={expandedParentIds}
-      replyTo={replyTo}
-      newComment={newComment}
-      setNewComment={setNewComment}
-      commentImages={commentImages}
-      setCommentImages={setCommentImages}
-      generalHandlers={generalHandlers}
-      interactionHandlers={interactionHandlers}
-      showAdminFeedback={showAdminFeedback}
-      allFeedbacks={allFeedbacks}
-      setShowAdminFeedback={setShowAdminFeedback}
-      setZoomedSingleImage={setZoomedSingleImage}
-      zoomMode={zoomMode}
-      zoomedSingleImage={zoomedSingleImage}
-      detailPlace={detailPlace}
-      setDetailPlace={setDetailPlace}
-      scrollContainerRef={scrollContainerRef}
-      setZoomMode={setZoomMode}
-      showAddRecommend={showAddRecommend}
-      newRec={newRec}
-      recommendSuggestions={recommendSuggestions}
-      recImages={recImages}
-      setNewRec={setNewRec}
-      setRecImages={setRecImages}
-      setShowAddRecommend={setShowAddRecommend}
-      showNotice={showNotice}
-      noticeContent={noticeContent}
-      isMobile={isMobile}
-      ADMIN_PHONE={ADMIN_PHONE}
-      setIsEditingNotice={setIsEditingNotice}
-      onOpenAnnouncement={handleOpenAnnouncement}
-      onDismissAnnouncement={handleDismissAnnouncement}
-      onManageBadge={handleManageBadge}
-      showBadgeGrantModal={showBadgeGrantModal}
-      onCloseManageBadgeModal={closeManageBadgeModal}
-      onSubmitManageBadge={submitManageBadge}
-      onOpenBadgePicker={openBadgePicker}
-      onCloseBadgePicker={closeBadgePicker}
-      onSelectBadge={handleSelectBadge}
-      isEditingNotice={isEditingNotice}
-      setNoticeContent={setNoticeContent}
-      setInitialSlide={setInitialSlide}
-      showFeedback={showFeedback}
-      feedbackContent={feedbackContent}
-      setFeedbackContent={setFeedbackContent}
-      feedbackImages={feedbackImages}
-      setFeedbackImages={setFeedbackImages}
-      setShowFeedback={setShowFeedback}
-      showRoutePlanner={showRoutePlanner}
-      setShowRoutePlanner={setShowRoutePlanner}
-      showNoticeList={showNoticeList}
-      authApiBase={authApiBase}
-      userLocation={userLocation}
-      targetPlaces={targetPlaces}
-      search={search}
-      setSearch={setSearch}
-      filter={filter}
-      favoriteIds={favoriteIds}
-      favoritePlacesForRoute={favoritePlacesForRoute}
-      filteredPlaces={filteredPlaces}
-      setTargetPlaces={setTargetPlaces}
+      activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} notifications={notifications} activeBadgeTitle={activeBadgeTitle} activeBadgeMeta={activeBadgeMeta}
+      badgeSummary={badgeSummary} showBadgePicker={showBadgePicker} setShowNoticeList={setShowNoticeList} setFilter={setFilter} viewingCommentsPlace={viewingCommentsPlace}
+      currentPlaceComments={currentPlaceComments} commentSort={commentSort} setCommentSort={setCommentSort} showOnlyImages={showOnlyImages} setShowOnlyImages={setShowOnlyImages}
+      expandedParentIds={expandedParentIds} replyTo={replyTo} newComment={newComment} setNewComment={setNewComment} commentImages={commentImages} setCommentImages={setCommentImages}
+      generalHandlers={generalHandlers} interactionHandlers={interactionHandlers} showAdminFeedback={showAdminFeedback} allFeedbacks={allFeedbacks} setShowAdminFeedback={setShowAdminFeedback}
+      setZoomedSingleImage={setZoomedSingleImage} zoomMode={zoomMode} zoomedSingleImage={zoomedSingleImage} detailPlace={detailPlace} setDetailPlace={setDetailPlace}
+      scrollContainerRef={scrollContainerRef} setZoomMode={setZoomMode} showAddRecommend={showAddRecommend} newRec={newRec} recommendSuggestions={recommendSuggestions} recImages={recImages}
+      setNewRec={setNewRec} setRecImages={setRecImages} setShowAddRecommend={setShowAddRecommend} showNotice={showNotice} noticeContent={noticeContent} isMobile={isMobile}
+      ADMIN_PHONE={ADMIN_PHONE} setIsEditingNotice={setIsEditingNotice} onOpenAnnouncement={handleOpenAnnouncement} onDismissAnnouncement={handleDismissAnnouncement}
+      onManageBadge={handleManageBadge} showBadgeGrantModal={showBadgeGrantModal} onCloseManageBadgeModal={closeManageBadgeModal} onSubmitManageBadge={submitManageBadge}
+      onOpenBadgePicker={openBadgePicker} onCloseBadgePicker={closeBadgePicker} onSelectBadge={handleSelectBadge} isEditingNotice={isEditingNotice} setNoticeContent={setNoticeContent}
+      setInitialSlide={setInitialSlide} showFeedback={showFeedback} feedbackContent={feedbackContent} setFeedbackContent={setFeedbackContent} feedbackImages={feedbackImages}
+      setFeedbackImages={setFeedbackImages} setShowFeedback={setShowFeedback} showRoutePlanner={showRoutePlanner} setShowRoutePlanner={setShowRoutePlanner}
+      showNoticeList={showNoticeList} authApiBase={authApiBase} userLocation={userLocation} targetPlaces={targetPlaces} search={search} setSearch={setSearch} filter={filter}
+      favoriteIds={favoriteIds} favoritePlacesForRoute={favoritePlacesForRoute} filteredPlaces={filteredPlaces} setTargetPlaces={setTargetPlaces}
     />
   );
 }

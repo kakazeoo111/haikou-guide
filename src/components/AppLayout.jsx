@@ -275,7 +275,7 @@ function AppLayout({
         filter={filter}
         favoriteIds={favoriteIds}
         filteredPlaces={filteredPlaces}
-        onRefreshLocation={() => window.location.reload()}
+        onRefreshLocation={generalHandlers.handleRefreshLocation}
         onAvatarUpload={generalHandlers.handleAvatarUpload}
         onOpenProfile={() => setActiveTab("profile")}
         onLogout={generalHandlers.handleLogout}

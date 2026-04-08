@@ -67,7 +67,7 @@ export function createInteractionHandlers(ctx) {
       body: JSON.stringify({ phone: currentUser.phone, recId: Number(recId) }),
     });
     const data = await res.json();
-    if (data.ok) fetchRecommendations();
+    if (data.ok) fetchRecommendations(false);
   };
 
   const handleDeleteRec = async (e, recId) => {
@@ -79,7 +79,7 @@ export function createInteractionHandlers(ctx) {
       body: JSON.stringify({ phone: currentUser.phone, recId }),
     });
     const data = await res.json();
-    if (data.ok) fetchRecommendations();
+    if (data.ok) fetchRecommendations(false);
   };
 
   const handleRecommendInputChange = (val) => {
@@ -134,7 +134,7 @@ export function createInteractionHandlers(ctx) {
     setShowAddRecommend(false);
     setNewRec({ name: "", desc: "", lat: null, lng: null });
     setRecImages([]);
-    fetchRecommendations();
+    fetchRecommendations(false);
     setFilter("recommend");
   };
 

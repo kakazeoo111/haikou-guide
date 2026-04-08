@@ -123,6 +123,7 @@ function useMapBootstrap(isMobile, userLocation, mapRef, setMapError, containerI
       setMapError(FALLBACK_DESKTOP);
       return;
     }
+    if (mapRef.current) return;
 
     const BMapGL = window.BMapGL;
     if (!BMapGL) {
@@ -142,7 +143,7 @@ function useMapBootstrap(isMobile, userLocation, mapRef, setMapError, containerI
       console.error("地图初始化异常:", error);
       setMapError(FALLBACK_INIT);
     }
-  }, [isMobile, userLocation, mapRef, setMapError, containerId]);
+  }, [isMobile, mapRef, setMapError, containerId]);
 }
 
 function useMapOverlays(targetPlaces, userLocation, routePath, isMobile, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError) {

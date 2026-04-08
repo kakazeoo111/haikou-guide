@@ -16,6 +16,7 @@ import {
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { FILTER_ITEMS } from "../constants/homeFilters";
 import { getRecommendCardDomId } from "../logic/recommendJump";
+import { buildImageLoadingProps } from "../logic/imageProps";
 import LikeHeartIcon from "./LikeHeartIcon";
 
 const UNREAD_BADGE_LIMIT = 99;
@@ -55,6 +56,7 @@ const userBadgeBaseStyle = {
   boxShadow: "0 8px 16px rgba(90,167,123,0.16)",
   width: "fit-content",
 };
+const listCardPerformanceStyle = { contentVisibility: "auto", containIntrinsicSize: "260px" };
 
 function formatPlaceTypeTag(type) {
   if (type === "food") return "🍱 美食";
@@ -125,6 +127,7 @@ function HomePanels({
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
             <img
               src={currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.phone}`}
+              {...buildImageLoadingProps({ eager: true, priority: "high" })}
               style={avatarStyle}
               onClick={() => document.getElementById("avatar-input").click()}
               alt="avatar"
@@ -207,12 +210,17 @@ function HomePanels({
             const coverImage = (place.album && place.album[0]) || "https://api.suzcore.top/uploads/default_place.jpg";
             const recommendCardId = place.type === "recommend" ? getRecommendCardDomId(place.realId) : "";
             return (
-              <div id={recommendCardId || undefined} key={place.id} style={{ padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
+              <div id={recommendCardId || undefined} key={place.id} style={{ ...listCardPerformanceStyle, padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
                 {filter === "top10" && <div style={rankBadgeStyle(index)}>{index + 1}</div>}
 
                 {place.type === "recommend" && (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
-                    <img src={place.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${place.user_phone}`} style={{ width: "24px", height: "24px", borderRadius: "50%" }} alt="user-avatar" />
+                    <img
+                      src={place.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${place.user_phone}`}
+                      {...buildImageLoadingProps()}
+                      style={{ width: "24px", height: "24px", borderRadius: "50%" }}
+                      alt="user-avatar"
+                    />
                     <span style={{ fontSize: "12px", fontWeight: "bold" }}>{place.username} 分享</span>
                     <span style={{ fontSize: "10px", color: "#999" }}>{formatCommentTime(place.created_at)}</span>
                     {place.user_phone === currentUser.phone && (

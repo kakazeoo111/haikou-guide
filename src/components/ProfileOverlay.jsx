@@ -2,6 +2,8 @@ import { useState } from "react";
 import BadgePickerModal from "./BadgePickerModal";
 import { badgeStyle, btnLogOutStyle, menuItemStyle, navHeaderStyle, profileAvatarLarge, profileInfoCard, profilePageStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
+import { APP_CACHE_TTL_MS, readCachedValue } from "../logic/clientCache";
+import { buildImageLoadingProps } from "../logic/imageProps";
 import { formatCommentTime, parseRecommendationAlbum } from "../logic/placeUtils";
 
 const activeBadgePillBaseStyle = {
@@ -64,6 +66,12 @@ function ProfileOverlay({
 
   const handleOpenMyRecommendations = async () => {
     if (!currentUser?.phone) return;
+    const cachedData = readCachedValue(`recommendations_${currentUser.phone}`, APP_CACHE_TTL_MS.recommendations);
+    if (cachedData?.ok) {
+      const cachedMine = (cachedData.data || []).filter((item) => String(item.user_phone || "") === String(currentUser.phone));
+      setMyRecommendations(cachedMine);
+      setShowMyRecommendations(true);
+    }
     setMyRecommendationsLoading(true);
     try {
       const res = await fetch(`${authApiBase}/api/recommendations?phone=${currentUser.phone}`);
@@ -99,6 +107,7 @@ function ProfileOverlay({
           <div style={{ position: "relative", display: "inline-block" }}>
             <img
               src={currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.phone}`}
+              {...buildImageLoadingProps({ eager: true, priority: "high" })}
               style={{ ...profileAvatarLarge, cursor: "pointer" }}
               onClick={() => document.getElementById("profile-avatar-input").click()}
               title="点击更换头像"
@@ -201,7 +210,7 @@ function ProfileOverlay({
                   }}
                 >
                   <div style={{ display: "flex", gap: "12px" }}>
-                    <img src={cover} alt={item.place_name} style={{ width: "78px", height: "78px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 }} />
+                    <img src={cover} {...buildImageLoadingProps()} alt={item.place_name} style={{ width: "78px", height: "78px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 }} />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: "16px", fontWeight: 700, color: "#1f4133", marginBottom: "4px" }}>{item.place_name}</div>
                       <div style={{ fontSize: "12px", color: "#6c7f77", lineHeight: 1.45 }}>{item.description || "暂无描述"}</div>

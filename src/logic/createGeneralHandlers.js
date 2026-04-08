@@ -1,55 +1,47 @@
 import { parseRecommendationAlbum } from "./placeUtils";
 import { uploadAvatar } from "./avatarUploadHandler";
+import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./clientCache";
+
+const GEOLOCATION_REFRESH_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 
 export function createGeneralHandlers(ctx) {
   const {
-    authApiBase,
-    currentUser,
-    places,
-    recommendations,
-    loginForm,
-    authMode,
-    noticeContent,
-    feedbackContent,
-    feedbackImages,
-    favoriteIds,
-    setRecommendations,
-    setNotifications,
-    setActiveComments,
-    setShowNoticeList,
-    setActiveTab,
-    setViewingCommentsPlace,
-    setCurrentUser,
-    setAllFeedbacks,
-    setShowAdminFeedback,
-    setFeedbackContent,
-    setFeedbackImages,
-    setShowFeedback,
-    setIsEditingNotice,
-    setCountdown,
-    setLoginError,
-    setFavoriteIds,
-    setCommentSort,
-    setReplyTo,
-    setShowOnlyImages,
-    setInitialSlide,
-    setZoomMode,
-    setZoomedSingleImage,
-    setDetailPlace,
-    setAuthMode,
+    authApiBase, currentUser, places, recommendations, loginForm, authMode, noticeContent, feedbackContent, feedbackImages, favoriteIds,
+    setRecommendations, setNotifications, setActiveComments, setShowNoticeList, setActiveTab, setViewingCommentsPlace, setCurrentUser, setUserLocation,
+    setAllFeedbacks, setShowAdminFeedback, setFeedbackContent, setFeedbackImages, setShowFeedback, setIsEditingNotice, setCountdown, setLoginError,
+    setFavoriteIds, setCommentSort, setReplyTo, setShowOnlyImages, setInitialSlide, setZoomMode, setZoomedSingleImage, setDetailPlace, setAuthMode,
   } = ctx;
 
-  const fetchRecommendations = async () => {
-    const res = await fetch(`${authApiBase}/api/recommendations?phone=${currentUser?.phone || ""}`);
+  const fetchRecommendations = async (preferCache = true) => {
+    const phone = currentUser?.phone || "";
+    const cacheKey = `recommendations_${phone || "guest"}`;
+    if (preferCache) {
+      const cachedData = readCachedValue(cacheKey, APP_CACHE_TTL_MS.recommendations);
+      if (cachedData?.ok && Array.isArray(cachedData.data)) setRecommendations(cachedData.data);
+    }
+    const res = await fetch(`${authApiBase}/api/recommendations?phone=${phone}`);
     const data = await res.json();
-    if (data.ok) setRecommendations(data.data);
+    if (data.ok) {
+      setRecommendations(data.data);
+      writeCachedValue(cacheKey, data);
+    }
+    return data;
   };
 
-  const fetchNotices = async () => {
+  const fetchNotices = async (preferCache = true) => {
     if (!currentUser) return;
+    const cacheKey = `notifications_${currentUser.phone}`;
+    if (preferCache) {
+      const cachedData = readCachedValue(cacheKey, APP_CACHE_TTL_MS.notifications);
+      if (cachedData?.ok && Array.isArray(cachedData.data)) setNotifications(cachedData.data);
+    }
     const res = await fetch(`${authApiBase}/api/notifications/${currentUser.phone}`);
     const data = await res.json();
-    if (data.ok) setNotifications(data.data);
+    if (data.ok) {
+      setNotifications(data.data);
+      writeCachedValue(cacheKey, data);
+    }
+    return data;
   };
 
   const fetchComments = async (id) => {
@@ -61,6 +53,22 @@ export function createGeneralHandlers(ctx) {
   const handleLogout = () => {
     localStorage.removeItem("haikouUser");
     window.location.reload();
+  };
+
+  const handleRefreshLocation = () => {
+    if (!navigator.geolocation) {
+      console.error("重新定位失败: 当前设备不支持地理定位");
+      alert("当前设备不支持定位，请检查微信定位权限");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => setUserLocation({ lat: position.coords.latitude, lng: position.coords.longitude }),
+      (error) => {
+        console.error("重新定位失败:", error);
+        alert("重新定位失败，请检查微信定位权限后重试");
+      },
+      GEOLOCATION_REFRESH_OPTIONS,
+    );
   };
 
   const handleNoticeClick = (notice) => {
@@ -284,6 +292,7 @@ export function createGeneralHandlers(ctx) {
     fetchNotices,
     fetchComments,
     handleLogout,
+    handleRefreshLocation,
     handleNoticeClick,
     handleAvatarUpload,
     fetchAllFeedbacks,

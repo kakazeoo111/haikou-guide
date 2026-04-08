@@ -1,5 +1,6 @@
 import { useState } from "react";
 import FeedbackThreadModal from "./FeedbackThreadModal";
+import { buildImageLoadingProps } from "../logic/imageProps";
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 
 function getNoticeText(notice) {
@@ -182,6 +183,8 @@ function NoticeListModal({
                 if (canOpenFeedbackThread) handleOpenAdminReply(notice);
               }}
               style={{
+                contentVisibility: "auto",
+                containIntrinsicSize: "72px",
                 padding: "15px 10px",
                 borderBottom: "1px solid #f0f0f0",
                 cursor: isClickable ? "pointer" : "default",
@@ -197,6 +200,7 @@ function NoticeListModal({
                       ? notice.sender_avatar.replace("http://", "https://")
                       : `https://api.dicebear.com/7.x/avataaars/svg?seed=${notice.sender_phone}`
                   }
+                  {...buildImageLoadingProps()}
                   style={{ width: "32px", height: "32px", minWidth: "32px", borderRadius: "50%", objectFit: "cover" }}
                   alt="avatar"
                 />

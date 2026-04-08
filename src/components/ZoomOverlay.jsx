@@ -1,4 +1,5 @@
 import { closeZoomStyle, swipeContainerStyle, swipeItemStyle, zoomOverlayStyle, zoomedImgStyle } from "../styles/appStyles";
+import { buildImageLoadingProps } from "../logic/imageProps";
 
 function getGroupedZoomData(zoomedSingleImage) {
   if (!zoomedSingleImage || typeof zoomedSingleImage !== "object") return null;
@@ -31,12 +32,12 @@ function ZoomOverlay({ visible, zoomMode, detailPlace, zoomedSingleImage, scroll
         >
           {swipeImages.map((img, index) => (
             <div key={`${img}-${index}`} style={swipeItemStyle}>
-              <img src={img} style={zoomedImgStyle} alt="zoom" />
+              <img src={img} {...buildImageLoadingProps({ eager: true, priority: "high" })} style={zoomedImgStyle} alt="zoom" />
             </div>
           ))}
         </div>
       )}
-      {!zoomMode && singleImage && <img src={singleImage} style={zoomedImgStyle} onClick={onClose} alt="single-zoom" />}
+      {!zoomMode && singleImage && <img src={singleImage} {...buildImageLoadingProps({ eager: true, priority: "high" })} style={zoomedImgStyle} onClick={onClose} alt="single-zoom" />}
       <div
         style={closeZoomStyle}
         onClick={(event) => {
