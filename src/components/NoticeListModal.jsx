@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAvatarWithFallback } from "../logic/avatarFallback";
 import FeedbackThreadModal from "./FeedbackThreadModal";
 import { buildImageLoadingProps } from "../logic/imageProps";
 import { optimizeUploadImages } from "../logic/uploadImageOptimizer";
@@ -197,11 +198,7 @@ function NoticeListModal({
             >
               <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
                 <img
-                  src={
-                    notice.sender_avatar && notice.sender_avatar !== "null"
-                      ? notice.sender_avatar.replace("http://", "https://")
-                      : `https://api.dicebear.com/7.x/avataaars/svg?seed=${notice.sender_phone}`
-                  }
+                  src={getAvatarWithFallback(notice.sender_avatar, notice.sender_phone, notice.sender_name)}
                   {...buildImageLoadingProps()}
                   style={{ width: "32px", height: "32px", minWidth: "32px", borderRadius: "50%", objectFit: "cover" }}
                   alt="avatar"

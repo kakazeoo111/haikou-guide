@@ -17,6 +17,7 @@ import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { FILTER_ITEMS } from "../constants/homeFilters";
 import { getRecommendCardDomId } from "../logic/recommendJump";
 import { buildImageLoadingProps } from "../logic/imageProps";
+import { getAvatarWithFallback } from "../logic/avatarFallback";
 import LikeHeartIcon from "./LikeHeartIcon";
 
 const UNREAD_BADGE_LIMIT = 99;
@@ -126,7 +127,7 @@ function HomePanels({
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
             <img
-              src={currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.phone}`}
+              src={getAvatarWithFallback(currentUser.avatar_url, currentUser.phone, currentUser.username)}
               {...buildImageLoadingProps({ eager: true, priority: "high" })}
               style={avatarStyle}
               onClick={() => document.getElementById("avatar-input").click()}
@@ -216,7 +217,7 @@ function HomePanels({
                 {place.type === "recommend" && (
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" }}>
                     <img
-                      src={place.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${place.user_phone}`}
+                      src={getAvatarWithFallback(place.avatar_url, place.user_phone, place.username)}
                       {...buildImageLoadingProps()}
                       style={{ width: "24px", height: "24px", borderRadius: "50%" }}
                       alt="user-avatar"

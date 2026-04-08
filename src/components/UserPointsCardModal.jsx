@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { JUMP_TO_RECOMMEND_EVENT } from "../constants/jumpEvents";
+import { getAvatarWithFallback } from "../logic/avatarFallback";
 
 const CARD_OVERLAY_Z_INDEX = 4100;
 const AVATAR_PREVIEW_Z_INDEX = 4200;
@@ -39,6 +40,7 @@ function AvatarPreview({ visible, avatarUrl, onClose }) {
 }
 
 function SummaryHeader({ data, onAvatarClick }) {
+  const avatarUrl = getAvatarWithFallback(data?.avatarUrl, data?.phone, data?.username);
   return (
     <div
       style={{
@@ -52,7 +54,7 @@ function SummaryHeader({ data, onAvatarClick }) {
       }}
     >
       <img
-        src={data.avatarUrl}
+        src={avatarUrl}
         alt="user-avatar"
         onClick={onAvatarClick}
         style={{
@@ -199,6 +201,7 @@ function ModalShell({ visible, onClose, children }) {
 
 function UserPointsCardModal({ visible, loading, data, onClose }) {
   const [avatarPreviewVisible, setAvatarPreviewVisible] = useState(false);
+  const avatarPreviewUrl = getAvatarWithFallback(data?.avatarUrl, data?.phone, data?.username);
 
   const recommendedPlaces = useMemo(() => {
     if (!Array.isArray(data?.recommendedPlaces)) return [];
@@ -222,7 +225,7 @@ function UserPointsCardModal({ visible, loading, data, onClose }) {
           onJumpPlace={(place) => jumpToRecommendList(place, onClose)}
         />
       </ModalShell>
-      <AvatarPreview visible={avatarPreviewVisible} avatarUrl={data?.avatarUrl} onClose={() => setAvatarPreviewVisible(false)} />
+      <AvatarPreview visible={avatarPreviewVisible} avatarUrl={avatarPreviewUrl} onClose={() => setAvatarPreviewVisible(false)} />
     </>
   );
 }

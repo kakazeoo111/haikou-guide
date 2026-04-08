@@ -3,6 +3,7 @@ import BadgePickerModal from "./BadgePickerModal";
 import { badgeStyle, btnLogOutStyle, menuItemStyle, navHeaderStyle, profileAvatarLarge, profileInfoCard, profilePageStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { APP_CACHE_TTL_MS, readCachedValue } from "../logic/clientCache";
+import { getAvatarWithFallback } from "../logic/avatarFallback";
 import { buildImageLoadingProps } from "../logic/imageProps";
 import { formatCommentTime, parseRecommendationAlbum } from "../logic/placeUtils";
 
@@ -106,7 +107,7 @@ function ProfileOverlay({
         <div style={profileInfoCard}>
           <div style={{ position: "relative", display: "inline-block" }}>
             <img
-              src={currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentUser.phone}`}
+              src={getAvatarWithFallback(currentUser.avatar_url, currentUser.phone, currentUser.username)}
               {...buildImageLoadingProps({ eager: true, priority: "high" })}
               style={{ ...profileAvatarLarge, cursor: "pointer" }}
               onClick={() => document.getElementById("profile-avatar-input").click()}

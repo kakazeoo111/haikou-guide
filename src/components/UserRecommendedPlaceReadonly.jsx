@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { getAvatarWithFallback } from "../logic/avatarFallback";
 import LikeHeartIcon from "./LikeHeartIcon";
 
 const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
@@ -39,9 +40,7 @@ function parseCommentImageUrls(imageValue) {
 }
 
 function getCommentAvatar(comment) {
-  const normalized = toHttpsUrl(comment.avatar_url);
-  if (normalized) return normalized;
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${comment.user_phone || "user"}`;
+  return getAvatarWithFallback(toHttpsUrl(comment.avatar_url), comment.user_phone, comment.username);
 }
 
 function buildCommentDisplayList(comments) {

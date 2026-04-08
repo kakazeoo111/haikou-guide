@@ -1,5 +1,6 @@
 import { btnMainStyle } from "../../styles/appStyles";
 import { BADGE_ANIMATION_STYLE, buildBadgePresentation } from "../../logic/commentsOverlayUtils";
+import { getAvatarWithFallback } from "../../logic/avatarFallback";
 import { parseForumImageUrls } from "../../logic/forumImageUtils";
 import { buildImageLoadingProps } from "../../logic/imageProps";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
@@ -50,9 +51,7 @@ const callLabelStyle = (active) => ({
 });
 
 function getAvatarSrc(phone, avatarUrl) {
-  const normalized = String(avatarUrl || "").trim();
-  if (normalized) return normalized.replace("http://", "https://");
-  return `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || "forum-user"}`;
+  return getAvatarWithFallback(avatarUrl, phone, "");
 }
 
 function getSelfBadge(userPhone, currentUserPhone, activeBadgeTitle, badgeIcon) {

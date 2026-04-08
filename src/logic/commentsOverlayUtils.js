@@ -1,10 +1,9 @@
+import { buildLocalAvatarDataUri, normalizeAvatarUrl } from "./avatarFallback";
 import { getBadgeEmoji, getBadgeTheme } from "./badgeTheme";
 
 export const PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH = "152px";
 export const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "128px";
 
-const CARTOON_AVATAR_STYLES = ["adventurer", "bottts", "fun-emoji", "personas"];
-const CARTOON_AVATAR_API_BASE = "https://api.dicebear.com/7.x";
 const DEFAULT_BADGE_TITLE = "未解锁称号";
 const PARENT_AVATAR_SIZE = 36;
 const REPLY_AVATAR_SIZE = 24;
@@ -103,13 +102,6 @@ function hashString(value) {
   return Math.abs(hash);
 }
 
-function getCartoonAvatar(phone, username) {
-  const seedBase = `${phone || "guest"}-${username || "user"}`;
-  const hash = hashString(seedBase);
-  const style = CARTOON_AVATAR_STYLES[hash % CARTOON_AVATAR_STYLES.length];
-  return `${CARTOON_AVATAR_API_BASE}/${style}/svg?seed=${encodeURIComponent(seedBase)}`;
-}
-
 export function parseCommentImageUrls(imgData) {
   if (!imgData || imgData === "[]" || imgData === "null") return [];
   if (typeof imgData !== "string") return [];
@@ -130,18 +122,21 @@ function hasCommentImages(comment) {
 
 export function getAvatarSrc(url, phone, username) {
   const normalized = String(url || "").trim();
-  if (!normalized || normalized === "null" || normalized === "undefined") return getCartoonAvatar(phone, username);
-  if (normalized.startsWith("http://") || normalized.startsWith("https://")) return normalized.replace("http://", "https://");
-  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
-  console.error("Invalid avatar url, fallback to cartoon avatar:", normalized);
-  return getCartoonAvatar(phone, username);
+  if (!normalized || normalized === "null" || normalized === "undefined") return buildLocalAvatarDataUri(phone, username);
+  const safeAvatarUrl = normalizeAvatarUrl(normalized);
+  if (safeAvatarUrl) return safeAvatarUrl;
+  console.error("Invalid avatar url, fallback to local avatar:", normalized);
+  return buildLocalAvatarDataUri(phone, username);
 }
 
 export function handleAvatarLoadError(event, phone, username) {
-  const fallback = getCartoonAvatar(phone, username);
-  if (event.currentTarget.src === fallback) return;
-  console.error("Avatar load failed, fallback to cartoon avatar:", event.currentTarget.src);
-  event.currentTarget.src = fallback;
+  const target = event.currentTarget;
+  const alreadyHandled = target?.dataset?.fallbackApplied === "1";
+  if (alreadyHandled) return;
+  const fallback = buildLocalAvatarDataUri(phone, username);
+  console.error("Avatar load failed, fallback to local avatar:", target.src);
+  target.dataset.fallbackApplied = "1";
+  target.src = fallback;
 }
 
 export function getSelfBadge(comment, currentUser, activeBadgeTitle, badgeIcon) {

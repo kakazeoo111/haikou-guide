@@ -1,7 +1,9 @@
+import { getAvatarWithFallback } from "./avatarFallback";
 import { parseRecommendationAlbum } from "./placeUtils";
 
 const WARMUP_LIMIT_RECOMMENDATIONS = 6;
 const WARMUP_LIMIT_COMMENTS = 10;
+const WARMUP_LIMIT_COMMENT_AVATARS = 16;
 const WARMUP_IMAGES_PER_ITEM = 2;
 const warmedImageSet = new Set();
 
@@ -52,5 +54,13 @@ export function warmCommentImages(items) {
   comments.slice(0, WARMUP_LIMIT_COMMENTS).forEach((item) => {
     const commentImages = parseCommentImageUrls(item?.image_url);
     commentImages.slice(0, WARMUP_IMAGES_PER_ITEM).forEach(warmImageUrl);
+  });
+}
+
+export function warmCommentAvatars(items) {
+  const comments = Array.isArray(items) ? items : [];
+  comments.slice(0, WARMUP_LIMIT_COMMENT_AVATARS).forEach((item) => {
+    const avatarUrl = getAvatarWithFallback(item?.avatar_url, item?.user_phone, item?.username);
+    warmImageUrl(avatarUrl);
   });
 }
