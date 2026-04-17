@@ -4,7 +4,7 @@ import { getAvatarWithFallback } from "../logic/avatarFallback";
 
 const CARD_OVERLAY_Z_INDEX = 4100;
 const AVATAR_PREVIEW_Z_INDEX = 4200;
-const CARD_MAX_WIDTH = 340;
+const CARD_MAX_WIDTH = 320;
 function AvatarPreview({ visible, avatarUrl, onClose }) {
   if (!visible) return null;
   return (
