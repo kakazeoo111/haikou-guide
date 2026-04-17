@@ -230,7 +230,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
     <div style={forumPageStyle}>
       <div style={forumHeaderStyle}>
         <span onClick={onBack} style={{ cursor: "pointer", fontSize: "18px" }}>&lt; 返回</span>
-        <span style={{ fontWeight: 700, color: "#2e6a4a" }}>24小时论坛</span>
+        <span style={{ fontWeight: 700, color: "#2e6a4a" }}>7天论坛</span>
         <span style={{ width: "58px" }} />
       </div>
 
@@ -239,7 +239,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
           <textarea
             value={postContent}
             onChange={(event) => setPostContent(event.target.value)}
-            placeholder="发布你的24小时动态..."
+            placeholder="发布你的7天动态..."
             style={{ width: "100%", minHeight: "90px", border: "1px solid #dce8e1", borderRadius: "12px", padding: "10px", boxSizing: "border-box", resize: "vertical" }}
           />
           {postImages.length > 0 && (
@@ -278,7 +278,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
         </div>
 
         {loadingPosts && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>论坛内容加载中...</div>}
-        {!loadingPosts && posts.length === 0 && <div style={{ textAlign: "center", color: "#97a8a0", padding: "16px 0" }}>24小时内暂无相关帖子</div>}
+        {!loadingPosts && posts.length === 0 && <div style={{ textAlign: "center", color: "#97a8a0", padding: "16px 0" }}>7天内暂无相关帖子</div>}
 
         {!loadingPosts && posts.map((post) => (
           <ForumPostCard

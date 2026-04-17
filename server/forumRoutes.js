@@ -26,7 +26,7 @@ const FORUM_POST_LIST_SQL = `
   LEFT JOIN (
     SELECT post_id, COUNT(*) AS comment_count
     FROM forum_comments
-    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+    WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     GROUP BY post_id
   ) comment_stats ON comment_stats.post_id = p.id
   LEFT JOIN (
@@ -40,7 +40,7 @@ const FORUM_POST_LIST_SQL = `
     WHERE user_phone = ?
     GROUP BY post_id
   ) my_call_stats ON my_call_stats.post_id = p.id
-  WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+  WHERE p.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
     AND (? = '' OR u.username LIKE CONCAT('%', ?, '%') OR p.content LIKE CONCAT('%', ?, '%'))
 `;
 
@@ -112,7 +112,7 @@ async function ensureForumTables(pool) {
 
 async function isForumPostActive(pool, postId) {
   const [rows] = await pool.execute(
-    "SELECT id FROM forum_posts WHERE id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1",
+    "SELECT id FROM forum_posts WHERE id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY) LIMIT 1",
     [postId]
   );
   return rows.length > 0;
@@ -183,7 +183,7 @@ export async function registerForumRoutes(app, { pool, upload }) {
       if (!users.length) return res.status(404).json({ ok: false, message: "用户不存在，请重新登录" });
 
       const active = await isForumPostActive(pool, normalizedPostId);
-      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
+      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过7天" });
 
       const [rows] = await pool.execute(
         "SELECT id FROM forum_post_calls WHERE post_id = ? AND user_phone = ? LIMIT 1",
@@ -212,13 +212,13 @@ export async function registerForumRoutes(app, { pool, upload }) {
 
     try {
       const active = await isForumPostActive(pool, postId);
-      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
+      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过7天" });
       const [rows] = await pool.execute(
         `SELECT c.id, c.post_id, c.parent_id, c.user_phone, c.content, c.image_url, c.created_at, u.username, u.avatar_url
          FROM forum_comments c
          JOIN users u ON c.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
          WHERE c.post_id = ?
-           AND c.created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+           AND c.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
          ORDER BY c.created_at DESC, c.id DESC`,
         [postId]
       );
@@ -244,7 +244,7 @@ export async function registerForumRoutes(app, { pool, upload }) {
 
     try {
       const active = await isForumPostActive(pool, normalizedPostId);
-      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过24小时" });
+      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过7天" });
       if (normalizedParentId) {
         const [parents] = await pool.execute("SELECT id FROM forum_comments WHERE id = ? AND post_id = ? LIMIT 1", [normalizedParentId, normalizedPostId]);
         if (!parents.length) return res.status(400).json({ ok: false, message: "回复目标不存在" });

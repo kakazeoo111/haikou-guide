@@ -35,13 +35,6 @@ const doneButtonStyle = {
   cursor: "pointer",
 };
 
-const ruleList = [
-  "禁止辱骂、人身攻击、引战与地域歧视。",
-  "禁止发布违法信息、涉黄涉赌涉毒、诈骗或引流交易内容。",
-  "禁止恶意骚扰、刷屏、造谣与冒充他人。",
-  "禁止泄露他人隐私信息（手机号、住址、证件等）。",
-];
-
 function ForumNoticeModal({ visible, dontShowAgain, onToggleDontShowAgain, onClose }) {
   if (!visible) return null;
 
@@ -56,22 +49,7 @@ function ForumNoticeModal({ visible, dontShowAgain, onToggleDontShowAgain, onClo
         </div>
 
         <div style={{ marginTop: "8px", color: "#355a49", fontSize: "13px", lineHeight: 1.65 }}>
-          这是 24 小时论坛，用来发布短时动态、即刻分享和互动打call。内容会按时间和 chill 热度排序，适合快速交流、结伴和交换实时信息。
-        </div>
-
-        <div style={{ marginTop: "10px", background: "#f7fffa", border: "1px solid #d9eee2", borderRadius: "14px", padding: "10px 11px" }}>
-          <div style={{ fontSize: "13px", fontWeight: 800, color: "#1f5f45", marginBottom: "6px" }}>社区规则</div>
-          <div style={{ fontSize: "12px", color: "#436658", lineHeight: 1.65 }}>
-            {ruleList.map((rule) => (
-              <div key={rule}>• {rule}</div>
-            ))}
-          </div>
-          <div style={{ marginTop: "6px", fontSize: "12px", color: "#4a6a5c", fontWeight: 600 }}>
-            祝大家玩得开心，交流友善。
-          </div>
-          <div style={{ marginTop: "4px", fontSize: "12px", color: "#d14f57", fontWeight: 700 }}>
-            违者将采取封禁账号处理。
-          </div>
+          这是 7 天论坛，用来发布短时动态、即刻分享和互动打call。内容会按时间和 chill 热度排序，适合快速交流、结伴和交换实时信息。
         </div>
 
         <label style={{ marginTop: "12px", display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13px", color: "#4a6a5c", cursor: "pointer" }}>
