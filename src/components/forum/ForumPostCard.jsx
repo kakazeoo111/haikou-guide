@@ -111,7 +111,8 @@ function ForumPostCard({
   const replyMotionStyle = getMotionIconStyle(replyMotionIconStyle, isExplorerBadge);
 
   return (
-    <div style={{ contentVisibility: "auto", containIntrinsicSize: "320px", border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
+    <>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "320px", border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
       <style>{BADGE_ANIMATION_STYLE}</style>
       <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
         <div
@@ -254,8 +255,9 @@ function ForumPostCard({
           </div>
         </div>
       )}
+      </div>
       <UserPointsCardModal visible={userPointsCard.visible} loading={userPointsCard.loading} data={userPointsCard.data} onClose={userPointsCard.close} />
-    </div>
+    </>
   );
 }
 
