@@ -6,6 +6,9 @@ import { APP_CACHE_TTL_MS, readCachedValue } from "../logic/clientCache";
 import { getAvatarWithFallback } from "../logic/avatarFallback";
 import { buildImageLoadingProps } from "../logic/imageProps";
 import { formatCommentTime, parseRecommendationAlbum } from "../logic/placeUtils";
+import { DEFAULT_PLACE_COVER } from "../constants/imageFallbacks";
+
+const MY_RECOMMEND_THUMB_SIZE_PX = 78;
 
 const activeBadgePillBaseStyle = {
   marginTop: "8px",
@@ -197,7 +200,7 @@ function ProfileOverlay({
             )}
             {myRecommendations.map((item) => {
               const album = parseRecommendationAlbum(item.image_url);
-              const cover = album[0] || "https://api.suzcore.top/uploads/default_place.jpg";
+              const cover = album[0] || DEFAULT_PLACE_COVER;
               return (
                 <div
                   key={item.id}
@@ -211,7 +214,14 @@ function ProfileOverlay({
                   }}
                 >
                   <div style={{ display: "flex", gap: "12px" }}>
-                    <img src={cover} {...buildImageLoadingProps()} alt={item.place_name} style={{ width: "78px", height: "78px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 }} />
+                    <img
+                      src={cover}
+                      {...buildImageLoadingProps()}
+                      width={MY_RECOMMEND_THUMB_SIZE_PX}
+                      height={MY_RECOMMEND_THUMB_SIZE_PX}
+                      alt={item.place_name}
+                      style={{ width: "78px", height: "78px", borderRadius: "12px", objectFit: "cover", flexShrink: 0 }}
+                    />
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: "16px", fontWeight: 700, color: "#1f4133", marginBottom: "4px" }}>{item.place_name}</div>
                       <div style={{ fontSize: "12px", color: "#6c7f77", lineHeight: 1.45 }}>{item.description || "暂无描述"}</div>

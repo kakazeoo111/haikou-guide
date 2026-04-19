@@ -1,5 +1,7 @@
 import { albumThumbStyle, btnMainStyle, horizontalScrollWrapper, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 
+const ALBUM_THUMB_HEIGHT_PX = 150;
+
 function DetailModal({ place, onClose, onPreviewAlbum }) {
   if (!place) return null;
 
@@ -19,6 +21,7 @@ function DetailModal({ place, onClose, onPreviewAlbum }) {
               key={`${img}-${idx}`}
               src={img}
               style={albumThumbStyle}
+              height={ALBUM_THUMB_HEIGHT_PX}
               loading="lazy"
               decoding="async"
               fetchPriority="low"

@@ -15,12 +15,15 @@ import {
 } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { FILTER_ITEMS } from "../constants/homeFilters";
+import { DEFAULT_PLACE_COVER } from "../constants/imageFallbacks";
 import { getRecommendCardDomId } from "../logic/recommendJump";
 import { buildImageLoadingProps } from "../logic/imageProps";
 import { getAvatarWithFallback } from "../logic/avatarFallback";
 import LikeHeartIcon from "./LikeHeartIcon";
 
 const UNREAD_BADGE_LIMIT = 99;
+const FIRST_FOLD_CARD_COUNT = 4;
+const LIST_THUMB_SIZE_PX = 70;
 const FAVORITE_ICON_SIZE = "32px";
 const FAVORITE_ICON_FONT_SIZE = "18px";
 const FAVORITE_ICON_ACTIVE_COLOR = "#ffffff";
@@ -208,7 +211,8 @@ function HomePanels({
           {filteredPlaces.map((place, index) => {
             const isMarked = targetPlaces.some((target) => target.id === place.id);
             const isFav = favoriteIds.includes(String(place.id));
-            const coverImage = (place.album && place.album[0]) || "https://api.suzcore.top/uploads/default_place.jpg";
+            const coverImage = (place.album && place.album[0]) || DEFAULT_PLACE_COVER;
+            const isAboveFold = index < FIRST_FOLD_CARD_COUNT;
             const recommendCardId = place.type === "recommend" ? getRecommendCardDomId(place.realId) : "";
             return (
               <div id={recommendCardId || undefined} key={place.id} style={{ ...listCardPerformanceStyle, padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
@@ -233,7 +237,15 @@ function HomePanels({
                 )}
 
                 <div style={{ display: "flex", gap: "12px", alignItems: "flex-start" }}>
-                  <img src={coverImage} style={listThumbStyle} loading="lazy" decoding="async" fetchPriority="low" onClick={() => onOpenDetail(place, 0, true)} alt="place-cover" />
+                  <img
+                    src={coverImage}
+                    style={listThumbStyle}
+                    width={LIST_THUMB_SIZE_PX}
+                    height={LIST_THUMB_SIZE_PX}
+                    {...buildImageLoadingProps({ eager: isAboveFold, priority: isAboveFold ? "high" : "low" })}
+                    onClick={() => onOpenDetail(place, 0, true)}
+                    alt="place-cover"
+                  />
                   <div style={{ flex: 1 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <h3 style={{ margin: 0, fontSize: "16px", color: "#333" }}>{place.name}</h3>
