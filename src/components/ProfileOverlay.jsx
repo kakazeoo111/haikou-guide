@@ -1,6 +1,6 @@
 import { useState } from "react";
 import BadgePickerModal from "./BadgePickerModal";
-import { badgeStyle, btnLogOutStyle, menuItemStyle, navHeaderStyle, profileAvatarLarge, profileInfoCard, profilePageStyle } from "../styles/appStyles";
+import { badgeStyle, navHeaderStyle, profileAvatarLarge, profilePageStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { APP_CACHE_TTL_MS, readCachedValue } from "../logic/clientCache";
 import { getAvatarWithFallback } from "../logic/avatarFallback";
@@ -9,6 +9,9 @@ import { formatCommentTime, parseRecommendationAlbum } from "../logic/placeUtils
 import { DEFAULT_PLACE_COVER } from "../constants/imageFallbacks";
 
 const MY_RECOMMEND_THUMB_SIZE_PX = 78;
+const MENU_ICON_CONTAINER_SIZE_PX = 38;
+const PROFILE_CARD_GRADIENT = "radial-gradient(ellipse at top, #eefbf3 0%, #ffffff 62%)";
+const MENU_ICON_BG = "linear-gradient(135deg, #eaf7ef, #dff1e7)";
 
 const activeBadgePillBaseStyle = {
   marginTop: "8px",
@@ -23,6 +26,56 @@ const activeBadgePillBaseStyle = {
   color: "#1f5f45",
   fontWeight: 700,
   fontSize: "12px",
+};
+
+const profileCardEnhancedStyle = {
+  background: PROFILE_CARD_GRADIENT,
+  borderRadius: "24px",
+  padding: "36px 20px 28px",
+  textAlign: "center",
+  border: "1px solid #eaf3ee",
+  boxShadow: "0 10px 28px rgba(90,167,123,0.08)",
+};
+
+const menuItemEnhancedStyle = {
+  background: "white",
+  padding: "16px 18px",
+  borderRadius: "18px",
+  marginBottom: "12px",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  border: "1px solid #eef4f0",
+  boxShadow: "0 4px 14px rgba(90,167,123,0.06)",
+  cursor: "pointer",
+};
+
+const menuIconWrapperStyle = {
+  width: `${MENU_ICON_CONTAINER_SIZE_PX}px`,
+  height: `${MENU_ICON_CONTAINER_SIZE_PX}px`,
+  borderRadius: "12px",
+  background: MENU_ICON_BG,
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "18px",
+  flexShrink: 0,
+};
+
+const menuItemLeftStyle = { display: "flex", alignItems: "center", gap: "12px", color: "#2b3a33", fontWeight: 600, fontSize: "15px" };
+
+const enhancedLogOutStyle = {
+  width: "100%",
+  marginTop: "24px",
+  padding: "15px",
+  borderRadius: "16px",
+  border: "1px solid #ffd2d5",
+  color: "#ff4d4f",
+  background: "#fff",
+  fontWeight: 700,
+  fontSize: "15px",
+  cursor: "pointer",
+  boxShadow: "0 6px 16px rgba(255,77,79,0.08)",
 };
 
 const myRecommendOverlayStyle = {
@@ -107,12 +160,12 @@ function ProfileOverlay({
       </div>
 
       <div style={{ padding: "20px" }}>
-        <div style={profileInfoCard}>
+        <div style={profileCardEnhancedStyle}>
           <div style={{ position: "relative", display: "inline-block" }}>
             <img
               src={getAvatarWithFallback(currentUser.avatar_url, currentUser.phone, currentUser.username)}
               {...buildImageLoadingProps({ eager: true, priority: "high" })}
-              style={{ ...profileAvatarLarge, cursor: "pointer" }}
+              style={{ ...profileAvatarLarge, cursor: "pointer", boxShadow: "0 6px 18px rgba(90,167,123,0.25)" }}
               onClick={() => document.getElementById("profile-avatar-input").click()}
               title="点击更换头像"
               alt="profile-avatar"
@@ -124,14 +177,15 @@ function ProfileOverlay({
                 right: "5px",
                 background: "#5aa77b",
                 borderRadius: "50%",
-                width: "24px",
-                height: "24px",
+                width: "26px",
+                height: "26px",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "white",
                 fontSize: "14px",
                 border: "2px solid white",
+                boxShadow: "0 2px 8px rgba(90,167,123,0.35)",
               }}
             >
               📷
@@ -145,34 +199,36 @@ function ProfileOverlay({
             <span>{badgeIcon}</span>
             <span>{activeBadgeTitle || "未解锁称号"}</span>
           </div>
-          <p style={{ color: "#999", fontSize: "13px", margin: "10px 0 0" }}>手机号: {currentUser.phone}</p>
-          <p style={{ color: "#5aa77b", fontSize: "11px", marginTop: "5px" }}>点击头像可更换</p>
+          <p style={{ color: "#99a8a1", fontSize: "13px", margin: "12px 0 0" }}>手机号: {currentUser.phone}</p>
         </div>
 
-        <div style={{ marginTop: "20px" }}>
-          <div style={menuItemStyle} onClick={onShowNoticeList}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span>🔔</span> 消息回复提醒
+        <div style={{ marginTop: "22px" }}>
+          <div style={menuItemEnhancedStyle} onClick={onShowNoticeList}>
+            <div style={menuItemLeftStyle}>
+              <span style={menuIconWrapperStyle}>🔔</span>
+              <span>消息回复提醒</span>
             </div>
             {unreadCount > 0 && <span style={badgeStyle}>{unreadCount}</span>}
           </div>
 
-          <div style={menuItemStyle} onClick={onOpenBadgePicker}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span>🏆</span> 荣誉称号获得
+          <div style={menuItemEnhancedStyle} onClick={onOpenBadgePicker}>
+            <div style={menuItemLeftStyle}>
+              <span style={menuIconWrapperStyle}>🏆</span>
+              <span>荣誉称号获得</span>
             </div>
             <div style={{ fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>{activeBadgeTitle || "未解锁称号"}</div>
           </div>
 
-          <div style={menuItemStyle} onClick={handleOpenMyRecommendations}>
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <span>✨</span> 我的推荐
+          <div style={menuItemEnhancedStyle} onClick={handleOpenMyRecommendations}>
+            <div style={menuItemLeftStyle}>
+              <span style={menuIconWrapperStyle}>✨</span>
+              <span>我的推荐</span>
             </div>
-            <span>{myRecommendationsLoading ? "加载中..." : "›"}</span>
+            <span style={{ color: "#8ca397", fontSize: "16px" }}>{myRecommendationsLoading ? "加载中..." : "›"}</span>
           </div>
         </div>
 
-        <button onClick={onLogout} style={btnLogOutStyle}>
+        <button onClick={onLogout} style={enhancedLogOutStyle}>
           退出当前账号
         </button>
       </div>

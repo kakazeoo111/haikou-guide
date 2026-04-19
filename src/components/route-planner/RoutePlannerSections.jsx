@@ -2,12 +2,26 @@ import { suggestionItemStyle, suggestionListStyle } from "../../styles/appStyles
 import { getTypeLabel, MAX_ROUTE_PLACES, START_MODE_CURRENT, START_MODE_CUSTOM } from "../../logic/routePlannerUtils";
 
 const MODAL_LIST_MAX_HEIGHT = "38vh";
+const PRIMARY_GREEN = "#5aa77b";
+const PRIMARY_DARK_GREEN = "#2e6a4a";
+const LOCATION_OK_BG = "#ebf8f1";
+const LOCATION_OK_BORDER = "#d2ebde";
+const LOCATION_FAIL_BG = "#fdeeef";
+const LOCATION_FAIL_BORDER = "#f9d3d7";
+const LOCATION_FAIL_COLOR = "#d94f5c";
 
 export function RoutePlannerHeader({ onClose }) {
   return (
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <h2 style={{ margin: 0, color: "#2e6a4a", fontSize: "20px" }}>规划路线</h2>
-      <button onClick={onClose} style={{ border: "none", background: "transparent", fontSize: "24px", lineHeight: 1, cursor: "pointer", color: "#7a8c82" }}>
+      <h2 style={{ margin: 0, color: PRIMARY_DARK_GREEN, fontSize: "20px", display: "inline-flex", alignItems: "center", gap: "8px" }}>
+        <span style={{ fontSize: "22px" }}>📍</span>
+        <span>规划路线</span>
+      </h2>
+      <button
+        onClick={onClose}
+        style={{ border: "none", background: "transparent", fontSize: "24px", lineHeight: 1, cursor: "pointer", color: "#9fb2a8", padding: "4px 8px" }}
+        aria-label="close-planner"
+      >
         ×
       </button>
     </div>
@@ -19,16 +33,42 @@ function StartModeButton({ active, onClick, children }) {
     <button
       onClick={onClick}
       style={{
-        padding: "8px 12px",
+        padding: "8px 16px",
         borderRadius: "999px",
-        border: "1px solid #d4e7dc",
-        background: active ? "#5aa77b" : "#f2f8f4",
+        border: active ? `1px solid ${PRIMARY_GREEN}` : "1px solid #d4e7dc",
+        background: active ? PRIMARY_GREEN : "#f2f8f4",
         color: active ? "#fff" : "#3e5f4d",
         cursor: "pointer",
+        fontWeight: active ? 700 : 500,
+        fontSize: "13px",
+        boxShadow: active ? "0 6px 14px rgba(90,167,123,0.3)" : "none",
+        transition: "all 0.2s ease",
       }}
     >
       {children}
     </button>
+  );
+}
+
+function LocationStatusPill({ ok }) {
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 10px",
+        borderRadius: "999px",
+        fontSize: "11px",
+        fontWeight: 700,
+        background: ok ? LOCATION_OK_BG : LOCATION_FAIL_BG,
+        color: ok ? PRIMARY_DARK_GREEN : LOCATION_FAIL_COLOR,
+        border: `1px solid ${ok ? LOCATION_OK_BORDER : LOCATION_FAIL_BORDER}`,
+      }}
+    >
+      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: ok ? PRIMARY_GREEN : LOCATION_FAIL_COLOR }} />
+      {ok ? "定位可用" : "定位不可用"}
+    </span>
   );
 }
 
@@ -66,7 +106,7 @@ export function RouteStartSection({
         <StartModeButton active={startMode === START_MODE_CUSTOM} onClick={() => setStartMode(START_MODE_CUSTOM)}>
           手动输入起点
         </StartModeButton>
-        {startMode === START_MODE_CURRENT && <span style={{ fontSize: "12px", color: hasCurrentLocation ? "#5aa77b" : "#d94f5c" }}>{hasCurrentLocation ? "定位可用" : "定位不可用"}</span>}
+        {startMode === START_MODE_CURRENT && <LocationStatusPill ok={hasCurrentLocation} />}
       </div>
 
       {startMode === START_MODE_CUSTOM && (
@@ -75,10 +115,10 @@ export function RouteStartSection({
             placeholder="搜索起点（如：海口东站）"
             value={customOriginText}
             onChange={(event) => onCustomOriginChange(event.target.value)}
-            style={{ width: "100%", padding: "10px 12px", borderRadius: "12px", border: "1px solid #dbe7de", outline: "none", boxSizing: "border-box" }}
+            style={{ width: "100%", padding: "12px 14px", borderRadius: "14px", border: "1px solid #dbe7de", outline: "none", boxSizing: "border-box", background: "#f9fcfa", fontSize: "14px" }}
           />
           <OriginSuggestionList suggestions={suggestions} onPick={onPickSuggestion} />
-          <div style={{ marginTop: "8px", fontSize: "11px", color: customOriginPoint ? "#5aa77b" : "#7a9186" }}>
+          <div style={{ marginTop: "8px", fontSize: "11px", color: customOriginPoint ? PRIMARY_GREEN : "#7a9186" }}>
             {customOriginPoint ? `已确认起点：${customOriginPoint.name}${customOriginPoint.address ? ` · ${customOriginPoint.address}` : ""}` : searchMessage}
           </div>
         </div>
@@ -91,41 +131,46 @@ function FavoritePlaceRow({ place, selectedIds, onTogglePlace }) {
   const placeId = String(place.id);
   const selectedIndex = selectedIds.indexOf(placeId);
   const selectedOrder = selectedIndex >= 0 ? selectedIndex + 1 : null;
+  const isSelected = Boolean(selectedOrder);
   return (
     <div
       onClick={() => onTogglePlace(placeId)}
       style={{
         display: "flex",
-        gap: "10px",
+        gap: "12px",
         alignItems: "center",
-        padding: "10px",
+        padding: "12px",
         borderRadius: "14px",
         marginBottom: "8px",
         cursor: "pointer",
-        background: selectedOrder ? "#eaf7ef" : "#fff",
-        border: selectedOrder ? "1px solid #b8dfc6" : "1px solid #e8f0eb",
+        background: isSelected ? "linear-gradient(90deg, #eaf7ef, #f5fcf8)" : "#fff",
+        border: isSelected ? "1px solid #b8dfc6" : "1px solid #e8f0eb",
+        borderLeft: isSelected ? `3px solid ${PRIMARY_GREEN}` : "1px solid #e8f0eb",
+        boxShadow: isSelected ? "0 6px 14px rgba(90,167,123,0.12)" : "none",
+        transition: "all 0.2s ease",
       }}
     >
       <div
         style={{
-          width: "24px",
-          height: "24px",
+          width: "26px",
+          height: "26px",
           borderRadius: "50%",
-          background: selectedOrder ? "#5aa77b" : "#edf4f0",
-          color: selectedOrder ? "#fff" : "#8aa296",
+          background: isSelected ? PRIMARY_GREEN : "#edf4f0",
+          color: isSelected ? "#fff" : "#8aa296",
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: "12px",
           fontWeight: 700,
           flexShrink: 0,
+          boxShadow: isSelected ? "0 3px 8px rgba(90,167,123,0.35)" : "none",
         }}
       >
         {selectedOrder || "○"}
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: "14px", color: "#33473c", fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{place.name}</div>
-        <div style={{ fontSize: "11px", color: "#7d9086", marginTop: "2px" }}>{getTypeLabel(place.type)}</div>
+        <div style={{ fontSize: "11px", color: "#7d9086", marginTop: "3px" }}>{getTypeLabel(place.type)}</div>
       </div>
     </div>
   );
@@ -134,9 +179,11 @@ function FavoritePlaceRow({ place, selectedIds, onTogglePlace }) {
 export function FavoritePlacesSection({ favoritePlaces, selectedIds, onTogglePlace }) {
   return (
     <div style={{ border: "1px solid #e6f0ea", borderRadius: "20px", overflow: "hidden", background: "#f9fcfa" }}>
-      <div style={{ padding: "10px 14px", borderBottom: "1px solid #e8f2ec", fontSize: "12px", color: "#658275", fontWeight: 700 }}>可规划收藏点 ({favoritePlaces.length})</div>
-      <div style={{ maxHeight: MODAL_LIST_MAX_HEIGHT, overflowY: "auto", padding: "8px" }}>
-        {favoritePlaces.length === 0 && <div style={{ padding: "14px 10px", fontSize: "13px", color: "#7f8f86" }}>你当前没有可用于路线规划的收藏点</div>}
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid #e8f2ec", fontSize: "12px", color: PRIMARY_DARK_GREEN, fontWeight: 700, letterSpacing: "0.3px" }}>
+        可规划收藏点 ({favoritePlaces.length})
+      </div>
+      <div style={{ maxHeight: MODAL_LIST_MAX_HEIGHT, overflowY: "auto", padding: "10px" }}>
+        {favoritePlaces.length === 0 && <div style={{ padding: "14px 10px", fontSize: "13px", color: "#7f8f86", textAlign: "center" }}>你当前没有可用于路线规划的收藏点</div>}
         {favoritePlaces.map((place) => (
           <FavoritePlaceRow key={String(place.id)} place={place} selectedIds={selectedIds} onTogglePlace={onTogglePlace} />
         ))}
@@ -146,10 +193,16 @@ export function FavoritePlacesSection({ favoritePlaces, selectedIds, onTogglePla
 }
 
 export function RouteSummary({ selectedPlaces }) {
+  const count = selectedPlaces.length;
+  const isEmpty = count === 0;
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#6f877a" }}>
-      <span>已选择 {selectedPlaces.length}/{MAX_ROUTE_PLACES} 个</span>
-      <span>{selectedPlaces.length > 0 ? `终点：${selectedPlaces[selectedPlaces.length - 1].name}` : "请先选择景点"}</span>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#6f877a", padding: "0 4px" }}>
+      <span>
+        已选择 <strong style={{ color: PRIMARY_GREEN, fontSize: "13px" }}>{count}</strong>/{MAX_ROUTE_PLACES} 个
+      </span>
+      <span style={{ color: isEmpty ? "#a5b5ad" : PRIMARY_DARK_GREEN }}>
+        {isEmpty ? "勾选景点开始规划吧" : `终点：${selectedPlaces[count - 1].name}`}
+      </span>
     </div>
   );
 }

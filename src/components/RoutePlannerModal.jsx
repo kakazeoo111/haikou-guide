@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { btnCancelStyle, btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
+import { modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 import {
   buildDirectionUrl,
   isValidCoordinate,
@@ -13,6 +13,40 @@ import {
 } from "../logic/routePlannerUtils";
 import { FavoritePlacesSection, RoutePlannerHeader, RouteStartSection, RouteSummary } from "./route-planner/RoutePlannerSections";
 import RoutePreviewPage from "./route-planner/RoutePreviewPage";
+
+const PRIMARY_GREEN = "#5aa77b";
+const HINT_BAR_STYLE = {
+  fontSize: "12px",
+  color: "#3e6b52",
+  lineHeight: 1.6,
+  background: "#f2fbf6",
+  border: "1px solid #dceee3",
+  borderRadius: "12px",
+  padding: "10px 14px",
+};
+const CANCEL_BUTTON_STYLE = {
+  flex: "0 0 auto",
+  padding: "12px 28px",
+  borderRadius: "14px",
+  border: "1px solid #dfe8e2",
+  background: "#fff",
+  color: "#5b6e65",
+  fontWeight: 600,
+  fontSize: "14px",
+  cursor: "pointer",
+};
+const PLAN_BUTTON_STYLE = {
+  flex: 1,
+  padding: "14px",
+  borderRadius: "14px",
+  border: "none",
+  background: PRIMARY_GREEN,
+  color: "white",
+  fontWeight: 700,
+  fontSize: "15px",
+  cursor: "pointer",
+  boxShadow: "0 8px 18px rgba(90,167,123,0.28)",
+};
 
 function getOriginData({ startMode, hasCurrentLocation, userLocation, customOriginPoint }) {
   if (startMode === START_MODE_CURRENT) {
@@ -182,7 +216,7 @@ function RoutePlannerModal({ visible, onClose, favoritePlaces, userLocation, isM
     <div style={modalOverlayStyle} onClick={onClose}>
       <div style={{ ...modalContentStyle, maxWidth: "560px", maxHeight: "82vh", display: "flex", flexDirection: "column", gap: "14px" }} onClick={(event) => event.stopPropagation()}>
         <RoutePlannerHeader onClose={onClose} />
-        <div style={{ fontSize: "12px", color: "#688579", lineHeight: 1.6 }}>仅支持你已收藏且有坐标的景点，最多选择 {MAX_ROUTE_PLACES} 个，按你勾选的顺序规划。</div>
+        <div style={HINT_BAR_STYLE}>仅支持你已收藏且有坐标的景点，最多选择 {MAX_ROUTE_PLACES} 个，按你勾选的顺序规划。</div>
         <RouteStartSection
           startMode={controller.startMode}
           setStartMode={controller.setStartMode}
@@ -200,10 +234,10 @@ function RoutePlannerModal({ visible, onClose, favoritePlaces, userLocation, isM
         <FavoritePlacesSection favoritePlaces={favoritePlaces} selectedIds={controller.selectedIds} onTogglePlace={controller.handleTogglePlace} />
         <RouteSummary selectedPlaces={controller.selectedPlaces} />
         <div style={{ display: "flex", gap: "10px" }}>
-          <button onClick={onClose} style={btnCancelStyle}>
+          <button onClick={onClose} style={CANCEL_BUTTON_STYLE}>
             取消
           </button>
-          <button onClick={controller.handlePlanRoute} style={btnMainStyle}>
+          <button onClick={controller.handlePlanRoute} style={PLAN_BUTTON_STYLE}>
             开始规划
           </button>
         </div>

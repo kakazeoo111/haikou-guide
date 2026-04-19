@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
-import { btnMainStyle } from "../styles/appStyles";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import ForumPostCard from "./forum/ForumPostCard";
+import ForumPostComposer from "./forum/ForumPostComposer";
 import ForumNoticeModal from "./forum/ForumNoticeModal";
-import XhsImageUploadButton from "./common/XhsImageUploadButton";
 import { optimizeUploadImages } from "../logic/uploadImageOptimizer";
 import { useOnlineCount } from "../logic/useOnlineCount";
 import { useForumNotice } from "../logic/useForumNotice";
@@ -12,9 +11,14 @@ import {
   MAX_FORUM_IMAGES,
   buildForumPostsUrl,
   forumHeaderStyle,
+  forumHintBannerStyle,
   forumNoticeButtonStyle,
   forumOnlinePillStyle,
   forumPageStyle,
+  forumSearchButtonStyle,
+  forumSearchInputStyle,
+  forumSearchRowStyle,
+  forumSortButtonStyle,
   normalizeForumPosts,
   splitValidForumFiles,
 } from "../logic/forumModalUtils";
@@ -229,44 +233,36 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   return (
     <div style={forumPageStyle}>
       <div style={forumHeaderStyle}>
-        <span onClick={onBack} style={{ cursor: "pointer", fontSize: "18px" }}>&lt; 返回</span>
-        <span style={{ fontWeight: 700, color: "#2e6a4a" }}>7天论坛</span>
+        <span onClick={onBack} style={{ cursor: "pointer", fontSize: "18px", color: "#5a6e65" }}>&lt; 返回</span>
+        <span style={{ fontWeight: 700, color: "#2e6a4a", display: "inline-flex", alignItems: "center", gap: "6px" }}>
+          <span>🗒️</span>
+          <span>7天论坛</span>
+        </span>
         <span style={{ width: "58px" }} />
       </div>
 
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px 24px 14px" }}>
-        <div style={{ background: "#fff", borderRadius: "20px", padding: "12px", border: "1px solid #e7f1eb", marginBottom: "12px" }}>
-          <textarea
-            value={postContent}
-            onChange={(event) => setPostContent(event.target.value)}
-            placeholder="发布你的7天动态..."
-            style={{ width: "100%", minHeight: "90px", border: "1px solid #dce8e1", borderRadius: "12px", padding: "10px", boxSizing: "border-box", resize: "vertical" }}
-          />
-          {postImages.length > 0 && (
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", maxWidth: "280px" }}>
-              {postImages.map((file, index) => (
-                <div key={`${file.name}-${index}`} style={{ position: "relative" }}>
-                  <img src={URL.createObjectURL(file)} alt="forum-post-preview" style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover" }} />
-                  <span onClick={() => setPostImages((prev) => prev.filter((_, i) => i !== index))} style={{ position: "absolute", top: "-5px", right: "-5px", width: "18px", height: "18px", borderRadius: "50%", background: "#ff4d4f", color: "#fff", textAlign: "center", lineHeight: "18px", cursor: "pointer" }}>×</span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "8px" }}>
-            <XhsImageUploadButton onClick={() => document.getElementById(FORUM_POST_INPUT_ID)?.click()} ariaLabel="upload-forum-post-images" size={42} radius={13} iconSize={21} />
-            <span style={{ fontSize: "12px", color: "#6e867a" }}>已选 {postImages.length}/{MAX_FORUM_IMAGES}</span>
-            <input id={FORUM_POST_INPUT_ID} type="file" hidden accept="image/*" multiple onChange={handleSelectPostImages} />
-            <button onClick={handleSubmitPost} disabled={submittingPost} style={{ ...btnMainStyle, marginTop: 0, marginLeft: "auto", width: "auto", padding: "8px 16px" }}>{submittingPost ? "发布中..." : "发布"}</button>
-          </div>
-        </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 24px 14px" }}>
+        <div style={forumHintBannerStyle}>💬 记录你7天内的心情 · 7天后自动消散</div>
 
-        <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
-          <input value={searchKeyword} onChange={(event) => setSearchKeyword(event.target.value)} placeholder="搜索用户或帖子内容" style={{ flex: 1, border: "1px solid #dce8e1", borderRadius: "12px", padding: "10px 12px", outline: "none", background: "#fff" }} />
-          <button onClick={() => loadPosts(searchKeyword, sortMode)} style={{ ...btnMainStyle, marginTop: 0, width: "88px" }}>搜索</button>
+        <ForumPostComposer
+          postContent={postContent}
+          onContentChange={setPostContent}
+          postImages={postImages}
+          onRemoveImage={(index) => setPostImages((prev) => prev.filter((_, i) => i !== index))}
+          onSelectImages={handleSelectPostImages}
+          onSubmitPost={handleSubmitPost}
+          submitting={submittingPost}
+          inputId={FORUM_POST_INPUT_ID}
+        />
+
+        <div style={forumSearchRowStyle}>
+          <input value={searchKeyword} onChange={(event) => setSearchKeyword(event.target.value)} placeholder="搜索用户或帖子内容" style={forumSearchInputStyle} />
+          <button onClick={() => loadPosts(searchKeyword, sortMode)} style={forumSearchButtonStyle}>搜索</button>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" }}>
-          <button onClick={handleToggleSortMode} style={{ border: "none", background: "transparent", color: sortMode === "chill" ? "#2e6a4a" : "#6f8b7e", cursor: "pointer", fontWeight: 700, fontSize: "13px", padding: 0 }}>
-            {sortMode === "chill" ? "按最新排序" : "按chill排序"}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+          <button onClick={handleToggleSortMode} style={forumSortButtonStyle}>
+            <span>⚡</span>
+            <span>{sortMode === "chill" ? "按最新排序" : "按chill排序"}</span>
           </button>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
             <button onClick={openNotice} style={forumNoticeButtonStyle}>公告</button>
