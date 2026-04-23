@@ -2,11 +2,23 @@ import { useEffect, useState } from "react";
 
 const FORUM_JUMP_EVENT = "forum:jumpTo";
 const FORUM_POST_DOM_ID_PREFIX = "forum-post-";
+const FORUM_JUMP_SCROLL_RETRY_DELAY_MS = 120;
+const FORUM_JUMP_SCROLL_MAX_RETRIES = 12;
 
 function parsePositiveInt(value) {
   const normalized = Number(value);
   if (!Number.isInteger(normalized) || normalized <= 0) return null;
   return normalized;
+}
+
+function scrollToForumPost(postId, attempt = 0) {
+  const element = document.getElementById(getForumPostDomId(postId));
+  if (element) {
+    element.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  if (attempt >= FORUM_JUMP_SCROLL_MAX_RETRIES) return;
+  setTimeout(() => scrollToForumPost(postId, attempt + 1), FORUM_JUMP_SCROLL_RETRY_DELAY_MS);
 }
 
 export function getForumPostDomId(postId) {
@@ -37,9 +49,7 @@ export function useForumJumpTo({ posts, expandedPostIds, setExpandedPostIds, loa
     if (!commentsMap?.[jumpPostId]) {
       Promise.resolve(loadComments?.(jumpPostId)).catch((error) => console.error("论坛跳转加载评论失败:", error));
     }
-    setTimeout(() => {
-      document.getElementById(getForumPostDomId(jumpPostId))?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 0);
+    scrollToForumPost(jumpPostId);
     setJumpPostId(null);
   }, [jumpPostId, loadingPosts, posts, expandedPostIds, setExpandedPostIds, loadComments, commentsMap]);
 }

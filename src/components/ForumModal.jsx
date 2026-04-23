@@ -291,7 +291,6 @@ function ForumModal({
 
   const handleOpenForumNotices = () => {
     setShowForumNotices(true);
-    handleMarkForumRead();
   };
 
   const handleForumNoticeClick = async (notice) => {
@@ -302,11 +301,7 @@ function ForumModal({
     if (!Number.isInteger(postId) || postId <= 0) return;
     if (searchKeyword.trim()) setSearchKeyword("");
     await loadPosts("", sortMode);
-    setExpandedPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
-    if (!commentsMap[postId]) await loadComments(postId);
-    setTimeout(() => {
-      document.getElementById(getForumPostDomId(postId))?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
+    window.dispatchEvent(new CustomEvent("forum:jumpTo", { detail: { postId } }));
   };
 
   return (
@@ -382,7 +377,7 @@ function ForumModal({
         authApiBase={authApiBase}
         onClose={() => setShowForumNotices(false)}
         onNoticeClick={handleForumNoticeClick}
-        onRefresh={handleMarkForumRead}
+        onRefresh={() => onRefreshNotices?.(false)}
         formatCommentTime={formatCommentTime}
         modalTitle="论坛互动"
         emptyText="暂无互动"
