@@ -1,3 +1,10 @@
+async function ensureNotificationTypeColumn(pool) {
+  const [rows] = await pool.execute("SHOW COLUMNS FROM notifications LIKE 'type'");
+  const columnType = String(rows?.[0]?.Type || "").toLowerCase();
+  if (!columnType.startsWith("enum(")) return;
+  await pool.execute("ALTER TABLE notifications MODIFY COLUMN type VARCHAR(50) NOT NULL");
+}
+
 async function ensureNotificationsTable(pool) {
   await pool.execute(
     `CREATE TABLE IF NOT EXISTS notifications (
@@ -14,6 +21,7 @@ async function ensureNotificationsTable(pool) {
       KEY idx_notifications_sender (sender_phone)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   );
+  await ensureNotificationTypeColumn(pool);
 }
 
 const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply"];
