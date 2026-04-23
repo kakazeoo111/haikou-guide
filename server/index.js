@@ -1,4 +1,4 @@
-import cors from "cors";
+﻿import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import mysql from "mysql2/promise";
@@ -149,9 +149,9 @@ try {
   console.error("反馈管理路由初始化失败:", error.message);
 }
 try {
-  await registerForumRoutes(app, { pool, upload, addNotice });
+  await registerForumRoutes(app, { pool, upload });
 } catch (error) {
-  console.error("论坛路由初始化失败:", error.message);
+  console.error("论坛路由初始化失败.:", error.message);
 }
 try {
   registerOnlineRoutes(app);
