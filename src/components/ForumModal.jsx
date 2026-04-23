@@ -27,6 +27,20 @@ import {
 
 const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply"];
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
+const forumUnreadBadgeStyle = {
+  minWidth: "16px",
+  height: "16px",
+  padding: "0 4px",
+  borderRadius: "999px",
+  background: "#ff4d6d",
+  color: "white",
+  fontSize: "10px",
+  fontWeight: "bold",
+  lineHeight: "16px",
+  textAlign: "center",
+  boxSizing: "border-box",
+  boxShadow: "0 2px 6px rgba(255,77,109,0.35)",
+};
 function ForumModal({
   currentUser,
   authApiBase,
@@ -67,6 +81,10 @@ function ForumModal({
       return FORUM_NOTICE_TYPES.includes(type) || placeId.startsWith("forum_");
     }),
     [notifications],
+  );
+  const forumUnreadCount = useMemo(
+    () => forumNotifications.filter((notice) => !notice.is_read).length,
+    [forumNotifications],
   );
   useForumJumpTo({ posts, expandedPostIds, setExpandedPostIds, loadComments: (postId) => loadComments(postId), commentsMap, loadingPosts });
   const loadPosts = async (keyword = searchKeyword, nextSortMode = sortMode) => {
@@ -304,7 +322,10 @@ function ForumModal({
             <span>{sortMode === "chill" ? "按最新排序" : "按chill排序"}</span>
           </button>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-            <button onClick={() => setShowForumNotices(true)} style={forumNoticeButtonStyle}>互动提醒</button>
+            <button onClick={() => setShowForumNotices(true)} style={forumNoticeButtonStyle}>
+              <span>互动</span>
+              {forumUnreadCount > 0 && <span style={forumUnreadBadgeStyle}>{forumUnreadCount > 99 ? "99+" : forumUnreadCount}</span>}
+            </button>
             <button onClick={openNotice} style={forumNoticeButtonStyle}>公告</button>
             <span style={forumOnlinePillStyle}>
               <span style={{ fontSize: "10px" }}>●</span>
@@ -339,13 +360,23 @@ function ForumModal({
         authApiBase={authApiBase}
         onClose={() => setShowForumNotices(false)}
         onNoticeClick={(notice) => {
+          const placeId = String(notice?.place_id || "");
+          const matched = placeId.match(/^forum_(\d+)$/);
+          const postId = matched ? Number(matched[1]) : null;
           setShowForumNotices(false);
+          if (Number.isInteger(postId) && postId > 0) {
+            setExpandedPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
+            if (!commentsMap[postId]) loadComments(postId);
+            setTimeout(() => {
+              document.getElementById(getForumPostDomId(postId))?.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 120);
+          }
           onNoticeClick?.(notice);
         }}
         onRefresh={() => onRefreshNotices?.(false)}
         formatCommentTime={formatCommentTime}
-        modalTitle="论坛互动提醒"
-        emptyText="暂无论坛互动提醒"
+        modalTitle="论坛互动"
+        emptyText="暂无互动"
         markReadPath="/api/notifications/read-forum"
         showClearButton={false}
       />
