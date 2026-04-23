@@ -159,4 +159,4 @@ try {
   console.error("在线人数路由初始化失败:", error.message);
 }
 
-app.listen(port, () => console.log(`🚀 后端已启动：${port}`));
+app.listen(port, () => console.log(`🚀 后端已启动.：${port}`));
