@@ -171,9 +171,18 @@ function App() {
       .catch((error) => console.error("获取公告失败:", error));
   }, [currentUser?.phone, authApiBase]);
   useEffect(() => {
-    if (activeTab !== "profile") return;
-    generalHandlers.fetchNotices();
-  }, [activeTab]);
+    if (!currentUser?.phone) return;
+    if (activeTab !== "home" && activeTab !== "forum" && activeTab !== "profile") return;
+    generalHandlers.fetchNotices(false);
+  }, [activeTab, currentUser?.phone]);
+
+  useEffect(() => {
+    if (!currentUser?.phone) return;
+    const timer = setInterval(() => {
+      generalHandlers.fetchNotices(false);
+    }, 15000);
+    return () => clearInterval(timer);
+  }, [currentUser?.phone]);
   if (!currentUser) {
     return (
       <AuthPanel

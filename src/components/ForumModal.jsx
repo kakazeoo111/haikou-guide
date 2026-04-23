@@ -112,9 +112,10 @@ function ForumModal({
     if (searchKeyword.trim()) return;
     loadPosts("", sortMode);
   }, [searchKeyword]);
-
-
-
+  useEffect(() => {
+    if (!currentUser?.phone) return;
+    onRefreshNotices?.(false);
+  }, [currentUser?.phone]);
 
   const loadComments = async (postId) => {
     if (!currentUser?.phone) return;
@@ -275,7 +276,8 @@ function ForumModal({
     loadPosts(searchKeyword, nextSortMode);
   };
 
-  const handleOpenForumNotices = () => {
+  const handleOpenForumNotices = async () => {
+    await onRefreshNotices?.(false);
     setShowForumNotices(true);
   };
 
