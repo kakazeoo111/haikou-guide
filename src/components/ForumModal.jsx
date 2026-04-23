@@ -61,7 +61,11 @@ function ForumModal({
   const onlineCount = useOnlineCount({ enabled: Boolean(currentUser?.phone), authApiBase, phone: currentUser?.phone });
   const { showNotice, openNotice, closeNotice, dontShowAgain, updateDontShowAgain } = useForumNotice(currentUser?.phone);
   const forumNotifications = useMemo(
-    () => (notifications || []).filter((notice) => FORUM_NOTICE_TYPES.includes(String(notice.type || ""))),
+    () => (notifications || []).filter((notice) => {
+      const type = String(notice.type || "");
+      const placeId = String(notice.place_id || "");
+      return FORUM_NOTICE_TYPES.includes(type) || placeId.startsWith("forum_");
+    }),
     [notifications],
   );
   useForumJumpTo({ posts, expandedPostIds, setExpandedPostIds, loadComments: (postId) => loadComments(postId), commentsMap, loadingPosts });

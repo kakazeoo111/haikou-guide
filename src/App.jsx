@@ -95,7 +95,11 @@ function App() {
     [viewingCommentsPlace, activeComments],
   );
   const forumUnreadCount = useMemo(
-    () => notifications.filter((notice) => !notice.is_read && String(notice.type || "").startsWith("forum_")).length,
+    () => notifications.filter((notice) => {
+      const type = String(notice.type || "");
+      const placeId = String(notice.place_id || "");
+      return !notice.is_read && (type.startsWith("forum_") || placeId.startsWith("forum_"));
+    }).length,
     [notifications],
   );
   const favoritePlacesForRoute = useMemo(() => {

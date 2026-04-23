@@ -49,7 +49,8 @@ export async function registerNotificationRoutes(app, { pool }) {
       const { phone } = req.body;
       await pool.execute(
         `UPDATE notifications SET is_read = 1
-         WHERE receiver_phone = ? AND type IN (?, ?, ?)`,
+         WHERE receiver_phone = ?
+           AND (type IN (?, ?, ?) OR place_id LIKE 'forum_%')`,
         [phone, ...FORUM_NOTICE_TYPES],
       );
       res.json({ ok: true });
