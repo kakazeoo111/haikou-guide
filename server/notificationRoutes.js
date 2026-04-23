@@ -16,6 +16,8 @@ async function ensureNotificationsTable(pool) {
   );
 }
 
+const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply"];
+
 export async function registerNotificationRoutes(app, { pool }) {
   await ensureNotificationsTable(pool);
 
@@ -36,6 +38,20 @@ export async function registerNotificationRoutes(app, { pool }) {
   app.post("/api/notifications/read", async (req, res) => {
     try {
       await pool.execute("UPDATE notifications SET is_read = 1 WHERE receiver_phone = ?", [req.body.phone]);
+      res.json({ ok: true });
+    } catch (error) {
+      res.status(500).json({ ok: false });
+    }
+  });
+
+  app.post("/api/notifications/read-forum", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      await pool.execute(
+        `UPDATE notifications SET is_read = 1
+         WHERE receiver_phone = ? AND type IN (?, ?, ?)`,
+        [phone, ...FORUM_NOTICE_TYPES],
+      );
       res.json({ ok: true });
     } catch (error) {
       res.status(500).json({ ok: false });

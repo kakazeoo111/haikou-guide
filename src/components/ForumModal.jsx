@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
+import NoticeListModal from "./NoticeListModal";
 import ForumPostCard from "./forum/ForumPostCard";
 import ForumPostComposer from "./forum/ForumPostComposer";
 import ForumNoticeModal from "./forum/ForumNoticeModal";
 import { optimizeUploadImages } from "../logic/uploadImageOptimizer";
 import { useOnlineCount } from "../logic/useOnlineCount";
 import { useForumNotice } from "../logic/useForumNotice";
+import { getForumPostDomId, useForumJumpTo } from "../logic/useForumJumpTo";
 import {
   FORUM_IMAGE_TOO_LARGE_MESSAGE,
   MAX_FORUM_IMAGES,
@@ -23,8 +25,20 @@ import {
   splitValidForumFiles,
 } from "../logic/forumModalUtils";
 
+const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply"];
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
-function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMeta, onBack, onZoomImage, formatCommentTime }) {
+function ForumModal({
+  currentUser,
+  authApiBase,
+  activeBadgeTitle,
+  activeBadgeMeta,
+  notifications,
+  onRefreshNotices,
+  onNoticeClick,
+  onBack,
+  onZoomImage,
+  formatCommentTime,
+}) {
   const [posts, setPosts] = useState([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [submittingPost, setSubmittingPost] = useState(false);
@@ -40,11 +54,17 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
   const [commentDraftMap, setCommentDraftMap] = useState({});
   const [commentImagesMap, setCommentImagesMap] = useState({});
   const [replyTargetMap, setReplyTargetMap] = useState({});
+  const [showForumNotices, setShowForumNotices] = useState(false);
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
   const badgeTheme = getBadgeTheme(badgeSeed);
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
   const onlineCount = useOnlineCount({ enabled: Boolean(currentUser?.phone), authApiBase, phone: currentUser?.phone });
   const { showNotice, openNotice, closeNotice, dontShowAgain, updateDontShowAgain } = useForumNotice(currentUser?.phone);
+  const forumNotifications = useMemo(
+    () => (notifications || []).filter((notice) => FORUM_NOTICE_TYPES.includes(String(notice.type || ""))),
+    [notifications],
+  );
+  useForumJumpTo({ posts, expandedPostIds, setExpandedPostIds, loadComments: (postId) => loadComments(postId), commentsMap, loadingPosts });
   const loadPosts = async (keyword = searchKeyword, nextSortMode = sortMode) => {
     if (!currentUser?.phone) return;
     setLoadingPosts(true);
@@ -70,6 +90,21 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
     if (searchKeyword.trim()) return;
     loadPosts("", sortMode);
   }, [searchKeyword]);
+
+  useEffect(() => {
+    if (!currentUser?.phone) return;
+    fetch(`${authApiBase}/api/notifications/read-forum`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ phone: currentUser.phone }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.ok) return;
+        onRefreshNotices?.(false);
+      })
+      .catch((error) => console.error("论坛消息已读失败:", error));
+  }, [currentUser?.phone, authApiBase]);
 
   const loadComments = async (postId) => {
     if (!currentUser?.phone) return;
@@ -265,6 +300,7 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
             <span>{sortMode === "chill" ? "按最新排序" : "按chill排序"}</span>
           </button>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+            <button onClick={() => setShowForumNotices(true)} style={forumNoticeButtonStyle}>互动提醒</button>
             <button onClick={openNotice} style={forumNoticeButtonStyle}>公告</button>
             <span style={forumOnlinePillStyle}>
               <span style={{ fontSize: "10px" }}>●</span>
@@ -277,19 +313,38 @@ function ForumModal({ currentUser, authApiBase, activeBadgeTitle, activeBadgeMet
         {!loadingPosts && posts.length === 0 && <div style={{ textAlign: "center", color: "#97a8a0", padding: "16px 0" }}>7天内暂无相关帖子</div>}
 
         {!loadingPosts && posts.map((post) => (
-          <ForumPostCard
-            key={post.id} post={post} currentUser={currentUser} activeBadgeTitle={activeBadgeTitle} badgeIcon={badgeIcon} badgeTheme={badgeTheme}
-            expanded={expandedPostIds.includes(Number(post.id))} comments={commentsMap[Number(post.id)] || []} loadingComments={loadingCommentPostIds.includes(Number(post.id))}
-            replyTarget={replyTargetMap[Number(post.id)] || null} commentDraft={commentDraftMap[Number(post.id)] || ""} commentImages={commentImagesMap[Number(post.id)] || []}
-            submittingComment={submittingCommentPostIds.includes(Number(post.id))} callingPost={callingPostIds.includes(Number(post.id))}
-            onToggleComments={handleToggleComments} onToggleCall={handleToggleCall} onZoomImage={onZoomImage}
-            onReplySelect={(postId, comment) => setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }))} onReplyCancel={(postId) => setReplyTargetMap((prev) => ({ ...prev, [postId]: null }))}
-            onCommentDraftChange={(postId, value) => setCommentDraftMap((prev) => ({ ...prev, [postId]: value }))} onSelectCommentImages={handleSelectCommentImages} onRemoveCommentImage={handleRemoveCommentImage}
-            onSubmitComment={handleSubmitComment} formatCommentTime={formatCommentTime}
-          />
+          <div key={post.id} id={getForumPostDomId(post.id)}>
+            <ForumPostCard
+              post={post} currentUser={currentUser} activeBadgeTitle={activeBadgeTitle} badgeIcon={badgeIcon} badgeTheme={badgeTheme}
+              expanded={expandedPostIds.includes(Number(post.id))} comments={commentsMap[Number(post.id)] || []} loadingComments={loadingCommentPostIds.includes(Number(post.id))}
+              replyTarget={replyTargetMap[Number(post.id)] || null} commentDraft={commentDraftMap[Number(post.id)] || ""} commentImages={commentImagesMap[Number(post.id)] || []}
+              submittingComment={submittingCommentPostIds.includes(Number(post.id))} callingPost={callingPostIds.includes(Number(post.id))}
+              onToggleComments={handleToggleComments} onToggleCall={handleToggleCall} onZoomImage={onZoomImage}
+              onReplySelect={(postId, comment) => setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }))} onReplyCancel={(postId) => setReplyTargetMap((prev) => ({ ...prev, [postId]: null }))}
+              onCommentDraftChange={(postId, value) => setCommentDraftMap((prev) => ({ ...prev, [postId]: value }))} onSelectCommentImages={handleSelectCommentImages} onRemoveCommentImage={handleRemoveCommentImage}
+              onSubmitComment={handleSubmitComment} formatCommentTime={formatCommentTime}
+            />
+          </div>
         ))}
       </div>
       <ForumNoticeModal visible={showNotice} dontShowAgain={dontShowAgain} onToggleDontShowAgain={updateDontShowAgain} onClose={closeNotice} />
+      <NoticeListModal
+        visible={showForumNotices}
+        notifications={forumNotifications}
+        currentUser={currentUser}
+        authApiBase={authApiBase}
+        onClose={() => setShowForumNotices(false)}
+        onNoticeClick={(notice) => {
+          setShowForumNotices(false);
+          onNoticeClick?.(notice);
+        }}
+        onRefresh={() => onRefreshNotices?.(false)}
+        formatCommentTime={formatCommentTime}
+        modalTitle="论坛互动提醒"
+        emptyText="暂无论坛互动提醒"
+        markReadPath="/api/notifications/read-forum"
+        showClearButton={false}
+      />
     </div>
   );
 }

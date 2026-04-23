@@ -79,6 +79,7 @@ function HomePanels({
   activeBadgeTitle,
   activeBadgeMeta,
   unreadCount,
+  forumUnreadCount,
   search,
   filter,
   favoriteIds,
@@ -107,6 +108,7 @@ function HomePanels({
   formatCommentTime,
 }) {
   const unreadBadgeText = unreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : unreadCount;
+  const forumUnreadBadgeText = forumUnreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : forumUnreadCount;
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
   const badgeTheme = getBadgeTheme(badgeSeed);
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
@@ -156,8 +158,9 @@ function HomePanels({
             <span onClick={onShowFeedback} style={{ color: "#5aa77b", cursor: "pointer" }}>
               反馈建议
             </span>
-            <span onClick={onShowForum} style={{ color: "#5aa77b", cursor: "pointer" }}>
-              论坛
+            <span onClick={onShowForum} style={{ color: "#5aa77b", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+              <span>论坛</span>
+              {forumUnreadCount > 0 && <span style={unreadBadgeStyle}>{forumUnreadBadgeText}</span>}
             </span>
             <span onClick={onOpenRoutePlanner} style={{ color: "#5aa77b", cursor: "pointer" }}>
               规划路线

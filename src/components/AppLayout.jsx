@@ -18,6 +18,7 @@ function AppLayout({
   setActiveTab,
   currentUser,
   notifications,
+  forumUnreadCount,
   activeBadgeTitle,
   activeBadgeMeta,
   badgeSummary,
@@ -252,6 +253,9 @@ function AppLayout({
           authApiBase={authApiBase}
           activeBadgeTitle={activeBadgeTitle}
           activeBadgeMeta={activeBadgeMeta}
+          notifications={notifications}
+          onRefreshNotices={generalHandlers.fetchNotices}
+          onNoticeClick={generalHandlers.handleNoticeClick}
           onBack={() => setActiveTab("home")}
           onZoomImage={(images, index) => {
             setZoomedSingleImage({ images, index });
@@ -271,6 +275,7 @@ function AppLayout({
         activeBadgeTitle={activeBadgeTitle}
         activeBadgeMeta={activeBadgeMeta}
         unreadCount={unreadCount}
+        forumUnreadCount={forumUnreadCount}
         search={search}
         filter={filter}
         favoriteIds={favoriteIds}

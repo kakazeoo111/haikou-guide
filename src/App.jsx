@@ -94,6 +94,10 @@ function App() {
     () => (viewingCommentsPlace ? activeComments[viewingCommentsPlace.id] || [] : []),
     [viewingCommentsPlace, activeComments],
   );
+  const forumUnreadCount = useMemo(
+    () => notifications.filter((notice) => !notice.is_read && String(notice.type || "").startsWith("forum_")).length,
+    [notifications],
+  );
   const favoritePlacesForRoute = useMemo(() => {
     const favoriteOrderMap = new Map(favoriteIds.map((id, index) => [String(id), index]));
     return getAllSourcePlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation })
@@ -183,7 +187,7 @@ function App() {
 
   return (
     <AppLayout
-      activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} notifications={notifications} activeBadgeTitle={activeBadgeTitle} activeBadgeMeta={activeBadgeMeta}
+      activeTab={activeTab} setActiveTab={setActiveTab} currentUser={currentUser} notifications={notifications} forumUnreadCount={forumUnreadCount} activeBadgeTitle={activeBadgeTitle} activeBadgeMeta={activeBadgeMeta}
       badgeSummary={badgeSummary} showBadgePicker={showBadgePicker} setShowNoticeList={setShowNoticeList} setFilter={setFilter} viewingCommentsPlace={viewingCommentsPlace}
       currentPlaceComments={currentPlaceComments} commentSort={commentSort} setCommentSort={setCommentSort} showOnlyImages={showOnlyImages} setShowOnlyImages={setShowOnlyImages}
       expandedParentIds={expandedParentIds} replyTo={replyTo} newComment={newComment} setNewComment={setNewComment} commentImages={commentImages} setCommentImages={setCommentImages}

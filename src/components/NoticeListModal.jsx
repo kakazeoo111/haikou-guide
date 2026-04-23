@@ -10,6 +10,9 @@ function getNoticeText(notice) {
   if (notice.type === "like_comment") return "点赞了你的评论";
   if (notice.type === "reply") return `回复了你：${notice.content || ""}`;
   if (notice.type === "admin_reply") return `给你发来回信：${notice.content || ""}`;
+  if (notice.type === "forum_call") return "给你的论坛动态打了call";
+  if (notice.type === "forum_comment") return `评论了你的论坛动态：${notice.content || ""}`;
+  if (notice.type === "forum_reply") return `回复了你的论坛评论：${notice.content || ""}`;
   return notice.content || "给你发送了一条消息";
 }
 
@@ -32,6 +35,10 @@ function NoticeListModal({
   onNoticeClick,
   onRefresh,
   formatCommentTime,
+  modalTitle = "消息中心",
+  emptyText = "暂无消息",
+  markReadPath = "/api/notifications/read",
+  showClearButton = true,
 }) {
   const [showThreadModal, setShowThreadModal] = useState(false);
   const [threadLoading, setThreadLoading] = useState(false);
@@ -129,7 +136,7 @@ function NoticeListModal({
 
   const handleMarkRead = async () => {
     try {
-      await fetch(`${authApiBase}/api/notifications/read`, {
+      await fetch(`${authApiBase}${markReadPath}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone }),
@@ -166,13 +173,13 @@ function NoticeListModal({
     <div style={modalOverlayStyle}>
       <div style={{ ...modalContentStyle, maxHeight: "80vh", overflowY: "auto" }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "20px" }}>
-          <h3 style={{ margin: 0 }}>消息中心</h3>
+          <h3 style={{ margin: 0 }}>{modalTitle}</h3>
           <span style={{ cursor: "pointer", fontSize: "24px" }} onClick={onClose}>
             ×
           </span>
         </div>
 
-        {notifications.length === 0 && <p style={{ textAlign: "center", color: "#999", padding: "20px 0" }}>暂无消息</p>}
+        {notifications.length === 0 && <p style={{ textAlign: "center", color: "#999", padding: "20px 0" }}>{emptyText}</p>}
 
         {notifications.map((notice) => {
           const canJumpToPlace = notice.type !== "admin_reply" && Boolean(notice.place_id);
@@ -222,9 +229,11 @@ function NoticeListModal({
           <button onClick={handleMarkRead} style={{ ...btnMainStyle, flex: 1, marginTop: 0 }}>
             全部已读
           </button>
-          <button onClick={handleClear} style={{ ...btnMainStyle, flex: 1, marginTop: 0, background: "#ff4d4f" }}>
-            清空全部
-          </button>
+          {showClearButton && (
+            <button onClick={handleClear} style={{ ...btnMainStyle, flex: 1, marginTop: 0, background: "#ff4d4f" }}>
+              清空全部
+            </button>
+          )}
         </div>
       </div>
 

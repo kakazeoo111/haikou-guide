@@ -149,7 +149,7 @@ try {
   console.error("反馈管理路由初始化失败:", error.message);
 }
 try {
-  await registerForumRoutes(app, { pool, upload });
+  await registerForumRoutes(app, { pool, upload, addNotice });
 } catch (error) {
   console.error("论坛路由初始化失败:", error.message);
 }

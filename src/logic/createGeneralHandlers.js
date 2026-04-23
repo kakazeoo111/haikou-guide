@@ -80,6 +80,15 @@ export function createGeneralHandlers(ctx) {
 
   const handleNoticeClick = (notice) => {
     if (notice?.type === "admin_reply") return;
+    const placeId = String(notice?.place_id || "");
+    if (placeId.startsWith("forum_")) {
+      const postId = Number(placeId.slice("forum_".length));
+      if (!Number.isInteger(postId) || postId <= 0) return alert("该论坛动态ID无效");
+      setShowNoticeList(false);
+      setActiveTab("forum");
+      setTimeout(() => window.dispatchEvent(new CustomEvent("forum:jumpTo", { detail: { postId } })), 0);
+      return;
+    }
     const allSource = [
       ...places.map((p) => ({ ...p, id: String(p.id) })),
       ...recommendations.map((r) => ({ ...r, id: `rec_${r.id}`, name: r.place_name, album: parseRecommendationAlbum(r.image_url) })),
