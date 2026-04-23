@@ -113,20 +113,22 @@ function ForumModal({
     loadPosts("", sortMode);
   }, [searchKeyword]);
 
-  useEffect(() => {
+  const handleMarkForumRead = async () => {
     if (!currentUser?.phone) return;
-    fetch(`${authApiBase}/api/notifications/read-forum`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ phone: currentUser.phone }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.ok) return;
-        onRefreshNotices?.(false);
-      })
-      .catch((error) => console.error("论坛消息已读失败:", error));
-  }, [currentUser?.phone, authApiBase]);
+    try {
+      const res = await fetch(`${authApiBase}/api/notifications/read-forum`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone }),
+      });
+      const data = await res.json();
+      if (!data.ok) return;
+      onRefreshNotices?.(false);
+    } catch (error) {
+      console.error("论坛消息已读失败:", error);
+    }
+  };
+
 
   const loadComments = async (postId) => {
     if (!currentUser?.phone) return;
@@ -287,6 +289,26 @@ function ForumModal({
     loadPosts(searchKeyword, nextSortMode);
   };
 
+  const handleOpenForumNotices = () => {
+    setShowForumNotices(true);
+    handleMarkForumRead();
+  };
+
+  const handleForumNoticeClick = async (notice) => {
+    const placeId = String(notice?.place_id || "");
+    const matched = placeId.match(/^forum_(\d+)$/);
+    const postId = matched ? Number(matched[1]) : null;
+    setShowForumNotices(false);
+    if (!Number.isInteger(postId) || postId <= 0) return;
+    if (searchKeyword.trim()) setSearchKeyword("");
+    await loadPosts("", sortMode);
+    setExpandedPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
+    if (!commentsMap[postId]) await loadComments(postId);
+    setTimeout(() => {
+      document.getElementById(getForumPostDomId(postId))?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  };
+
   return (
     <div style={forumPageStyle}>
       <div style={forumHeaderStyle}>
@@ -322,7 +344,7 @@ function ForumModal({
             <span>{sortMode === "chill" ? "按最新排序" : "按chill排序"}</span>
           </button>
           <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-            <button onClick={() => setShowForumNotices(true)} style={forumNoticeButtonStyle}>
+            <button onClick={handleOpenForumNotices} style={forumNoticeButtonStyle}>
               <span>互动</span>
               {forumUnreadCount > 0 && <span style={forumUnreadBadgeStyle}>{forumUnreadCount > 99 ? "99+" : forumUnreadCount}</span>}
             </button>
@@ -359,21 +381,8 @@ function ForumModal({
         currentUser={currentUser}
         authApiBase={authApiBase}
         onClose={() => setShowForumNotices(false)}
-        onNoticeClick={(notice) => {
-          const placeId = String(notice?.place_id || "");
-          const matched = placeId.match(/^forum_(\d+)$/);
-          const postId = matched ? Number(matched[1]) : null;
-          setShowForumNotices(false);
-          if (Number.isInteger(postId) && postId > 0) {
-            setExpandedPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
-            if (!commentsMap[postId]) loadComments(postId);
-            setTimeout(() => {
-              document.getElementById(getForumPostDomId(postId))?.scrollIntoView({ behavior: "smooth", block: "center" });
-            }, 120);
-          }
-          onNoticeClick?.(notice);
-        }}
-        onRefresh={() => onRefreshNotices?.(false)}
+        onNoticeClick={handleForumNoticeClick}
+        onRefresh={handleMarkForumRead}
         formatCommentTime={formatCommentTime}
         modalTitle="论坛互动"
         emptyText="暂无互动"
