@@ -24,6 +24,7 @@ import LikeHeartIcon from "./LikeHeartIcon";
 const UNREAD_BADGE_LIMIT = 99;
 const FIRST_FOLD_CARD_COUNT = 4;
 const LIST_THUMB_SIZE_PX = 70;
+const FORUM_DOT_SIZE_PX = 8;
 const FAVORITE_ICON_SIZE = "32px";
 const FAVORITE_ICON_FONT_SIZE = "18px";
 const FAVORITE_ICON_ACTIVE_COLOR = "#ffffff";
@@ -108,7 +109,6 @@ function HomePanels({
   formatCommentTime,
 }) {
   const unreadBadgeText = unreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : unreadCount;
-  const forumUnreadBadgeText = forumUnreadCount > UNREAD_BADGE_LIMIT ? `${UNREAD_BADGE_LIMIT}+` : forumUnreadCount;
   const badgeSeed = `${currentUser?.phone || ""}-${activeBadgeTitle || ""}`;
   const badgeTheme = getBadgeTheme(badgeSeed);
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
@@ -160,7 +160,7 @@ function HomePanels({
             </span>
             <span onClick={onShowForum} style={{ color: "#5aa77b", cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "4px" }}>
               <span>论坛</span>
-              {forumUnreadCount > 0 && <span style={unreadBadgeStyle}>{forumUnreadBadgeText}</span>}
+              {forumUnreadCount > 0 && <span style={{ width: `${FORUM_DOT_SIZE_PX}px`, height: `${FORUM_DOT_SIZE_PX}px`, borderRadius: "50%", background: "#ff4d6d", boxShadow: "0 0 0 2px #ffe4ec" }} />}
             </span>
             <span onClick={onOpenRoutePlanner} style={{ color: "#5aa77b", cursor: "pointer" }}>
               规划路线

@@ -26,7 +26,7 @@ export function getForumPostDomId(postId) {
   return normalized ? `${FORUM_POST_DOM_ID_PREFIX}${normalized}` : `${FORUM_POST_DOM_ID_PREFIX}unknown`;
 }
 
-export function useForumJumpTo({ posts, expandedPostIds, setExpandedPostIds, loadComments, commentsMap, loadingPosts }) {
+export function useForumJumpTo({ posts, loadComments, loadingPosts, onOpenComments }) {
   const [jumpPostId, setJumpPostId] = useState(null);
 
   useEffect(() => {
@@ -43,13 +43,9 @@ export function useForumJumpTo({ posts, expandedPostIds, setExpandedPostIds, loa
     if (!jumpPostId || loadingPosts) return;
     const exists = (posts || []).some((post) => Number(post.id) === Number(jumpPostId));
     if (!exists) return;
-    if (!expandedPostIds.includes(jumpPostId)) {
-      setExpandedPostIds((prev) => [...prev, jumpPostId]);
-    }
-    if (!commentsMap?.[jumpPostId]) {
-      Promise.resolve(loadComments?.(jumpPostId)).catch((error) => console.error("论坛跳转加载评论失败:", error));
-    }
+    Promise.resolve(loadComments?.(jumpPostId)).catch((error) => console.error("论坛跳转加载评论失败:", error));
+    onOpenComments?.(jumpPostId);
     scrollToForumPost(jumpPostId);
     setJumpPostId(null);
-  }, [jumpPostId, loadingPosts, posts, expandedPostIds, setExpandedPostIds, loadComments, commentsMap]);
+  }, [jumpPostId, loadingPosts, posts, loadComments, onOpenComments]);
 }

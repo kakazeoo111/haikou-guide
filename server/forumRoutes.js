@@ -19,6 +19,28 @@ function parseForumSortMode(value) {
 const FORUM_NOTICE_PLACE_ID_PREFIX = "forum_";
 const FORUM_NOTICE_COMMENT_SNIPPET_LIMIT = 50;
 
+const FORUM_COMMENT_LIST_SQL = `
+  SELECT c.id, c.post_id, c.parent_id, c.user_phone, c.content, c.image_url, c.created_at, u.username, u.avatar_url,
+         COALESCE(all_likes.like_count, 0) AS like_count,
+         COALESCE(my_likes.is_liked, 0) AS is_liked
+  FROM forum_comments c
+  JOIN users u ON c.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
+  LEFT JOIN (
+    SELECT comment_id, COUNT(*) AS like_count
+    FROM forum_comment_likes
+    GROUP BY comment_id
+  ) all_likes ON all_likes.comment_id = c.id
+  LEFT JOIN (
+    SELECT comment_id, 1 AS is_liked
+    FROM forum_comment_likes
+    WHERE user_phone COLLATE utf8mb4_general_ci = ?
+    GROUP BY comment_id
+  ) my_likes ON my_likes.comment_id = c.id
+  WHERE c.post_id = ?
+    AND c.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+  ORDER BY c.created_at DESC, c.id DESC
+`;
+
 function buildForumNoticePlaceId(postId) {
   return `${FORUM_NOTICE_PLACE_ID_PREFIX}${postId}`;
 }
@@ -34,12 +56,9 @@ async function getForumPostOwnerPhone(pool, postId) {
   return rows[0]?.user_phone || "";
 }
 
-async function getForumCommentAuthorPhone(pool, commentId, postId) {
-  const [rows] = await pool.execute(
-    "SELECT user_phone FROM forum_comments WHERE id = ? AND post_id = ? LIMIT 1",
-    [commentId, postId],
-  );
-  return rows[0]?.user_phone || "";
+async function getForumCommentOwner(pool, commentId) {
+  const [rows] = await pool.execute("SELECT user_phone, post_id FROM forum_comments WHERE id = ? LIMIT 1", [commentId]);
+  return rows[0] || null;
 }
 
 const FORUM_POST_LIST_SQL = `
@@ -132,6 +151,19 @@ async function ensureForumTables(pool) {
       UNIQUE KEY uk_forum_post_calls_post_user (post_id, user_phone),
       KEY idx_forum_post_calls_post_id (post_id),
       KEY idx_forum_post_calls_user_phone (user_phone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  );
+
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS forum_comment_likes (
+      id INT NOT NULL AUTO_INCREMENT,
+      comment_id INT NOT NULL,
+      user_phone VARCHAR(20) NOT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      UNIQUE KEY uk_forum_comment_likes_comment_user (comment_id, user_phone),
+      KEY idx_forum_comment_likes_comment_id (comment_id),
+      KEY idx_forum_comment_likes_user_phone (user_phone)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
   );
 }
@@ -236,24 +268,54 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
 
   app.get("/api/forum/comments/:postId", async (req, res) => {
     const postId = parsePositiveInt(req.params.postId);
+    const viewerPhone = String(req.query.phone || "").trim();
     if (!postId) return res.status(400).json({ ok: false, message: "����ID��Ч" });
 
     try {
       const active = await isForumPostActive(pool, postId);
       if (!active) return res.status(404).json({ ok: false, message: "���Ӳ����ڻ��ѳ���7��" });
-      const [rows] = await pool.execute(
-        `SELECT c.id, c.post_id, c.parent_id, c.user_phone, c.content, c.image_url, c.created_at, u.username, u.avatar_url
-         FROM forum_comments c
-         JOIN users u ON c.user_phone COLLATE utf8mb4_general_ci = u.phone COLLATE utf8mb4_general_ci
-         WHERE c.post_id = ?
-           AND c.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-         ORDER BY c.created_at DESC, c.id DESC`,
-        [postId]
-      );
-      res.json({ ok: true, data: rows });
+      const [rows] = await pool.execute(FORUM_COMMENT_LIST_SQL, [viewerPhone, postId]);
+      const data = rows.map((row) => ({
+        ...row,
+        like_count: Number(row.like_count || 0),
+        is_liked: Number(row.is_liked || 0) > 0,
+      }));
+      res.json({ ok: true, data });
     } catch (error) {
       console.error("��̳���ۻ�ȡʧ��:", error.message);
       res.status(500).json({ ok: false, message: `��̳���ۻ�ȡʧ��: ${error.message}` });
+    }
+  });
+
+  app.post("/api/forum/comment/like", async (req, res) => {
+    const { phone, commentId } = req.body;
+    const normalizedPhone = String(phone || "").trim();
+    const normalizedCommentId = parsePositiveInt(commentId);
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "�ֻ��Ų���Ϊ��" });
+    if (!normalizedCommentId) return res.status(400).json({ ok: false, message: "����ID��Ч" });
+
+    try {
+      const owner = await getForumCommentOwner(pool, normalizedCommentId);
+      if (!owner) return res.status(404).json({ ok: false, message: "�������۲�����" });
+
+      const [rows] = await pool.execute(
+        "SELECT id FROM forum_comment_likes WHERE comment_id = ? AND user_phone = ? LIMIT 1",
+        [normalizedCommentId, normalizedPhone]
+      );
+      const action = rows.length > 0 ? "unliked" : "liked";
+      if (action === "unliked") {
+        await pool.execute("DELETE FROM forum_comment_likes WHERE comment_id = ? AND user_phone = ?", [normalizedCommentId, normalizedPhone]);
+      } else {
+        await pool.execute("INSERT INTO forum_comment_likes (comment_id, user_phone) VALUES (?, ?)", [normalizedCommentId, normalizedPhone]);
+        await addNotice(owner.user_phone, normalizedPhone, "forum_reply", buildForumNoticePlaceId(Number(owner.post_id)), "点赞了你的论坛评论");
+      }
+
+      const [countRows] = await pool.execute("SELECT COUNT(*) AS count FROM forum_comment_likes WHERE comment_id = ?", [normalizedCommentId]);
+      const likeCount = Number(countRows[0]?.count || 0);
+      res.json({ ok: true, action, likeCount });
+    } catch (error) {
+      console.error("��̳���۵���ʧ��:", error.message);
+      res.status(500).json({ ok: false, message: `��̳���۵���ʧ��: ${error.message}` });
     }
   });
 
@@ -286,9 +348,9 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       const ownerPhone = await getForumPostOwnerPhone(pool, normalizedPostId);
       if (ownerPhone) await addNotice(ownerPhone, normalizedPhone, "forum_comment", noticePlaceId, snippet);
       if (normalizedParentId) {
-        const parentAuthorPhone = await getForumCommentAuthorPhone(pool, normalizedParentId, normalizedPostId);
-        if (parentAuthorPhone && parentAuthorPhone !== ownerPhone) {
-          await addNotice(parentAuthorPhone, normalizedPhone, "forum_reply", noticePlaceId, snippet);
+        const parentAuthorPhone = await getForumCommentOwner(pool, normalizedParentId);
+        if (parentAuthorPhone?.user_phone && parentAuthorPhone.user_phone !== ownerPhone) {
+          await addNotice(parentAuthorPhone.user_phone, normalizedPhone, "forum_reply", noticePlaceId, snippet);
         }
       }
       res.json({ ok: true, message: "���۷����ɹ�" });
