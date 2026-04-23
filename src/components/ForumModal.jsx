@@ -113,21 +113,7 @@ function ForumModal({
     loadPosts("", sortMode);
   }, [searchKeyword]);
 
-  const handleMarkForumRead = async () => {
-    if (!currentUser?.phone) return;
-    try {
-      const res = await fetch(`${authApiBase}/api/notifications/read-forum`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone: currentUser.phone }),
-      });
-      const data = await res.json();
-      if (!data.ok) return;
-      onRefreshNotices?.(false);
-    } catch (error) {
-      console.error("论坛消息已读失败:", error);
-    }
-  };
+
 
 
   const loadComments = async (postId) => {
