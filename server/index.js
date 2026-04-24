@@ -149,7 +149,7 @@ try {
   console.error("反馈管理路由初始化失败:", error.message);
 }
 try {
-  await registerForumRoutes(app, { pool, upload, addNotice });
+  await registerForumRoutes(app, { pool, upload });
 } catch (error) {
   console.error("论坛路由初始化失败.:", error.message);
 }
@@ -159,4 +159,4 @@ try {
   console.error("在线人数路由初始化失败:", error.message);
 }
 
-app.listen(port, () => console.log(`🚀 后端已启动.：${port}`));
+app.listen(port, () => console.log(`🚀 后端已启动：${port}`));
