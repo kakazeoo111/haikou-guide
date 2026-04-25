@@ -61,6 +61,11 @@ async function getForumCommentOwner(pool, commentId) {
   return rows[0] || null;
 }
 
+function resolveNoticeSender(addNotice) {
+  if (typeof addNotice === "function") return addNotice;
+  return async () => {};
+}
+
 const FORUM_POST_LIST_SQL = `
   SELECT p.id, p.user_phone, p.content, p.image_url, p.created_at, u.username, u.avatar_url,
          COALESCE(comment_stats.comment_count, 0) AS comment_count,
@@ -178,6 +183,7 @@ async function isForumPostActive(pool, postId) {
 
 export async function registerForumRoutes(app, { pool, upload, addNotice }) {
   await ensureForumTables(pool);
+  const sendNotice = resolveNoticeSender(addNotice);
 
   app.get("/api/forum/posts", async (req, res) => {
     const viewerPhone = String(req.query.phone || "").trim();
@@ -254,7 +260,7 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       } else {
         await pool.execute("INSERT INTO forum_post_calls (post_id, user_phone) VALUES (?, ?)", [normalizedPostId, normalizedPhone]);
         const ownerPhone = await getForumPostOwnerPhone(pool, normalizedPostId);
-        if (ownerPhone) await addNotice(ownerPhone, normalizedPhone, "forum_call", buildForumNoticePlaceId(normalizedPostId));
+        if (ownerPhone) await sendNotice(ownerPhone, normalizedPhone, "forum_call", buildForumNoticePlaceId(normalizedPostId));
       }
 
       const [countRows] = await pool.execute("SELECT COUNT(*) AS count FROM forum_post_calls WHERE post_id = ?", [normalizedPostId]);
@@ -307,7 +313,7 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
         await pool.execute("DELETE FROM forum_comment_likes WHERE comment_id = ? AND user_phone = ?", [normalizedCommentId, normalizedPhone]);
       } else {
         await pool.execute("INSERT INTO forum_comment_likes (comment_id, user_phone) VALUES (?, ?)", [normalizedCommentId, normalizedPhone]);
-        await addNotice(owner.user_phone, normalizedPhone, "forum_reply", buildForumNoticePlaceId(Number(owner.post_id)), "点赞了你的论坛评论");
+        await sendNotice(owner.user_phone, normalizedPhone, "forum_reply", buildForumNoticePlaceId(Number(owner.post_id)), "点赞了你的论坛评论");
       }
 
       const [countRows] = await pool.execute("SELECT COUNT(*) AS count FROM forum_comment_likes WHERE comment_id = ?", [normalizedCommentId]);
@@ -346,11 +352,11 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       const noticePlaceId = buildForumNoticePlaceId(normalizedPostId);
       const snippet = truncateForumCommentSnippet(message);
       const ownerPhone = await getForumPostOwnerPhone(pool, normalizedPostId);
-      if (ownerPhone) await addNotice(ownerPhone, normalizedPhone, "forum_comment", noticePlaceId, snippet);
+      if (ownerPhone) await sendNotice(ownerPhone, normalizedPhone, "forum_comment", noticePlaceId, snippet);
       if (normalizedParentId) {
         const parentAuthorPhone = await getForumCommentOwner(pool, normalizedParentId);
         if (parentAuthorPhone?.user_phone && parentAuthorPhone.user_phone !== ownerPhone) {
-          await addNotice(parentAuthorPhone.user_phone, normalizedPhone, "forum_reply", noticePlaceId, snippet);
+          await sendNotice(parentAuthorPhone.user_phone, normalizedPhone, "forum_reply", noticePlaceId, snippet);
         }
       }
       res.json({ ok: true, message: "���۷����ɹ�" });
