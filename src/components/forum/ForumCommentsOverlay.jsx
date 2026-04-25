@@ -90,6 +90,7 @@ function ForumCommentsOverlay({
   formatCommentTime,
 }) {
   const userPointsCard = useUserPointsCard();
+  const postImages = useMemo(() => parseForumImageUrls(post?.image_url), [post?.image_url]);
   const sortedComments = useMemo(
     () => sortAndFilterForumComments(comments, sortMode, showOnlyImages),
     [comments, sortMode, showOnlyImages],
@@ -162,6 +163,41 @@ function ForumCommentsOverlay({
         >
           <div style={{ fontWeight: "bold", marginBottom: "4px" }}>原帖内容</div>
           <div>{getPostSummary(post)}</div>
+          {postImages.length > 0 && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  postImages.length === 1
+                    ? "minmax(0, 180px)"
+                    : postImages.length === 2 || postImages.length === 4
+                      ? "repeat(2, minmax(0, 1fr))"
+                      : "repeat(3, minmax(0, 1fr))",
+                gap: "6px",
+                marginTop: "10px",
+                maxWidth: postImages.length === 1 ? "180px" : "280px",
+              }}
+            >
+              {postImages.map((url, index) => (
+                <img
+                  key={`${post?.id || "post"}-${index}`}
+                  src={url}
+                  {...buildImageLoadingProps()}
+                  style={{
+                    width: "100%",
+                    aspectRatio: "1 / 1",
+                    objectFit: "cover",
+                    borderRadius: "10px",
+                    border: "1px solid #dfece4",
+                    cursor: "zoom-in",
+                    background: "#fff",
+                  }}
+                  onClick={() => onZoomImage(postImages, index)}
+                  alt="forum-post-origin"
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
