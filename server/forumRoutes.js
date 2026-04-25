@@ -61,9 +61,46 @@ async function getForumCommentOwner(pool, commentId) {
   return rows[0] || null;
 }
 
-function resolveNoticeSender(addNotice) {
+async function ensureForumNotificationTypeColumn(pool) {
+  const [rows] = await pool.execute("SHOW COLUMNS FROM notifications LIKE 'type'");
+  const columnType = String(rows?.[0]?.Type || "").toLowerCase();
+  if (!columnType.startsWith("enum(")) return;
+  await pool.execute("ALTER TABLE notifications MODIFY COLUMN type VARCHAR(50) NOT NULL");
+}
+
+async function ensureForumNotificationTable(pool) {
+  await pool.execute(
+    `CREATE TABLE IF NOT EXISTS notifications (
+      id INT NOT NULL AUTO_INCREMENT,
+      receiver_phone VARCHAR(20) NOT NULL,
+      sender_phone VARCHAR(20) NOT NULL,
+      type VARCHAR(50) NOT NULL,
+      place_id VARCHAR(120) NULL,
+      content TEXT NULL,
+      is_read TINYINT(1) NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      KEY idx_notifications_receiver_created (receiver_phone, created_at),
+      KEY idx_notifications_sender (sender_phone)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  );
+  await ensureForumNotificationTypeColumn(pool);
+}
+
+function createForumNoticeSender(pool, addNotice) {
   if (typeof addNotice === "function") return addNotice;
-  return async () => {};
+  console.warn("forumRoutes: addNotice 未注入，已切换为论坛路由内置通知写入");
+  return async (receiverPhone, senderPhone, type, placeId, content = "") => {
+    if (receiverPhone === senderPhone) return;
+    try {
+      await pool.execute(
+        "INSERT INTO notifications (receiver_phone, sender_phone, type, place_id, content) VALUES (?, ?, ?, ?, ?)",
+        [receiverPhone, senderPhone, type, placeId, content],
+      );
+    } catch (error) {
+      console.error("论坛通知写入失败:", error.message);
+    }
+  };
 }
 
 const FORUM_POST_LIST_SQL = `
@@ -183,7 +220,8 @@ async function isForumPostActive(pool, postId) {
 
 export async function registerForumRoutes(app, { pool, upload, addNotice }) {
   await ensureForumTables(pool);
-  const sendNotice = resolveNoticeSender(addNotice);
+  await ensureForumNotificationTable(pool);
+  const sendNotice = createForumNoticeSender(pool, addNotice);
 
   app.get("/api/forum/posts", async (req, res) => {
     const viewerPhone = String(req.query.phone || "").trim();
