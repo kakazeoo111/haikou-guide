@@ -44,7 +44,7 @@ function ForumPostFeed({
 }) {
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 24px 14px" }}>
-      <div style={forumHintBannerStyle}>💬 记录你7天内的心情 · 7天后自动消散</div>
+      <div style={forumHintBannerStyle}>💬 记录你 7 天内的心情，7 天后自动消散</div>
 
       <ForumPostComposer
         postContent={postContent}
@@ -70,12 +70,12 @@ function ForumPostFeed({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
         <button onClick={onToggleSortMode} style={forumSortButtonStyle}>
           <span>⚡</span>
-          <span>{sortMode === "chill" ? "按最新排序" : "按chill排序"}</span>
+          <span>{sortMode === "chill" ? "按最新排序" : "按 chill 排序"}</span>
         </button>
         <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
-          <button onClick={onOpenForumNotices} style={forumNoticeButtonStyle}>
+          <button onClick={onOpenForumNotices} style={{ ...forumNoticeButtonStyle, position: "relative", paddingRight: "18px" }}>
             <span>互动</span>
-            {forumUnreadCount > 0 && <span style={forumUnreadDotStyle} />}
+            {forumUnreadCount > 0 && <span style={{ ...forumUnreadDotStyle, position: "absolute", top: "7px", right: "8px" }} />}
           </button>
           <button onClick={onOpenNotice} style={forumNoticeButtonStyle}>公告</button>
           <span style={forumOnlinePillStyle}>
@@ -86,7 +86,7 @@ function ForumPostFeed({
       </div>
 
       {loadingPosts && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>论坛内容加载中...</div>}
-      {!loadingPosts && posts.length === 0 && <div style={{ textAlign: "center", color: "#97a8a0", padding: "16px 0" }}>7天内暂无相关帖子</div>}
+      {!loadingPosts && posts.length === 0 && <div style={{ textAlign: "center", color: "#97a8a0", padding: "16px 0" }}>7 天内暂无相关帖子</div>}
 
       {!loadingPosts && posts.map((post) => (
         <div key={post.id} id={getForumPostDomId(post.id)}>

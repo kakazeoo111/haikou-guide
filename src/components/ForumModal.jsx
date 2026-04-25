@@ -16,6 +16,7 @@ const FORUM_UNREAD_DOT_STYLE = {
   height: "7px",
   borderRadius: "50%",
   background: "#ff4d4f",
+  boxShadow: "0 0 0 2px #ffe4ec",
 };
 
 function getPostIdFromNotice(notice) {
@@ -32,6 +33,7 @@ function ForumModal({
   activeBadgeTitle,
   activeBadgeMeta,
   notifications,
+  forumUnreadCount = 0,
   onRefreshNotices,
   onNoticeClick,
   onBack,
@@ -83,8 +85,31 @@ function ForumModal({
     onNoticeClick?.(notice);
   };
 
+  const handleReplySelect = (comment) => {
+    if (!forum.activeCommentPostId) return;
+    forum.setReplyTargetMap((prev) => ({ ...prev, [forum.activeCommentPostId]: comment }));
+    setTimeout(() => document.getElementById("forum-comment-input-overlay")?.focus(), 0);
+  };
+
+  const handleToggleExpand = (parentId) => {
+    const postId = forum.activeCommentPostId;
+    if (!postId) return;
+    forum.setExpandedCommentParentIdsMap((prev) => {
+      const currentIds = prev[postId] || [];
+      const nextIds = currentIds.includes(parentId) ? currentIds.filter((id) => id !== parentId) : [...currentIds, parentId];
+      return { ...prev, [postId]: nextIds };
+    });
+  };
+
+  const handleToggleShowOnlyImages = () => {
+    const postId = forum.activeCommentPostId;
+    if (!postId) return;
+    forum.setShowOnlyImageCommentMap((prev) => ({ ...prev, [postId]: !prev[postId] }));
+  };
+
   const activePost = forum.posts.find((item) => Number(item.id) === Number(forum.activeCommentPostId)) || null;
   const activePostComments = forum.activeCommentPostId ? (forum.commentsMap[forum.activeCommentPostId] || []) : [];
+  const effectiveForumUnreadCount = Math.max(Number(forumUnreadCount || 0), Number(forum.forumUnreadCount || 0));
 
   return (
     <div style={forumPageStyle}>
@@ -104,7 +129,7 @@ function ForumModal({
         postImages={forum.postImages}
         searchKeyword={forum.searchKeyword}
         sortMode={forum.sortMode}
-        forumUnreadCount={forum.forumUnreadCount}
+        forumUnreadCount={effectiveForumUnreadCount}
         onlineCount={onlineCount}
         callingPostIds={forum.callingPostIds}
         currentUser={currentUser}
@@ -135,14 +160,20 @@ function ForumModal({
         comments={activePostComments}
         loading={forum.loadingCommentPostIds.includes(Number(forum.activeCommentPostId))}
         sortMode={forum.commentSortMode}
+        showOnlyImages={Boolean(forum.showOnlyImageCommentMap[forum.activeCommentPostId])}
+        expandedParentIds={forum.expandedCommentParentIdsMap[forum.activeCommentPostId] || []}
         currentUser={currentUser}
+        activeBadgeTitle={activeBadgeTitle}
+        activeBadgeMeta={activeBadgeMeta}
         replyTarget={forum.replyTargetMap[forum.activeCommentPostId] || null}
         commentDraft={forum.commentDraftMap[forum.activeCommentPostId] || ""}
         commentImages={forum.commentImagesMap[forum.activeCommentPostId] || []}
         submitting={forum.submittingCommentPostIds.includes(Number(forum.activeCommentPostId))}
         onClose={() => forum.setActiveCommentPostId(null)}
         onSortChange={forum.setCommentSortMode}
-        onReplySelect={(comment) => forum.setReplyTargetMap((prev) => ({ ...prev, [forum.activeCommentPostId]: comment }))}
+        onToggleShowOnlyImages={handleToggleShowOnlyImages}
+        onToggleExpand={handleToggleExpand}
+        onReplySelect={handleReplySelect}
         onReplyCancel={() => forum.setReplyTargetMap((prev) => ({ ...prev, [forum.activeCommentPostId]: null }))}
         onCommentDraftChange={(value) => forum.setCommentDraftMap((prev) => ({ ...prev, [forum.activeCommentPostId]: value }))}
         onSelectCommentImages={(event) => forum.handleSelectCommentImages(forum.activeCommentPostId, event)}

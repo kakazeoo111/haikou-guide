@@ -260,6 +260,7 @@ function AppLayout({
           activeBadgeTitle={activeBadgeTitle}
           activeBadgeMeta={activeBadgeMeta}
           notifications={notifications}
+          forumUnreadCount={forumUnreadCount}
           onRefreshNotices={generalHandlers.fetchNotices}
           onNoticeClick={generalHandlers.handleNoticeClick}
           onBack={() => setActiveTab("home")}

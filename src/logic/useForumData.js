@@ -51,6 +51,8 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
   const [replyTargetMap, setReplyTargetMap] = useState({});
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
   const [commentSortMode, setCommentSortMode] = useState("latest");
+  const [expandedCommentParentIdsMap, setExpandedCommentParentIdsMap] = useState({});
+  const [showOnlyImageCommentMap, setShowOnlyImageCommentMap] = useState({});
 
   const forumNotifications = useMemo(() => toForumNotifications(notifications), [notifications]);
   const forumUnreadCount = useMemo(() => forumNotifications.filter((notice) => !notice.is_read).length, [forumNotifications]);
@@ -252,6 +254,8 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     replyTargetMap,
     activeCommentPostId,
     commentSortMode,
+    expandedCommentParentIdsMap,
+    showOnlyImageCommentMap,
     forumNotifications,
     forumUnreadCount,
     setPostContent,
@@ -262,6 +266,8 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     setCommentDraftMap,
     setActiveCommentPostId,
     setCommentSortMode,
+    setExpandedCommentParentIdsMap,
+    setShowOnlyImageCommentMap,
     loadPosts,
     loadComments,
     openComments,
