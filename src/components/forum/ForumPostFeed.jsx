@@ -1,5 +1,6 @@
 import ForumPostCard from "./ForumPostCard";
 import ForumPostComposer from "./ForumPostComposer";
+import ForumInlineCommentsPanel from "./ForumInlineCommentsPanel";
 import { getForumPostDomId } from "../../logic/useForumJumpTo";
 import {
   forumHintBannerStyle,
@@ -94,8 +95,19 @@ function ForumPostFeed({
   callingPostIds,
   currentUser,
   activeBadgeTitle,
+  activeBadgeMeta,
   badgeIcon,
   badgeTheme,
+  activeCommentPostId,
+  commentsMap,
+  loadingCommentPostIds,
+  commentSortMode,
+  showOnlyImageCommentMap,
+  expandedCommentParentIdsMap,
+  replyTargetMap,
+  commentDraftMap,
+  commentImagesMap,
+  submittingCommentPostIds,
   onPostContentChange,
   onRemovePostImage,
   onSelectPostImages,
@@ -108,6 +120,17 @@ function ForumPostFeed({
   onOpenForumNotices,
   onOpenNotice,
   onOpenComments,
+  onSortComments,
+  onToggleCommentImageOnly,
+  onToggleReplyExpand,
+  onReplySelect,
+  onReplyCancel,
+  onCommentDraftChange,
+  onSelectCommentImages,
+  onRemoveCommentImage,
+  onSubmitComment,
+  onLikeComment,
+  onDeleteComment,
   onToggleCall,
   onZoomImage,
   formatCommentTime,
@@ -159,22 +182,57 @@ function ForumPostFeed({
       {loadingPosts && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>论坛内容加载中...</div>}
       {!loadingPosts && posts.length === 0 && <div style={{ textAlign: "center", color: "#97a8a0", padding: "16px 0" }}>7 天内暂无相关帖子</div>}
 
-      {!loadingPosts && posts.map((post) => (
-        <div key={post.id} id={getForumPostDomId(post.id)}>
-          <ForumPostCard
-            post={post}
-            currentUser={currentUser}
-            activeBadgeTitle={activeBadgeTitle}
-            badgeIcon={badgeIcon}
-            badgeTheme={badgeTheme}
-            callingPost={callingPostIds.includes(Number(post.id))}
-            onOpenComments={onOpenComments}
-            onToggleCall={onToggleCall}
-            onZoomImage={onZoomImage}
-            formatCommentTime={formatCommentTime}
-          />
-        </div>
-      ))}
+      {!loadingPosts && posts.map((post) => {
+        const postId = Number(post.id);
+        const commentsOpen = Number(activeCommentPostId) === postId;
+        return (
+          <div key={post.id} id={getForumPostDomId(post.id)} style={{ marginBottom: "12px" }}>
+            <ForumPostCard
+              post={post}
+              currentUser={currentUser}
+              activeBadgeTitle={activeBadgeTitle}
+              badgeIcon={badgeIcon}
+              badgeTheme={badgeTheme}
+              callingPost={callingPostIds.includes(postId)}
+              commentsOpen={commentsOpen}
+              onOpenComments={onOpenComments}
+              onToggleCall={onToggleCall}
+              onZoomImage={onZoomImage}
+              formatCommentTime={formatCommentTime}
+            />
+            {commentsOpen && (
+              <ForumInlineCommentsPanel
+                postId={postId}
+                comments={commentsMap[postId] || []}
+                loading={loadingCommentPostIds.includes(postId)}
+                sortMode={commentSortMode}
+                showOnlyImages={Boolean(showOnlyImageCommentMap[postId])}
+                expandedParentIds={expandedCommentParentIdsMap[postId] || []}
+                currentUser={currentUser}
+                activeBadgeTitle={activeBadgeTitle}
+                activeBadgeMeta={activeBadgeMeta}
+                replyTarget={replyTargetMap[postId] || null}
+                commentDraft={commentDraftMap[postId] || ""}
+                commentImages={commentImagesMap[postId] || []}
+                submitting={submittingCommentPostIds.includes(postId)}
+                onSortChange={onSortComments}
+                onToggleShowOnlyImages={() => onToggleCommentImageOnly(postId)}
+                onToggleExpand={(parentId) => onToggleReplyExpand(postId, parentId)}
+                onReplySelect={(comment) => onReplySelect(postId, comment)}
+                onReplyCancel={() => onReplyCancel(postId)}
+                onCommentDraftChange={(value) => onCommentDraftChange(postId, value)}
+                onSelectCommentImages={(event) => onSelectCommentImages(postId, event)}
+                onRemoveCommentImage={(index) => onRemoveCommentImage(postId, index)}
+                onSubmitComment={() => onSubmitComment(postId)}
+                onLikeComment={(commentId) => onLikeComment(postId, commentId)}
+                onDeleteComment={(commentId) => onDeleteComment(postId, commentId)}
+                onZoomImage={onZoomImage}
+                formatCommentTime={formatCommentTime}
+              />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

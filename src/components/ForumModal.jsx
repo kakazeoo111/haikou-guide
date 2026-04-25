@@ -7,7 +7,6 @@ import { useForumJumpTo } from "../logic/useForumJumpTo";
 import { forumHeaderStyle, forumPageStyle } from "../logic/forumModalUtils";
 import NoticeListModal from "./NoticeListModal";
 import ForumNoticeModal from "./forum/ForumNoticeModal";
-import ForumCommentsOverlay from "./forum/ForumCommentsOverlay";
 import ForumPostFeed from "./forum/ForumPostFeed";
 
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
@@ -85,15 +84,24 @@ function ForumModal({
     onNoticeClick?.(notice);
   };
 
-  const handleReplySelect = (comment) => {
-    if (!forum.activeCommentPostId) return;
-    forum.setReplyTargetMap((prev) => ({ ...prev, [forum.activeCommentPostId]: comment }));
-    setTimeout(() => document.getElementById("forum-comment-input-overlay")?.focus(), 0);
+  const handleOpenComments = async (postId) => {
+    if (Number(forum.activeCommentPostId) === Number(postId)) {
+      forum.setActiveCommentPostId(null);
+      return;
+    }
+    await forum.openComments(postId);
   };
 
-  const handleToggleExpand = (parentId) => {
-    const postId = forum.activeCommentPostId;
-    if (!postId) return;
+  const handleReplySelect = (postId, comment) => {
+    forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }));
+    setTimeout(() => document.getElementById(`forum-comment-input-inline-${postId}`)?.focus(), 0);
+  };
+
+  const handleReplyCancel = (postId) => {
+    forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: null }));
+  };
+
+  const handleToggleReplyExpand = (postId, parentId) => {
     forum.setExpandedCommentParentIdsMap((prev) => {
       const currentIds = prev[postId] || [];
       const nextIds = currentIds.includes(parentId) ? currentIds.filter((id) => id !== parentId) : [...currentIds, parentId];
@@ -101,14 +109,10 @@ function ForumModal({
     });
   };
 
-  const handleToggleShowOnlyImages = () => {
-    const postId = forum.activeCommentPostId;
-    if (!postId) return;
+  const handleToggleCommentImageOnly = (postId) => {
     forum.setShowOnlyImageCommentMap((prev) => ({ ...prev, [postId]: !prev[postId] }));
   };
 
-  const activePost = forum.posts.find((item) => Number(item.id) === Number(forum.activeCommentPostId)) || null;
-  const activePostComments = forum.activeCommentPostId ? (forum.commentsMap[forum.activeCommentPostId] || []) : [];
   const effectiveForumUnreadCount = Math.max(Number(forumUnreadCount || 0), Number(forum.forumUnreadCount || 0));
 
   return (
@@ -116,7 +120,7 @@ function ForumModal({
       <div style={forumHeaderStyle}>
         <span onClick={onBack} style={{ cursor: "pointer", fontSize: "18px", color: "#5a6e65" }}>&lt; 返回</span>
         <span style={{ fontWeight: 700, color: "#2e6a4a", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-          <span>🗐</span>
+          <span>🗎</span>
           <span>7天论坛</span>
         </span>
         <span style={{ width: "58px" }} />
@@ -134,8 +138,19 @@ function ForumModal({
         callingPostIds={forum.callingPostIds}
         currentUser={currentUser}
         activeBadgeTitle={activeBadgeTitle}
+        activeBadgeMeta={activeBadgeMeta}
         badgeIcon={badgeIcon}
         badgeTheme={badgeTheme}
+        activeCommentPostId={forum.activeCommentPostId}
+        commentsMap={forum.commentsMap}
+        loadingCommentPostIds={forum.loadingCommentPostIds}
+        commentSortMode={forum.commentSortMode}
+        showOnlyImageCommentMap={forum.showOnlyImageCommentMap}
+        expandedCommentParentIdsMap={forum.expandedCommentParentIdsMap}
+        replyTargetMap={forum.replyTargetMap}
+        commentDraftMap={forum.commentDraftMap}
+        commentImagesMap={forum.commentImagesMap}
+        submittingCommentPostIds={forum.submittingCommentPostIds}
         onPostContentChange={forum.setPostContent}
         onRemovePostImage={(index) => forum.setPostImages((prev) => prev.filter((_, i) => i !== index))}
         onSelectPostImages={forum.handleSelectPostImages}
@@ -147,42 +162,22 @@ function ForumModal({
         onToggleSortMode={handleToggleSortMode}
         onOpenForumNotices={handleOpenForumNotices}
         onOpenNotice={openNotice}
-        onOpenComments={forum.openComments}
+        onOpenComments={handleOpenComments}
+        onSortComments={forum.setCommentSortMode}
+        onToggleCommentImageOnly={handleToggleCommentImageOnly}
+        onToggleReplyExpand={handleToggleReplyExpand}
+        onReplySelect={handleReplySelect}
+        onReplyCancel={handleReplyCancel}
+        onCommentDraftChange={(postId, value) => forum.setCommentDraftMap((prev) => ({ ...prev, [postId]: value }))}
+        onSelectCommentImages={forum.handleSelectCommentImages}
+        onRemoveCommentImage={forum.handleRemoveCommentImage}
+        onSubmitComment={forum.handleSubmitComment}
+        onLikeComment={forum.handleLikeComment}
+        onDeleteComment={forum.handleDeleteComment}
         onToggleCall={forum.handleToggleCall}
         onZoomImage={onZoomImage}
         formatCommentTime={formatCommentTime}
         forumUnreadDotStyle={FORUM_UNREAD_DOT_STYLE}
-      />
-
-      <ForumCommentsOverlay
-        visible={Boolean(activePost)}
-        post={activePost}
-        comments={activePostComments}
-        loading={forum.loadingCommentPostIds.includes(Number(forum.activeCommentPostId))}
-        sortMode={forum.commentSortMode}
-        showOnlyImages={Boolean(forum.showOnlyImageCommentMap[forum.activeCommentPostId])}
-        expandedParentIds={forum.expandedCommentParentIdsMap[forum.activeCommentPostId] || []}
-        currentUser={currentUser}
-        activeBadgeTitle={activeBadgeTitle}
-        activeBadgeMeta={activeBadgeMeta}
-        replyTarget={forum.replyTargetMap[forum.activeCommentPostId] || null}
-        commentDraft={forum.commentDraftMap[forum.activeCommentPostId] || ""}
-        commentImages={forum.commentImagesMap[forum.activeCommentPostId] || []}
-        submitting={forum.submittingCommentPostIds.includes(Number(forum.activeCommentPostId))}
-        onClose={() => forum.setActiveCommentPostId(null)}
-        onSortChange={forum.setCommentSortMode}
-        onToggleShowOnlyImages={handleToggleShowOnlyImages}
-        onToggleExpand={handleToggleExpand}
-        onReplySelect={handleReplySelect}
-        onReplyCancel={() => forum.setReplyTargetMap((prev) => ({ ...prev, [forum.activeCommentPostId]: null }))}
-        onCommentDraftChange={(value) => forum.setCommentDraftMap((prev) => ({ ...prev, [forum.activeCommentPostId]: value }))}
-        onSelectCommentImages={(event) => forum.handleSelectCommentImages(forum.activeCommentPostId, event)}
-        onRemoveCommentImage={(index) => forum.handleRemoveCommentImage(forum.activeCommentPostId, index)}
-        onSubmitComment={() => forum.handleSubmitComment(forum.activeCommentPostId)}
-        onLikeComment={(commentId) => forum.handleLikeComment(forum.activeCommentPostId, commentId)}
-        onDeleteComment={(commentId) => forum.handleDeleteComment(forum.activeCommentPostId, commentId)}
-        onZoomImage={onZoomImage}
-        formatCommentTime={formatCommentTime}
       />
 
       <ForumNoticeModal visible={showNotice} dontShowAgain={dontShowAgain} onToggleDontShowAgain={updateDontShowAgain} onClose={closeNotice} />

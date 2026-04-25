@@ -1,4 +1,3 @@
-import { btnMainStyle } from "../../styles/appStyles";
 import { BADGE_ANIMATION_STYLE, buildBadgePresentation } from "../../logic/commentsOverlayUtils";
 import { getAvatarWithFallback } from "../../logic/avatarFallback";
 import { parseForumImageUrls } from "../../logic/forumImageUtils";
@@ -49,10 +48,6 @@ const callLabelStyle = (active) => ({
   whiteSpace: "nowrap",
 });
 
-function getAvatarSrc(phone, avatarUrl) {
-  return getAvatarWithFallback(avatarUrl, phone, "");
-}
-
 function getSelfBadge(userPhone, currentUserPhone, activeBadgeTitle, badgeIcon) {
   if (String(userPhone || "") !== String(currentUserPhone || "")) return null;
   return { title: activeBadgeTitle || DEFAULT_BADGE_TITLE, icon: badgeIcon };
@@ -75,6 +70,7 @@ function ForumPostCard({
   badgeIcon,
   badgeTheme,
   callingPost,
+  commentsOpen,
   onOpenComments,
   onToggleCall,
   onZoomImage,
@@ -86,16 +82,16 @@ function ForumPostCard({
   const postBadge = getSelfBadge(post.user_phone, currentUser?.phone, activeBadgeTitle, badgeIcon);
   const { motionBadgeVariant, parentBadgeBubbleStyle, parentMotionIconStyle } = buildBadgePresentation(currentUser, activeBadgeTitle, { icon: badgeIcon });
   const isExplorerBadge = String(activeBadgeTitle || "") === "探店能手";
-  const badgeGlyph = isExplorerBadge ? "✨" : motionBadgeVariant.glyph;
+  const badgeGlyph = isExplorerBadge ? "✧" : motionBadgeVariant.glyph;
   const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
 
   return (
     <>
-      <div style={{ contentVisibility: "auto", containIntrinsicSize: "320px", border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", marginBottom: "12px", background: "#fff" }}>
+      <div style={{ contentVisibility: "auto", containIntrinsicSize: "320px", border: "1px solid #ebf2ee", borderRadius: "20px", padding: "12px", background: "#fff" }}>
         <style>{BADGE_ANIMATION_STYLE}</style>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <div onClick={() => userPointsCard.openByPhone(post.user_phone)} style={{ width: "32px", height: "32px", position: "relative", cursor: "pointer" }}>
-            <img src={getAvatarSrc(post.user_phone, post.avatar_url)} {...buildImageLoadingProps()} alt="forum-user-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+            <img src={getAvatarWithFallback(post.avatar_url, post.user_phone, post.username)} {...buildImageLoadingProps()} alt="forum-user-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
             {postBadge && (
               <div style={parentBadgeBubbleStyle}>
                 <span style={postMotionStyle}>{badgeGlyph}</span>
@@ -126,11 +122,11 @@ function ForumPostCard({
 
         <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <span onClick={() => onOpenComments(postId)} style={{ fontSize: "12px", color: "#5aa77b", cursor: "pointer", fontWeight: 700 }}>
-            {`查看评论（${Number(post.comment_count || 0)}）`}
+            {commentsOpen ? `收起评论 (${Number(post.comment_count || 0)})` : `查看评论 (${Number(post.comment_count || 0)})`}
           </span>
           <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px" }}>
             <span onClick={() => onToggleCall(postId)} style={callBtnStyle(Boolean(post.is_called), callingPost)}>
-              <span style={{ fontSize: "13px" }}>{post.is_called ? "⚡" : "✦"}</span>
+              <span style={{ fontSize: "13px" }}>{post.is_called ? "⚡" : "✧"}</span>
               <span>{Number(post.call_count || 0)}</span>
             </span>
             <span style={callLabelStyle(Boolean(post.is_called))}>{post.is_called ? "已共鸣" : "打call"}</span>
