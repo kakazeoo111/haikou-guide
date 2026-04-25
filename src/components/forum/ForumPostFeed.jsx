@@ -55,11 +55,13 @@ const QUOTE_TEXT_EN_STYLE = {
   lineHeight: 1.7,
 };
 const QUOTE_AUTHOR_STYLE = {
-  marginTop: "2px",
+  alignSelf: "flex-end",
+  marginTop: "10px",
   fontSize: "12px",
   color: "#6f877a",
   fontWeight: 600,
   letterSpacing: "0.2px",
+  textAlign: "right",
 };
 
 function getDailyQuoteIndex(length) {
