@@ -47,6 +47,32 @@ const PLAN_BUTTON_STYLE = {
   cursor: "pointer",
   boxShadow: "0 8px 18px rgba(90,167,123,0.28)",
 };
+const MODAL_CARD_STYLE = {
+  ...modalContentStyle,
+  maxWidth: "560px",
+  maxHeight: "82vh",
+  display: "flex",
+  flexDirection: "column",
+  gap: "14px",
+  overflow: "hidden",
+};
+const MODAL_BODY_STYLE = {
+  flex: 1,
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: "14px",
+  overflowY: "auto",
+  WebkitOverflowScrolling: "touch",
+  overscrollBehavior: "contain",
+  touchAction: "pan-y",
+  paddingRight: "2px",
+};
+const ACTION_ROW_STYLE = {
+  display: "flex",
+  gap: "10px",
+  flexShrink: 0,
+};
 
 function getOriginData({ startMode, hasCurrentLocation, userLocation, customOriginPoint }) {
   if (startMode === START_MODE_CURRENT) {
@@ -88,6 +114,7 @@ function usePlannerState(visible) {
   const [originSuggestions, setOriginSuggestions] = useState([]);
   const [originSearchMessage, setOriginSearchMessage] = useState("");
   const [previewRoute, setPreviewRoute] = useState(null);
+
   useEffect(() => {
     if (!visible) return;
     setSelectedIds([]);
@@ -98,6 +125,7 @@ function usePlannerState(visible) {
     setOriginSearchMessage("");
     setPreviewRoute(null);
   }, [visible]);
+
   return {
     selectedIds,
     setSelectedIds,
@@ -163,17 +191,20 @@ function usePlannerActions({
     if (!originData) return;
     setPreviewRoute(buildPreviewRoute(originData, selectedPlaces));
   };
+
   return { handleTogglePlace, handleSelectOriginSuggestion, handlePlanRoute };
 }
 
 function useRoutePlannerController({ visible, favoritePlaces, userLocation }) {
   const state = usePlannerState(visible);
+
   useOriginSuggestions({
     enabled: visible && state.startMode === START_MODE_CUSTOM,
     keyword: state.customOriginText,
     setSuggestions: state.setOriginSuggestions,
     setSearchMessage: state.setOriginSearchMessage,
   });
+
   const hasCurrentLocation = isValidCoordinate(userLocation?.lat) && isValidCoordinate(userLocation?.lng);
   const selectedPlaces = useMemo(() => mapSelectedPlaces(favoritePlaces, state.selectedIds), [favoritePlaces, state.selectedIds]);
   const actions = usePlannerActions({
@@ -189,6 +220,7 @@ function useRoutePlannerController({ visible, favoritePlaces, userLocation }) {
     setOriginSearchMessage: state.setOriginSearchMessage,
     setPreviewRoute: state.setPreviewRoute,
   });
+
   return {
     selectedIds: state.selectedIds,
     startMode: state.startMode,
@@ -209,31 +241,49 @@ function useRoutePlannerController({ visible, favoritePlaces, userLocation }) {
 
 function RoutePlannerModal({ visible, onClose, favoritePlaces, userLocation, isMobile }) {
   const controller = useRoutePlannerController({ visible, favoritePlaces, userLocation });
+
   if (!visible) return null;
-  if (controller.previewRoute) return <RoutePreviewPage previewRoute={controller.previewRoute} isMobile={isMobile} onBack={() => controller.setPreviewRoute(null)} onClose={onClose} />;
+  if (controller.previewRoute) {
+    return (
+      <RoutePreviewPage
+        previewRoute={controller.previewRoute}
+        isMobile={isMobile}
+        onBack={() => controller.setPreviewRoute(null)}
+        onClose={onClose}
+      />
+    );
+  }
 
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
-      <div style={{ ...modalContentStyle, maxWidth: "560px", maxHeight: "82vh", display: "flex", flexDirection: "column", gap: "14px" }} onClick={(event) => event.stopPropagation()}>
+      <div style={MODAL_CARD_STYLE} onClick={(event) => event.stopPropagation()}>
         <RoutePlannerHeader onClose={onClose} />
-        <div style={HINT_BAR_STYLE}>仅支持你已收藏且有坐标的景点，最多选择 {MAX_ROUTE_PLACES} 个，按你勾选的顺序规划。</div>
-        <RouteStartSection
-          startMode={controller.startMode}
-          setStartMode={controller.setStartMode}
-          hasCurrentLocation={controller.hasCurrentLocation}
-          customOriginText={controller.customOriginText}
-          onCustomOriginChange={(nextText) => {
-            controller.setCustomOriginText(nextText);
-            controller.setCustomOriginPoint(null);
-          }}
-          suggestions={controller.originSuggestions}
-          onPickSuggestion={controller.handleSelectOriginSuggestion}
-          customOriginPoint={controller.customOriginPoint}
-          searchMessage={controller.originSearchMessage}
-        />
-        <FavoritePlacesSection favoritePlaces={favoritePlaces} selectedIds={controller.selectedIds} onTogglePlace={controller.handleTogglePlace} />
-        <RouteSummary selectedPlaces={controller.selectedPlaces} />
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div style={MODAL_BODY_STYLE}>
+          <div style={HINT_BAR_STYLE}>
+            仅支持你已收藏且有坐标的景点，最多选择 {MAX_ROUTE_PLACES} 个，按你勾选的顺序规划。
+          </div>
+          <RouteStartSection
+            startMode={controller.startMode}
+            setStartMode={controller.setStartMode}
+            hasCurrentLocation={controller.hasCurrentLocation}
+            customOriginText={controller.customOriginText}
+            onCustomOriginChange={(nextText) => {
+              controller.setCustomOriginText(nextText);
+              controller.setCustomOriginPoint(null);
+            }}
+            suggestions={controller.originSuggestions}
+            onPickSuggestion={controller.handleSelectOriginSuggestion}
+            customOriginPoint={controller.customOriginPoint}
+            searchMessage={controller.originSearchMessage}
+          />
+          <FavoritePlacesSection
+            favoritePlaces={favoritePlaces}
+            selectedIds={controller.selectedIds}
+            onTogglePlace={controller.handleTogglePlace}
+          />
+          <RouteSummary selectedPlaces={controller.selectedPlaces} />
+        </div>
+        <div style={ACTION_ROW_STYLE}>
           <button onClick={onClose} style={CANCEL_BUTTON_STYLE}>
             取消
           </button>

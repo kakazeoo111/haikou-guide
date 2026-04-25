@@ -9,10 +9,28 @@ const LOCATION_OK_BORDER = "#d2ebde";
 const LOCATION_FAIL_BG = "#fdeeef";
 const LOCATION_FAIL_BORDER = "#f9d3d7";
 const LOCATION_FAIL_COLOR = "#d94f5c";
+const FAVORITES_CARD_STYLE = {
+  border: "1px solid #e6f0ea",
+  borderRadius: "20px",
+  overflow: "hidden",
+  background: "#f9fcfa",
+  minHeight: 0,
+  display: "flex",
+  flexDirection: "column",
+};
+const FAVORITES_LIST_STYLE = {
+  maxHeight: MODAL_LIST_MAX_HEIGHT,
+  minHeight: 0,
+  overflowY: "auto",
+  WebkitOverflowScrolling: "touch",
+  overscrollBehavior: "contain",
+  touchAction: "pan-y",
+  padding: "10px",
+};
 
 export function RoutePlannerHeader({ onClose }) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexShrink: 0 }}>
       <h2 style={{ margin: 0, color: PRIMARY_DARK_GREEN, fontSize: "20px", display: "inline-flex", alignItems: "center", gap: "8px" }}>
         <span style={{ fontSize: "22px" }}>📍</span>
         <span>规划路线</span>
@@ -112,7 +130,7 @@ export function RouteStartSection({
       {startMode === START_MODE_CUSTOM && (
         <div style={{ position: "relative" }}>
           <input
-            placeholder="搜索起点（如：海口东站）"
+            placeholder="搜索起点，例如：海口东站"
             value={customOriginText}
             onChange={(event) => onCustomOriginChange(event.target.value)}
             style={{ width: "100%", padding: "12px 14px", borderRadius: "14px", border: "1px solid #dbe7de", outline: "none", boxSizing: "border-box", background: "#f9fcfa", fontSize: "14px" }}
@@ -132,6 +150,7 @@ function FavoritePlaceRow({ place, selectedIds, onTogglePlace }) {
   const selectedIndex = selectedIds.indexOf(placeId);
   const selectedOrder = selectedIndex >= 0 ? selectedIndex + 1 : null;
   const isSelected = Boolean(selectedOrder);
+
   return (
     <div
       onClick={() => onTogglePlace(placeId)}
@@ -178,11 +197,11 @@ function FavoritePlaceRow({ place, selectedIds, onTogglePlace }) {
 
 export function FavoritePlacesSection({ favoritePlaces, selectedIds, onTogglePlace }) {
   return (
-    <div style={{ border: "1px solid #e6f0ea", borderRadius: "20px", overflow: "hidden", background: "#f9fcfa" }}>
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid #e8f2ec", fontSize: "12px", color: PRIMARY_DARK_GREEN, fontWeight: 700, letterSpacing: "0.3px" }}>
+    <div style={FAVORITES_CARD_STYLE}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid #e8f2ec", fontSize: "12px", color: PRIMARY_DARK_GREEN, fontWeight: 700, letterSpacing: "0.3px", flexShrink: 0 }}>
         可规划收藏点 ({favoritePlaces.length})
       </div>
-      <div style={{ maxHeight: MODAL_LIST_MAX_HEIGHT, overflowY: "auto", padding: "10px" }}>
+      <div style={FAVORITES_LIST_STYLE}>
         {favoritePlaces.length === 0 && <div style={{ padding: "14px 10px", fontSize: "13px", color: "#7f8f86", textAlign: "center" }}>你当前没有可用于路线规划的收藏点</div>}
         {favoritePlaces.map((place) => (
           <FavoritePlaceRow key={String(place.id)} place={place} selectedIds={selectedIds} onTogglePlace={onTogglePlace} />
@@ -195,8 +214,9 @@ export function FavoritePlacesSection({ favoritePlaces, selectedIds, onTogglePla
 export function RouteSummary({ selectedPlaces }) {
   const count = selectedPlaces.length;
   const isEmpty = count === 0;
+
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#6f877a", padding: "0 4px" }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#6f877a", padding: "0 4px", gap: "12px", flexWrap: "wrap" }}>
       <span>
         已选择 <strong style={{ color: PRIMARY_GREEN, fontSize: "13px" }}>{count}</strong>/{MAX_ROUTE_PLACES} 个
       </span>
