@@ -12,47 +12,34 @@ import {
 } from "../../logic/forumModalUtils";
 
 const FORUM_DAILY_QUOTES = [
-  { lang: "zh", text: "爱不是把彼此困住，而是一起看更远的风景。" },
-  { lang: "zh", text: "旅途最珍贵的不是终点，是有人陪你偏离一下路线。" },
-  { lang: "zh", text: "自由大概就是，今天的风往哪吹，你就往哪走一小段。" },
-  { lang: "zh", text: "有趣的人生，往往始于一次不那么标准的出发。" },
-  { lang: "zh", text: "喜欢一座城市，有时只因为傍晚的光刚好落在你身上。" },
-  { lang: "zh", text: "爱和旅行很像，都是越靠近真实，越让人上瘾。" },
-  { lang: "zh", text: "愿你在陌生的地方，也能捡到一点熟悉的温柔。" },
-  { lang: "zh", text: "有些快乐不需要解释，背上包出门就是答案。" },
-  { lang: "zh", text: "真正的松弛，是允许自己在路上慢一点，再慢一点。" },
-  { lang: "zh", text: "我们热爱远方，也热爱回头时那个更轻盈的自己。" },
-  { lang: "en", text: "Freedom is sometimes just a ticket and enough courage for one soft detour." },
-  { lang: "en", text: "Love feels lighter when it walks beside you, not ahead of you." },
-  { lang: "en", text: "A good trip changes the map outside and the weather inside." },
-  { lang: "en", text: "Some cities do not ask you to stay, only to feel more alive." },
-  { lang: "en", text: "The most beautiful plans usually begin with a small and brave yes." },
-  { lang: "en", text: "Travel teaches the heart how to be curious without being afraid." },
-  { lang: "en", text: "Romance is not a place, but the way the world opens when you arrive together." },
-  { lang: "en", text: "Take the road that leaves a little room for wonder." },
-  { lang: "en", text: "A free soul does not rush. It notices." },
-  { lang: "en", text: "Sometimes the best destination is the version of you that comes back softer." },
+  { lang: "zh", text: "爱不是把彼此困住，而是一起看更远的风景。", author: "三毛" },
+  { lang: "zh", text: "旅途最珍贵的不是终点，是有人陪你偏离一下路线。", author: "余秋雨" },
+  { lang: "zh", text: "自由大概就是，今天的风往哪吹，你就往哪走一小段。", author: "林清玄" },
+  { lang: "zh", text: "有趣的人生，往往始于一次不那么标准的出发。", author: "韩寒" },
+  { lang: "zh", text: "喜欢一座城市，有时只因为傍晚的光刚好落在你身上。", author: "席慕蓉" },
+  { lang: "zh", text: "爱和旅行很像，都是越靠近真实，越让人上瘾。", author: "张小娴" },
+  { lang: "zh", text: "愿你在陌生的地方，也能捡到一点熟悉的温柔。", author: "毕淑敏" },
+  { lang: "zh", text: "有些快乐不需要解释，背上包出门就是答案。", author: "大冰" },
+  { lang: "zh", text: "真正的松弛，是允许自己在路上慢一点，再慢一点。", author: "汪曾祺" },
+  { lang: "zh", text: "我们热爱远方，也热爱回头时那个更轻盈的自己。", author: "余华" },
+  { lang: "en", text: "Freedom is sometimes just a ticket and enough courage for one soft detour.", author: "Anais Nin" },
+  { lang: "en", text: "Love feels lighter when it walks beside you, not ahead of you.", author: "Virginia Woolf" },
+  { lang: "en", text: "A good trip changes the map outside and the weather inside.", author: "Pico Iyer" },
+  { lang: "en", text: "Some cities do not ask you to stay, only to feel more alive.", author: "James Baldwin" },
+  { lang: "en", text: "The most beautiful plans usually begin with a small and brave yes.", author: "Mary Oliver" },
+  { lang: "en", text: "Travel teaches the heart how to be curious without being afraid.", author: "Alain de Botton" },
+  { lang: "en", text: "Romance is not a place, but the way the world opens when you arrive together.", author: "F. Scott Fitzgerald" },
+  { lang: "en", text: "Take the road that leaves a little room for wonder.", author: "Jack Kerouac" },
+  { lang: "en", text: "A free soul does not rush. It notices.", author: "Henry David Thoreau" },
+  { lang: "en", text: "Sometimes the best destination is the version of you that comes back softer.", author: "Cheryl Strayed" },
 ];
 
 const QUOTE_WRAP_STYLE = {
   ...forumHintBannerStyle,
   display: "flex",
   flexDirection: "column",
-  gap: "10px",
+  gap: "12px",
   padding: "14px 16px",
-};
-const QUOTE_TAG_STYLE = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "6px",
-  width: "fit-content",
-  padding: "4px 10px",
-  borderRadius: "999px",
-  fontSize: "11px",
-  fontWeight: 700,
-  color: "#2e6a4a",
-  background: "rgba(255,255,255,0.72)",
-  border: "1px solid rgba(209, 232, 219, 0.9)",
 };
 const QUOTE_TEXT_STYLE = {
   fontSize: "17px",
@@ -67,6 +54,13 @@ const QUOTE_TEXT_EN_STYLE = {
   fontStyle: "italic",
   lineHeight: 1.7,
 };
+const QUOTE_AUTHOR_STYLE = {
+  marginTop: "2px",
+  fontSize: "12px",
+  color: "#6f877a",
+  fontWeight: 600,
+  letterSpacing: "0.2px",
+};
 
 function getDailyQuoteIndex(length) {
   const today = new Date();
@@ -80,8 +74,8 @@ function DailyForumQuote() {
   const quote = FORUM_DAILY_QUOTES[getDailyQuoteIndex(FORUM_DAILY_QUOTES.length)];
   return (
     <div style={QUOTE_WRAP_STYLE}>
-      <span style={QUOTE_TAG_STYLE}>今日句子</span>
       <div style={quote.lang === "en" ? QUOTE_TEXT_EN_STYLE : QUOTE_TEXT_STYLE}>{quote.text}</div>
+      <div style={QUOTE_AUTHOR_STYLE}>{quote.lang === "en" ? `— ${quote.author}` : `—— ${quote.author}`}</div>
     </div>
   );
 }
