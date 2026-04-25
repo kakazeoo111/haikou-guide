@@ -19,31 +19,28 @@ const COMMENT_INPUT_ID_PREFIX = "forum-comment-input-inline-";
 const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
 
 const PANEL_STYLE = {
-  marginTop: "10px",
+  marginTop: "8px",
   marginBottom: "12px",
-  border: "1px solid #e7f0ea",
-  borderRadius: "18px",
-  background: "#fcfefd",
-  overflow: "hidden",
+  borderTop: "1px solid #edf2ef",
+  background: "#fff",
 };
 const TOOLBAR_STYLE = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
   gap: "10px",
-  padding: "12px 14px",
-  borderBottom: "1px solid #edf3ef",
-  background: "#fff",
+  padding: "14px 4px 12px",
+  borderBottom: "1px solid #f0f3f1",
   flexWrap: "wrap",
 };
-const SORT_TABS_STYLE = { display: "inline-flex", alignItems: "center", gap: "14px" };
+const SORT_TABS_STYLE = { display: "inline-flex", alignItems: "center", gap: "16px" };
 const SORT_TAB_STYLE = (active) => ({
   border: "none",
   background: "transparent",
   padding: 0,
   fontSize: "13px",
   fontWeight: active ? 700 : 500,
-  color: active ? "#5aa77b" : "#8b9993",
+  color: active ? "#5aa77b" : "#8f9d96",
   cursor: "pointer",
 });
 const IMAGE_FILTER_STYLE = (active) => ({
@@ -52,15 +49,15 @@ const IMAGE_FILTER_STYLE = (active) => ({
   gap: "6px",
   padding: "6px 12px",
   borderRadius: "999px",
-  border: active ? "1px solid #cde7d8" : "1px solid #edf1ef",
-  background: active ? "#eef8f2" : "#f6f7f7",
-  color: active ? "#2f7d58" : "#99a59f",
+  border: active ? "1px solid #dcebe2" : "1px solid #edf1ef",
+  background: active ? "#f0f8f3" : "#f7f8f8",
+  color: active ? "#5aa77b" : "#98a59f",
   fontSize: "12px",
   fontWeight: 700,
   cursor: "pointer",
 });
 const COMMENTS_BODY_STYLE = {
-  padding: "14px 14px 6px",
+  padding: "0 0 4px",
 };
 const ACTION_TEXT_STYLE = {
   cursor: "pointer",
@@ -68,13 +65,12 @@ const ACTION_TEXT_STYLE = {
   color: "#5aa77b",
 };
 const DELETE_TEXT_STYLE = {
-  color: "#ff4d4f",
+  color: "#ff6b73",
   cursor: "pointer",
 };
 const COMPOSER_WRAP_STYLE = {
-  padding: "10px 14px 14px",
-  borderTop: "1px solid #edf3ef",
-  background: "#fff",
+  padding: "12px 0 4px",
+  borderTop: "1px solid #f0f3f1",
 };
 const REPLY_HINT_ROW_STYLE = {
   display: "flex",
@@ -90,8 +86,7 @@ const INPUT_BAR_STYLE = {
   display: "flex",
   alignItems: "center",
   gap: "10px",
-  background: "#f5f7f6",
-  border: "1px solid #edf1ef",
+  background: "#f6f7f7",
   borderRadius: "999px",
   padding: "8px 10px 8px 14px",
 };
@@ -121,6 +116,23 @@ const IMAGE_PREVIEW_GRID_STYLE = {
   marginTop: "10px",
   maxWidth: "240px",
 };
+const REPLY_TOGGLE_STYLE = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "10px",
+  marginTop: "10px",
+  color: "#6fae88",
+  fontSize: "12px",
+  fontWeight: 700,
+  cursor: "pointer",
+};
+const REPLY_TOGGLE_LINE_STYLE = {
+  width: "52px",
+  height: "1px",
+  background: "#7eb695",
+  opacity: 0.85,
+};
 
 function hasForumCommentImages(comment) {
   return parseForumImageUrls(comment?.image_url).length > 0;
@@ -145,6 +157,11 @@ function buildCommentTree(comments) {
   const parents = list.filter((item) => !item.parent_id);
   const children = list.filter((item) => item.parent_id);
   return { parents, children };
+}
+
+function buildReplyPrefix(reply) {
+  const content = String(reply.content || "").trim();
+  return content ? `回复：${content}` : "（图片回复）";
 }
 
 function ForumInlineCommentsPanel({
@@ -200,6 +217,7 @@ function ForumInlineCommentsPanel({
   return (
     <div style={PANEL_STYLE}>
       <style>{BADGE_ANIMATION_STYLE}</style>
+
       <div style={TOOLBAR_STYLE}>
         <div style={SORT_TABS_STYLE}>
           <button onClick={() => onSortChange("latest")} style={SORT_TAB_STYLE(sortMode === "latest")}>按照最新</button>
@@ -212,8 +230,8 @@ function ForumInlineCommentsPanel({
       </div>
 
       <div style={COMMENTS_BODY_STYLE}>
-        {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "10px 0 16px" }}>评论加载中...</div>}
-        {!loading && parents.length === 0 && <div style={{ textAlign: "center", color: "#a0aca6", padding: "8px 0 18px" }}>还没有评论，来抢个前排</div>}
+        {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0 18px" }}>评论加载中...</div>}
+        {!loading && parents.length === 0 && <div style={{ textAlign: "center", color: "#a0aca6", padding: "12px 0 20px" }}>还没有评论，来抢个前排</div>}
 
         {!loading && parents.map((parent) => {
           const replies = children
@@ -224,7 +242,7 @@ function ForumInlineCommentsPanel({
           const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
           return (
-            <div key={parent.id} style={{ marginBottom: "18px", borderBottom: "1px solid #f0f3f1", paddingBottom: "14px" }}>
+            <div key={parent.id} style={{ padding: "14px 0", borderBottom: "1px solid #f0f3f1" }}>
               <div style={{ display: "flex", gap: "10px" }}>
                 <div onClick={() => userPointsCard.openByPhone(parent.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
                   <img
@@ -239,6 +257,7 @@ function ForumInlineCommentsPanel({
                     </div>
                   )}
                 </div>
+
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
                     <div style={{ fontSize: "13px", fontWeight: 700, color: "#365243" }}>{parent.username}</div>
@@ -261,9 +280,11 @@ function ForumInlineCommentsPanel({
                       </div>
                     )}
                   </div>
+
                   <div style={{ fontSize: "15px", color: "#222", margin: "4px 0", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
                     {parent.content || "（图片评论）"}
                   </div>
+
                   {parentImages.length > 0 && (
                     <div
                       style={{
@@ -291,6 +312,7 @@ function ForumInlineCommentsPanel({
                       ))}
                     </div>
                   )}
+
                   <div style={{ display: "flex", alignItems: "center", gap: "15px", fontSize: "12px", color: "#999", marginTop: "10px", flexWrap: "wrap" }}>
                     <span>{formatCommentTime(parent.created_at)}</span>
                     <span onClick={() => onReplySelect(parent)} style={ACTION_TEXT_STYLE}>回复</span>
@@ -302,27 +324,23 @@ function ForumInlineCommentsPanel({
                       <span onClick={() => onDeleteComment(parent.id)} style={DELETE_TEXT_STYLE}>删除</span>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {replies.length > 0 && (
-                <div style={{ marginLeft: "46px", marginTop: "10px" }}>
-                  {!isExpanded && (
-                    <div
-                      onClick={() => onToggleExpand(parent.id)}
-                      style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px" }}
-                    >
-                      <div style={{ width: "20px", height: "1px", background: "#ddd" }} />
-                      <span>{`展开 ${replies.length} 条回复`}</span>
+                  {replies.length > 0 && !isExpanded && (
+                    <div onClick={() => onToggleExpand(parent.id)} style={REPLY_TOGGLE_STYLE}>
+                      <span style={REPLY_TOGGLE_LINE_STYLE} />
+                      <span>{`展开 ${replies.length} 条回复 ▼`}</span>
+                      <span style={REPLY_TOGGLE_LINE_STYLE} />
                     </div>
                   )}
-                  {isExpanded && (
-                    <div style={{ background: "#f7faf8", padding: "10px", borderRadius: "12px" }}>
+
+                  {replies.length > 0 && isExpanded && (
+                    <div style={{ marginTop: "10px" }}>
                       {replies.map((reply) => {
                         const replyImages = parseForumImageUrls(reply.image_url);
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
+
                         return (
-                          <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+                          <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px", marginLeft: "24px" }}>
                             <div onClick={() => userPointsCard.openByPhone(reply.user_phone)} style={{ ...replyAvatarWrapStyle, cursor: "pointer" }}>
                               <img
                                 src={getAvatarWithFallback(reply.avatar_url, reply.user_phone, reply.username)}
@@ -336,6 +354,7 @@ function ForumInlineCommentsPanel({
                                 </div>
                               )}
                             </div>
+
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                                 <div style={{ fontSize: "12px", fontWeight: 700, color: "#4d6157" }}>{reply.username}</div>
@@ -358,9 +377,12 @@ function ForumInlineCommentsPanel({
                                   </div>
                                 )}
                               </div>
-                              <div style={{ fontSize: "14px", color: "#333", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
-                                {reply.content || "（图片回复）"}
+
+                              <div style={{ fontSize: "14px", color: "#333", whiteSpace: "pre-wrap", lineHeight: 1.55 }}>
+                                <span style={{ color: "#5aa77b", fontWeight: 700 }}>回复：</span>
+                                {buildReplyPrefix(reply).replace(/^回复：/, "")}
                               </div>
+
                               {replyImages.length > 0 && (
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px", marginTop: "8px", maxWidth: REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH }}>
                                   {replyImages.map((url, idx) => (
@@ -375,6 +397,7 @@ function ForumInlineCommentsPanel({
                                   ))}
                                 </div>
                               )}
+
                               <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "11px", color: "#9ea9a4", marginTop: "5px", flexWrap: "wrap" }}>
                                 <span>{formatCommentTime(reply.created_at)}</span>
                                 <span onClick={() => onLikeComment(reply.id)} style={likeBtnStyle(reply.is_liked)}>
@@ -389,13 +412,16 @@ function ForumInlineCommentsPanel({
                           </div>
                         );
                       })}
-                      <div onClick={() => onToggleExpand(parent.id)} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", textAlign: "center", fontWeight: 700 }}>
-                        收起回复
+
+                      <div onClick={() => onToggleExpand(parent.id)} style={REPLY_TOGGLE_STYLE}>
+                        <span style={REPLY_TOGGLE_LINE_STYLE} />
+                        <span>收起回复 ▲</span>
+                        <span style={REPLY_TOGGLE_LINE_STYLE} />
                       </div>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </div>
           );
         })}
@@ -408,6 +434,7 @@ function ForumInlineCommentsPanel({
             <span onClick={onReplyCancel} style={{ cursor: "pointer", color: "#9aa6a0", fontSize: "16px" }}>×</span>
           </div>
         )}
+
         <div style={INPUT_BAR_STYLE}>
           <input
             id={commentInputId}
@@ -435,6 +462,7 @@ function ForumInlineCommentsPanel({
             已选择 {commentImages.length} 张图片
           </div>
         )}
+
         {commentImages.length > 0 && (
           <div style={IMAGE_PREVIEW_GRID_STYLE}>
             {commentImages.map((file, index) => (
