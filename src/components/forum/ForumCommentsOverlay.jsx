@@ -90,9 +90,6 @@ function ForumCommentsOverlay({
   formatCommentTime,
 }) {
   const userPointsCard = useUserPointsCard();
-
-  if (!visible || !post) return null;
-
   const sortedComments = useMemo(
     () => sortAndFilterForumComments(comments, sortMode, showOnlyImages),
     [comments, sortMode, showOnlyImages],
@@ -110,6 +107,8 @@ function ForumCommentsOverlay({
     parentMotionIconStyle,
     replyMotionIconStyle,
   } = buildBadgePresentation(currentUser, activeBadgeTitle, activeBadgeMeta);
+
+  if (!visible || !post) return null;
 
   return (
     <div style={fullPageOverlayStyle}>
