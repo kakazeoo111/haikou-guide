@@ -136,6 +136,59 @@ function ForumPostFeed({
   formatCommentTime,
   forumUnreadDotStyle,
 }) {
+  const activePost = activeCommentPostId ? posts.find((item) => Number(item.id) === Number(activeCommentPostId)) : null;
+
+  if (activePost) {
+    const postId = Number(activePost.id);
+    return (
+      <div style={{ flex: 1, overflowY: "auto", padding: "0 14px 24px 14px" }}>
+        <div style={{ marginBottom: "12px" }}>
+          <ForumPostCard
+            post={activePost}
+            currentUser={currentUser}
+            activeBadgeTitle={activeBadgeTitle}
+            badgeIcon={badgeIcon}
+            badgeTheme={badgeTheme}
+            callingPost={callingPostIds.includes(postId)}
+            commentsOpen
+            onOpenComments={onOpenComments}
+            onToggleCall={onToggleCall}
+            onZoomImage={onZoomImage}
+            formatCommentTime={formatCommentTime}
+          />
+          <ForumInlineCommentsPanel
+            postId={postId}
+            comments={commentsMap[postId] || []}
+            loading={loadingCommentPostIds.includes(postId)}
+            sortMode={commentSortMode}
+            showOnlyImages={Boolean(showOnlyImageCommentMap[postId])}
+            expandedParentIds={expandedCommentParentIdsMap[postId] || []}
+            currentUser={currentUser}
+            activeBadgeTitle={activeBadgeTitle}
+            activeBadgeMeta={activeBadgeMeta}
+            replyTarget={replyTargetMap[postId] || null}
+            commentDraft={commentDraftMap[postId] || ""}
+            commentImages={commentImagesMap[postId] || []}
+            submitting={submittingCommentPostIds.includes(postId)}
+            onSortChange={onSortComments}
+            onToggleShowOnlyImages={() => onToggleCommentImageOnly(postId)}
+            onToggleExpand={(parentId) => onToggleReplyExpand(postId, parentId)}
+            onReplySelect={(comment) => onReplySelect(postId, comment)}
+            onReplyCancel={() => onReplyCancel(postId)}
+            onCommentDraftChange={(value) => onCommentDraftChange(postId, value)}
+            onSelectCommentImages={(event) => onSelectCommentImages(postId, event)}
+            onRemoveCommentImage={(index) => onRemoveCommentImage(postId, index)}
+            onSubmitComment={() => onSubmitComment(postId)}
+            onLikeComment={(commentId) => onLikeComment(postId, commentId)}
+            onDeleteComment={(commentId) => onDeleteComment(postId, commentId)}
+            onZoomImage={onZoomImage}
+            formatCommentTime={formatCommentTime}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 24px 14px" }}>
       <DailyForumQuote />
@@ -184,7 +237,6 @@ function ForumPostFeed({
 
       {!loadingPosts && posts.map((post) => {
         const postId = Number(post.id);
-        const commentsOpen = Number(activeCommentPostId) === postId;
         return (
           <div key={post.id} id={getForumPostDomId(post.id)} style={{ marginBottom: "12px" }}>
             <ForumPostCard
@@ -194,42 +246,12 @@ function ForumPostFeed({
               badgeIcon={badgeIcon}
               badgeTheme={badgeTheme}
               callingPost={callingPostIds.includes(postId)}
-              commentsOpen={commentsOpen}
+              commentsOpen={false}
               onOpenComments={onOpenComments}
               onToggleCall={onToggleCall}
               onZoomImage={onZoomImage}
               formatCommentTime={formatCommentTime}
             />
-            {commentsOpen && (
-              <ForumInlineCommentsPanel
-                postId={postId}
-                comments={commentsMap[postId] || []}
-                loading={loadingCommentPostIds.includes(postId)}
-                sortMode={commentSortMode}
-                showOnlyImages={Boolean(showOnlyImageCommentMap[postId])}
-                expandedParentIds={expandedCommentParentIdsMap[postId] || []}
-                currentUser={currentUser}
-                activeBadgeTitle={activeBadgeTitle}
-                activeBadgeMeta={activeBadgeMeta}
-                replyTarget={replyTargetMap[postId] || null}
-                commentDraft={commentDraftMap[postId] || ""}
-                commentImages={commentImagesMap[postId] || []}
-                submitting={submittingCommentPostIds.includes(postId)}
-                onSortChange={onSortComments}
-                onToggleShowOnlyImages={() => onToggleCommentImageOnly(postId)}
-                onToggleExpand={(parentId) => onToggleReplyExpand(postId, parentId)}
-                onReplySelect={(comment) => onReplySelect(postId, comment)}
-                onReplyCancel={() => onReplyCancel(postId)}
-                onCommentDraftChange={(value) => onCommentDraftChange(postId, value)}
-                onSelectCommentImages={(event) => onSelectCommentImages(postId, event)}
-                onRemoveCommentImage={(index) => onRemoveCommentImage(postId, index)}
-                onSubmitComment={() => onSubmitComment(postId)}
-                onLikeComment={(commentId) => onLikeComment(postId, commentId)}
-                onDeleteComment={(commentId) => onDeleteComment(postId, commentId)}
-                onZoomImage={onZoomImage}
-                formatCommentTime={formatCommentTime}
-              />
-            )}
           </div>
         );
       })}

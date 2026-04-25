@@ -1,5 +1,13 @@
-import { useMemo } from "react";
-import { bottomInputContainer, bottomRealInput, btnSendStyle, likeBtnStyle } from "../../styles/appStyles";
+import {
+  bottomInputContainer,
+  bottomRealInput,
+  btnSendStyle,
+  fixedBottomBarStyle,
+  likeBtnStyle,
+  scrollContentStyle,
+  sortBtnStyle,
+  sortContainerStyle,
+} from "../../styles/appStyles";
 import {
   BADGE_ANIMATION_STYLE,
   PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH,
@@ -26,13 +34,7 @@ function sortAndFilterForumComments(comments, sortMode, showOnlyImages) {
   const source = Array.isArray(comments) ? [...comments] : [];
   const list = showOnlyImages ? source.filter(hasForumCommentImages) : source;
   if (sortMode === "latest") return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  if (sortMode === "hot") {
-    return list.sort((a, b) => {
-      const likeDiff = Number(b.like_count || 0) - Number(a.like_count || 0);
-      if (likeDiff !== 0) return likeDiff;
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
-  }
+  if (sortMode === "hot") return list.sort((a, b) => (Number(b.like_count || 0) - Number(a.like_count || 0)) || (new Date(b.created_at) - new Date(a.created_at)));
   return list;
 }
 
@@ -65,7 +67,7 @@ function ForumInlineCommentsPanel({
   formatCommentTime,
 }) {
   const userPointsCard = useUserPointsCard();
-  const sorted = useMemo(() => sortAndFilterForumComments(comments, sortMode, showOnlyImages), [comments, sortMode, showOnlyImages]);
+  const sorted = sortAndFilterForumComments(comments, sortMode, showOnlyImages);
   const parents = sorted.filter((item) => !item.parent_id);
   const children = sorted.filter((item) => item.parent_id);
   const {
@@ -85,15 +87,15 @@ function ForumInlineCommentsPanel({
   const commentImageInputId = `${COMMENT_IMAGE_INPUT_ID_PREFIX}${postId}`;
 
   return (
-    <div style={{ marginTop: "10px", paddingTop: "2px" }}>
+    <>
       <style>{BADGE_ANIMATION_STYLE}</style>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", borderTop: "1px solid #eef2ef", borderBottom: "1px solid #eef2ef" }}>
+      <div style={{ ...sortContainerStyle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", gap: "15px" }}>
-          <button onClick={() => onSortChange("latest")} style={{ border: "none", background: "transparent", fontSize: "12px", color: sortMode === "latest" ? "#5aa77b" : "#999", fontWeight: sortMode === "latest" ? "bold" : "normal", cursor: "pointer", padding: "4px 0", borderBottom: sortMode === "latest" ? "2px solid #5aa77b" : "2px solid transparent" }}>
+          <button onClick={() => onSortChange("latest")} style={sortBtnStyle(sortMode === "latest")}>
             按照最新
           </button>
-          <button onClick={() => onSortChange("hot")} style={{ border: "none", background: "transparent", fontSize: "12px", color: sortMode === "hot" ? "#5aa77b" : "#999", fontWeight: sortMode === "hot" ? "bold" : "normal", cursor: "pointer", padding: "4px 0", borderBottom: sortMode === "hot" ? "2px solid #5aa77b" : "2px solid transparent" }}>
+          <button onClick={() => onSortChange("hot")} style={sortBtnStyle(sortMode === "hot")}>
             按照最火
           </button>
         </div>
@@ -110,15 +112,15 @@ function ForumInlineCommentsPanel({
             transition: "0.2s",
           }}
         >
-          {showOnlyImages ? "🖼️ 仅看图片" : "🖼️ 仅看图片"}
+          🖼️ 仅看图片
         </div>
       </div>
 
-      <div style={{ padding: "14px 0 0" }}>
+      <div style={{ ...scrollContentStyle, padding: "20px 0 0" }}>
         {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
-        {!loading && parents.length === 0 && <div style={{ textAlign: "center", color: "#bbb", padding: "18px 0" }}>暂无相关评论...</div>}
+        {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "40px", color: "#bbb" }}>暂无相关评论...</div>}
 
-        {!loading && parents.map((parent) => {
+        {parents.map((parent) => {
           const replies = children
             .filter((child) => String(child.parent_id) === String(parent.id))
             .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
@@ -153,7 +155,7 @@ function ForumInlineCommentsPanel({
                       </div>
                     )}
                   </div>
-                  <div style={{ fontSize: "15px", color: "#222", margin: "4px 0", whiteSpace: "pre-wrap" }}>{parent.content || "（图片评论）"}</div>
+                  <div style={{ fontSize: "15px", color: "#222", margin: "4px 0" }}>{parent.content || "（图片评论）"}</div>
                   {parentImages.length > 0 && (
                     <div
                       style={{
@@ -207,7 +209,7 @@ function ForumInlineCommentsPanel({
                       style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px" }}
                     >
                       <div style={{ width: "20px", height: "1px", background: "#ddd" }} />
-                      {`展开 ${replies.length} 条回复 ▼`}
+                      展开 {replies.length} 条回复 ▼
                     </div>
                   )}
                   {isExpanded && (
@@ -280,9 +282,10 @@ function ForumInlineCommentsPanel({
             </div>
           );
         })}
+        <div style={{ height: "120px" }} />
       </div>
 
-      <div style={{ padding: "4px 0 0" }}>
+      <div style={fixedBottomBarStyle}>
         {replyTarget && (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 10px 8px", fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>
             <span>{`正在回复 @${replyTarget.username}`}</span>
@@ -312,44 +315,15 @@ function ForumInlineCommentsPanel({
             {submitting ? "发布中..." : "发布"}
           </button>
         </div>
-
         {commentImages.length > 0 && (
           <div style={{ fontSize: "10px", color: "#5aa77b", marginTop: "5px", fontWeight: "bold" }}>
             已选择 {commentImages.length} 张图片
           </div>
         )}
-        {commentImages.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", maxWidth: "260px" }}>
-            {commentImages.map((file, index) => (
-              <div key={`${file.name}-${index}`} style={{ position: "relative" }}>
-                <img src={URL.createObjectURL(file)} alt="forum-comment-selected" style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover" }} />
-                <span
-                  onClick={() => onRemoveCommentImage(index)}
-                  style={{
-                    position: "absolute",
-                    top: "-6px",
-                    right: "-6px",
-                    width: "18px",
-                    height: "18px",
-                    borderRadius: "50%",
-                    background: "#ff4d4f",
-                    color: "#fff",
-                    textAlign: "center",
-                    lineHeight: "18px",
-                    cursor: "pointer",
-                    fontSize: "12px",
-                  }}
-                >
-                  ×
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <UserPointsCardModal visible={userPointsCard.visible} loading={userPointsCard.loading} data={userPointsCard.data} onClose={userPointsCard.close} />
-    </div>
+    </>
   );
 }
 
