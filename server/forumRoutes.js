@@ -351,7 +351,7 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
         await pool.execute("DELETE FROM forum_comment_likes WHERE comment_id = ? AND user_phone = ?", [normalizedCommentId, normalizedPhone]);
       } else {
         await pool.execute("INSERT INTO forum_comment_likes (comment_id, user_phone) VALUES (?, ?)", [normalizedCommentId, normalizedPhone]);
-        await sendNotice(owner.user_phone, normalizedPhone, "forum_reply", buildForumNoticePlaceId(Number(owner.post_id)), "点赞了你的论坛评论");
+        await sendNotice(owner.user_phone, normalizedPhone, "forum_comment_like", buildForumNoticePlaceId(Number(owner.post_id)), "点赞了你的论坛评论");
       }
 
       const [countRows] = await pool.execute("SELECT COUNT(*) AS count FROM forum_comment_likes WHERE comment_id = ?", [normalizedCommentId]);
@@ -401,6 +401,42 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     } catch (error) {
       console.error("论坛评论发布失败:", error.message);
       res.status(500).json({ ok: false, message: `论坛评论发布失败: ${error.message}` });
+    }
+  });
+
+  app.post("/api/forum/comment/delete", async (req, res) => {
+    const { phone, commentId } = req.body;
+    const normalizedPhone = String(phone || "").trim();
+    const normalizedCommentId = parsePositiveInt(commentId);
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
+    if (!normalizedCommentId) return res.status(400).json({ ok: false, message: "评论ID无效" });
+
+    try {
+      const [rows] = await pool.execute(
+        "SELECT id, post_id, parent_id, user_phone FROM forum_comments WHERE id = ? LIMIT 1",
+        [normalizedCommentId]
+      );
+      const targetComment = rows[0];
+      if (!targetComment) return res.status(404).json({ ok: false, message: "评论不存在" });
+      if (String(targetComment.user_phone || "") !== normalizedPhone) {
+        return res.status(403).json({ ok: false, message: "只能删除自己的评论" });
+      }
+
+      const idsToDelete = [normalizedCommentId];
+      if (!targetComment.parent_id) {
+        const [childRows] = await pool.execute(
+          "SELECT id FROM forum_comments WHERE parent_id = ?",
+          [normalizedCommentId]
+        );
+        childRows.forEach((item) => idsToDelete.push(Number(item.id)));
+      }
+      const placeholders = idsToDelete.map(() => "?").join(", ");
+      await pool.execute(`DELETE FROM forum_comment_likes WHERE comment_id IN (${placeholders})`, idsToDelete);
+      await pool.execute(`DELETE FROM forum_comments WHERE id IN (${placeholders})`, idsToDelete);
+      res.json({ ok: true, deletedIds: idsToDelete });
+    } catch (error) {
+      console.error("论坛评论删除失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛评论删除失败: ${error.message}` });
     }
   });
 }

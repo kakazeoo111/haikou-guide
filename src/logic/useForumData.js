@@ -8,7 +8,7 @@ import {
   splitValidForumFiles,
 } from "./forumModalUtils";
 
-const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply"];
+const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply", "forum_comment_like"];
 
 function toForumNotifications(notifications) {
   return (notifications || []).filter((notice) => {
@@ -215,6 +215,29 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     }
   };
 
+  const handleDeleteComment = async (postId, commentId) => {
+    if (!window.confirm("确定删除这条评论吗？")) return;
+    try {
+      const res = await fetch(`${authApiBase}/api/forum/comment/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, commentId }),
+      });
+      const data = await res.json();
+      if (!data.ok) return alert(data.message || "评论删除失败");
+      setReplyTargetMap((prev) => {
+        const currentReply = prev[postId];
+        if (!currentReply || Number(currentReply.id) !== Number(commentId)) return prev;
+        return { ...prev, [postId]: null };
+      });
+      await loadComments(postId);
+      await loadPosts(searchKeyword, sortMode);
+    } catch (error) {
+      console.error("论坛评论删除失败:", error);
+      alert("网络错误，评论删除失败");
+    }
+  };
+
   const handleToggleCall = async (postId) => {
     if (callingPostIds.includes(postId)) return;
     setCallingPostIds((prev) => [...prev, postId]);
@@ -277,6 +300,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     handleSubmitPost,
     handleSubmitComment,
     handleLikeComment,
+    handleDeleteComment,
     handleToggleCall,
   };
 }

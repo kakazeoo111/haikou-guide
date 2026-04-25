@@ -24,7 +24,7 @@ async function ensureNotificationsTable(pool) {
   await ensureNotificationTypeColumn(pool);
 }
 
-const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply"];
+const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply", "forum_comment_like"];
 
 export async function registerNotificationRoutes(app, { pool }) {
   await ensureNotificationsTable(pool);

@@ -5,6 +5,20 @@ import { buildImageLoadingProps } from "../logic/imageProps";
 import { optimizeUploadImages } from "../logic/uploadImageOptimizer";
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 
+async function readJsonSafely(response) {
+  const rawText = await response.text();
+  if (!rawText) return {};
+  try {
+    return JSON.parse(rawText);
+  } catch (error) {
+    console.error("notice modal: response json parse failed", error);
+    return {
+      ok: false,
+      message: response.ok ? "返回数据格式异常" : `请求失败（${response.status}）`,
+    };
+  }
+}
+
 function getNoticeText(notice) {
   if (notice.type === "like_place") return "点赞了你的分享";
   if (notice.type === "like_comment") return "点赞了你的评论";
@@ -12,6 +26,7 @@ function getNoticeText(notice) {
   if (notice.type === "admin_reply") return `给你发来回信：${notice.content || ""}`;
   if (notice.type === "forum_call") return "给你的论坛动态打了 call";
   if (notice.type === "forum_comment") return `评论了你的论坛动态：${notice.content || ""}`;
+  if (notice.type === "forum_comment_like") return "点赞了你的论坛评论";
   if (notice.type === "forum_reply") return `回复了你的论坛评论：${notice.content || ""}`;
   return notice.content || "给你发送了一条消息";
 }
@@ -140,12 +155,21 @@ function NoticeListModal({
 
   const handleMarkRead = async () => {
     try {
-      await fetch(`${authApiBase}${markReadPath}`, {
+      const res = await fetch(`${authApiBase}${markReadPath}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone }),
       });
-      await onRefresh?.();
+      const data = await readJsonSafely(res);
+      if (!res.ok || data?.ok === false) {
+        alert(data?.message || "操作失败，请稍后再试");
+        return;
+      }
+      try {
+        await onRefresh?.();
+      } catch (refreshError) {
+        console.error("notice modal: refresh after mark-read failed", refreshError);
+      }
     } catch (error) {
       console.error("消息已读失败:", error);
       alert("操作失败，请稍后再试");
@@ -160,12 +184,17 @@ function NoticeListModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone }),
       });
-      const data = await res.json();
-      if (!data.ok) {
-        alert(data.message || "删除失败");
+      const data = await readJsonSafely(res);
+      if (!res.ok || data?.ok === false) {
+        alert(data?.message || "删除失败");
         return;
       }
-      await onRefresh?.();
+      onClose?.();
+      try {
+        await onRefresh?.();
+      } catch (refreshError) {
+        console.error("notice modal: refresh after clear failed", refreshError);
+      }
       alert(data.message || clearSuccessText);
     } catch (error) {
       console.error("消息清空失败:", error);

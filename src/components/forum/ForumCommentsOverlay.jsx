@@ -86,6 +86,7 @@ function ForumCommentsOverlay({
   onRemoveCommentImage,
   onSubmitComment,
   onLikeComment,
+  onDeleteComment,
   onZoomImage,
   formatCommentTime,
 }) {
@@ -288,6 +289,11 @@ function ForumCommentsOverlay({
                       <LikeHeartIcon liked={Boolean(parent.is_liked)} size={14} />
                       <span>{Number(parent.like_count || 0)}</span>
                     </span>
+                    {String(parent.user_phone || "") === String(currentUser?.phone || "") && (
+                      <span onClick={() => onDeleteComment(parent.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
+                        删除
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -369,6 +375,11 @@ function ForumCommentsOverlay({
                                   <LikeHeartIcon liked={Boolean(reply.is_liked)} size={14} />
                                   <span>{Number(reply.like_count || 0)}</span>
                                 </span>
+                                {String(reply.user_phone || "") === String(currentUser?.phone || "") && (
+                                  <span onClick={() => onDeleteComment(reply.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
+                                    删除
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>

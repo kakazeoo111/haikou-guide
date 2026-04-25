@@ -180,6 +180,7 @@ function ForumModal({
         onRemoveCommentImage={(index) => forum.handleRemoveCommentImage(forum.activeCommentPostId, index)}
         onSubmitComment={() => forum.handleSubmitComment(forum.activeCommentPostId)}
         onLikeComment={(commentId) => forum.handleLikeComment(forum.activeCommentPostId, commentId)}
+        onDeleteComment={(commentId) => forum.handleDeleteComment(forum.activeCommentPostId, commentId)}
         onZoomImage={onZoomImage}
         formatCommentTime={formatCommentTime}
       />

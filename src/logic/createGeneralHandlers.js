@@ -38,17 +38,22 @@ export function createGeneralHandlers(ctx) {
   const fetchNotices = async (preferCache = true) => {
     if (!currentUser) return;
     const cacheKey = `notifications_${currentUser.phone}`;
-    if (preferCache) {
-      const cachedData = readCachedValue(cacheKey, APP_CACHE_TTL_MS.notifications);
-      if (cachedData?.ok && Array.isArray(cachedData.data)) setNotifications(cachedData.data);
+    try {
+      if (preferCache) {
+        const cachedData = readCachedValue(cacheKey, APP_CACHE_TTL_MS.notifications);
+        if (cachedData?.ok && Array.isArray(cachedData.data)) setNotifications(cachedData.data);
+      }
+      const res = await fetch(`${authApiBase}/api/notifications/${currentUser.phone}`);
+      const data = await res.json();
+      if (data.ok) {
+        setNotifications(data.data);
+        writeCachedValue(cacheKey, data);
+      }
+      return data;
+    } catch (error) {
+      console.error("获取通知失败:", error);
+      return { ok: false, message: "通知获取失败" };
     }
-    const res = await fetch(`${authApiBase}/api/notifications/${currentUser.phone}`);
-    const data = await res.json();
-    if (data.ok) {
-      setNotifications(data.data);
-      writeCachedValue(cacheKey, data);
-    }
-    return data;
   };
 
   const fetchComments = async (id) => {
