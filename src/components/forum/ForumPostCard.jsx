@@ -84,6 +84,7 @@ function ForumPostCard({
   const isExplorerBadge = String(activeBadgeTitle || "") === "探店能手";
   const badgeGlyph = isExplorerBadge ? "✧" : motionBadgeVariant.glyph;
   const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
+  const commentCount = Number(post.comment_count || 0);
 
   return (
     <>
@@ -121,9 +122,19 @@ function ForumPostCard({
         )}
 
         <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          <span onClick={() => onOpenComments(postId)} style={{ fontSize: "12px", color: "#5aa77b", cursor: "pointer", fontWeight: 700 }}>
-            {commentsOpen ? `收起评论 (${Number(post.comment_count || 0)})` : `查看评论 (${Number(post.comment_count || 0)})`}
-          </span>
+          {commentsOpen ? (
+            <span onClick={() => onOpenComments(postId)} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", fontWeight: "bold" }}>
+              —— 收起评论 ▲ ——
+            </span>
+          ) : (
+            <span
+              onClick={() => onOpenComments(postId)}
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px", fontWeight: 600 }}
+            >
+              <span style={{ width: "20px", height: "1px", background: "#ddd" }} />
+              展开 {commentCount} 条评论 ▼
+            </span>
+          )}
           <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px" }}>
             <span onClick={() => onToggleCall(postId)} style={callBtnStyle(Boolean(post.is_called), callingPost)}>
               <span style={{ fontSize: "13px" }}>{post.is_called ? "⚡" : "✧"}</span>
