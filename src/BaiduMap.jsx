@@ -10,7 +10,7 @@ const PLACE_LABEL_OFFSET_Y = -12;
 const FALLBACK_DESKTOP = "电脑端已关闭地图渲染，请使用手机端查看地图。";
 const FALLBACK_SDK = "地图加载失败：未检测到百度地图 SDK，请检查网络后重试。";
 const FALLBACK_INIT = "地图初始化失败，请刷新后重试。";
-const FALLBACK_RENDER = "地图渲染失败，请刷新后重试。";
+const FALLBACK_RENDER = "地图渲染失败.请刷新后重试。";
 const mapStyle = { width: "100%", height: "100%" };
 const mapFallbackWrapStyle = {
   width: "100%",
