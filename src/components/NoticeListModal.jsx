@@ -10,7 +10,7 @@ function getNoticeText(notice) {
   if (notice.type === "like_comment") return "点赞了你的评论";
   if (notice.type === "reply") return `回复了你：${notice.content || ""}`;
   if (notice.type === "admin_reply") return `给你发来回信：${notice.content || ""}`;
-  if (notice.type === "forum_call") return "给你的论坛动态打了call";
+  if (notice.type === "forum_call") return "给你的论坛动态打了 call";
   if (notice.type === "forum_comment") return `评论了你的论坛动态：${notice.content || ""}`;
   if (notice.type === "forum_reply") return `回复了你的论坛评论：${notice.content || ""}`;
   return notice.content || "给你发送了一条消息";
@@ -38,6 +38,10 @@ function NoticeListModal({
   modalTitle = "消息中心",
   emptyText = "暂无消息",
   markReadPath = "/api/notifications/read",
+  clearPath = "/api/notifications/clear",
+  clearButtonText = "清空全部",
+  clearConfirmText = "确定要清空这些消息吗？",
+  clearSuccessText = "消息已清空",
   showClearButton = true,
 }) {
   const [showThreadModal, setShowThreadModal] = useState(false);
@@ -82,7 +86,7 @@ function NoticeListModal({
   const handleOpenAdminReply = async (notice) => {
     const feedbackId = parseFeedbackIdFromNotice(notice);
     if (!feedbackId) {
-      alert("该回信缺少关联反馈ID，无法查看详情");
+      alert("该回信缺少关联反馈 ID，无法查看详情");
       return;
     }
     setShowThreadModal(true);
@@ -125,7 +129,7 @@ function NoticeListModal({
       setFollowupImages([]);
       alert(data.message || "补充回信已发送");
       await fetchFeedbackThread(threadRootId);
-      await onRefresh();
+      await onRefresh?.();
     } catch (error) {
       console.error("补充回信请求失败:", error);
       alert("网络错误，请稍后再试");
@@ -141,7 +145,7 @@ function NoticeListModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone }),
       });
-      onRefresh();
+      await onRefresh?.();
     } catch (error) {
       console.error("消息已读失败:", error);
       alert("操作失败，请稍后再试");
@@ -149,20 +153,20 @@ function NoticeListModal({
   };
 
   const handleClear = async () => {
-    if (!window.confirm("确定要清空所有消息记录吗？")) return;
+    if (!window.confirm(clearConfirmText)) return;
     try {
-      const res = await fetch(`${authApiBase}/api/notifications/clear`, {
+      const res = await fetch(`${authApiBase}${clearPath}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone }),
       });
       const data = await res.json();
       if (!data.ok) {
-        alert(data.message || "清空失败");
+        alert(data.message || "删除失败");
         return;
       }
-      onRefresh();
-      alert("消息已全部清空");
+      await onRefresh?.();
+      alert(data.message || clearSuccessText);
     } catch (error) {
       console.error("消息清空失败:", error);
       alert("网络错误，请稍后再试");
@@ -217,7 +221,7 @@ function NoticeListModal({
                   </div>
                   <div style={{ fontSize: "11px", color: "#bbb", marginTop: "6px", display: "flex", justifyContent: "space-between" }}>
                     <span>{formatCommentTime(notice.created_at)}</span>
-                    <span style={{ color: "#5aa77b" }}>{isClickable ? "点击查看 ➜" : "站主回信"}</span>
+                    <span style={{ color: "#5aa77b" }}>{isClickable ? "点击查看 →" : "站内消息"}</span>
                   </div>
                 </div>
               </div>
@@ -231,7 +235,7 @@ function NoticeListModal({
           </button>
           {showClearButton && (
             <button onClick={handleClear} style={{ ...btnMainStyle, flex: 1, marginTop: 0, background: "#ff4d4f" }}>
-              清空全部
+              {clearButtonText}
             </button>
           )}
         </div>

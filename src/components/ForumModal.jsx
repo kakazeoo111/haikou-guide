@@ -12,11 +12,10 @@ import ForumPostFeed from "./forum/ForumPostFeed";
 
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
 const FORUM_UNREAD_DOT_STYLE = {
-  width: "9px",
-  height: "9px",
+  width: "7px",
+  height: "7px",
   borderRadius: "50%",
-  background: "linear-gradient(135deg, #58b783 0%, #2f8f63 100%)",
-  boxShadow: "0 0 0 2px #e6f6ed, 0 3px 8px rgba(47, 143, 99, 0.28)",
+  background: "#ff4d4f",
 };
 
 function getPostIdFromNotice(notice) {
@@ -92,7 +91,7 @@ function ForumModal({
       <div style={forumHeaderStyle}>
         <span onClick={onBack} style={{ cursor: "pointer", fontSize: "18px", color: "#5a6e65" }}>&lt; 返回</span>
         <span style={{ fontWeight: 700, color: "#2e6a4a", display: "inline-flex", alignItems: "center", gap: "6px" }}>
-          <span>🗒️</span>
+          <span>🗐</span>
           <span>7天论坛</span>
         </span>
         <span style={{ width: "58px" }} />
@@ -167,7 +166,11 @@ function ForumModal({
         modalTitle="论坛互动"
         emptyText="暂无互动"
         markReadPath="/api/notifications/read-forum"
-        showClearButton={false}
+        clearPath="/api/notifications/clear-forum"
+        clearButtonText="全部删除"
+        clearConfirmText="确定要删除全部互动消息吗？"
+        clearSuccessText="互动消息已删除"
+        showClearButton
       />
     </div>
   );

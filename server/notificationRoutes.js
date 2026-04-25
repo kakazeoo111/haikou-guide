@@ -31,7 +31,7 @@ export async function registerNotificationRoutes(app, { pool }) {
 
   app.get("/api/notifications/:phone", async (req, res) => {
     try {
-      const sql = `SELECT n.*, COALESCE(u.username, n.sender_phone) as sender_name, u.avatar_url as sender_avatar
+      const sql = `SELECT n.*, COALESCE(u.username, n.sender_phone) AS sender_name, u.avatar_url AS sender_avatar
                    FROM notifications n
                    LEFT JOIN users u ON n.sender_phone = u.phone
                    WHERE n.receiver_phone = ?
@@ -63,6 +63,22 @@ export async function registerNotificationRoutes(app, { pool }) {
       );
       res.json({ ok: true });
     } catch (error) {
+      res.status(500).json({ ok: false });
+    }
+  });
+
+  app.post("/api/notifications/clear-forum", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      await pool.execute(
+        `DELETE FROM notifications
+         WHERE receiver_phone = ?
+           AND (type IN (?, ?, ?) OR place_id LIKE 'forum_%')`,
+        [phone, ...FORUM_NOTICE_TYPES],
+      );
+      res.json({ ok: true, message: "论坛互动已删除" });
+    } catch (error) {
+      console.error("删除论坛互动失败:", error.message);
       res.status(500).json({ ok: false });
     }
   });
