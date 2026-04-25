@@ -50,6 +50,7 @@ function ForumInlineCommentsPanel({
   onLikeComment,
   onDeleteComment,
   onZoomImage,
+  onCloseComments,
   formatCommentTime,
 }) {
   const userPointsCard = useUserPointsCard();
@@ -242,6 +243,9 @@ function ForumInlineCommentsPanel({
             </div>
           );
         })}
+        <div onClick={onCloseComments} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", textAlign: "center", fontWeight: "bold", marginTop: "6px" }}>
+          —— 收起评论区 ▲ ——
+        </div>
         <div style={{ height: "120px" }} />
       </div>
 

@@ -122,20 +122,15 @@ function ForumPostCard({
         )}
 
         <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          {commentCount > 0 &&
-            (commentsOpen ? (
-              <span onClick={() => onOpenComments(postId)} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", fontWeight: "bold" }}>
-                —— 收起评论 ▲ ——
-              </span>
-            ) : (
-              <span
-                onClick={() => onOpenComments(postId)}
-                style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px", fontWeight: 600 }}
-              >
-                <span style={{ width: "20px", height: "1px", background: "#ddd" }} />
-                展开 {commentCount} 条评论 ▼
-              </span>
-            ))}
+          {commentCount > 0 && !commentsOpen && (
+            <span
+              onClick={() => onOpenComments(postId)}
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px", fontWeight: 600 }}
+            >
+              <span style={{ width: "20px", height: "1px", background: "#ddd" }} />
+              展开 {commentCount} 条评论 ▼
+            </span>
+          )}
           <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px" }}>
             <span onClick={() => onToggleCall(postId)} style={callBtnStyle(Boolean(post.is_called), callingPost)}>
               <span style={{ fontSize: "13px" }}>{post.is_called ? "⚡" : "✧"}</span>

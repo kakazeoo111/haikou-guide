@@ -223,6 +223,7 @@ function ForumPostFeed({
                 onLikeComment={(commentId) => onLikeComment(postId, commentId)}
                 onDeleteComment={(commentId) => onDeleteComment(postId, commentId)}
                 onZoomImage={onZoomImage}
+                onCloseComments={() => onOpenComments(postId)}
                 formatCommentTime={formatCommentTime}
               />
             )}
