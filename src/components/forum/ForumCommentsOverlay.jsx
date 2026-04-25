@@ -26,8 +26,7 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const COMMENT_INPUT_ID = "forum-comment-input-overlay";
 const COMMENT_IMAGE_INPUT_ID = "forum-comment-images-input-overlay";
-const PARENT_COMMENT_INDENT = "16px";
-const REPLY_THREAD_INDENT = "72px";
+const REPLY_THREAD_INDENT = "46px";
 
 function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
@@ -169,7 +168,7 @@ function ForumCommentsOverlay({
           const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
           return (
-            <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px", marginLeft: PARENT_COMMENT_INDENT }}>
+            <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
               <div style={{ display: "flex", gap: "10px" }}>
                 <div onClick={() => userPointsCard.openByPhone(parent.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
                   <img
@@ -262,11 +261,11 @@ function ForumCommentsOverlay({
                       style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px" }}
                     >
                       <div style={{ width: "20px", height: "1px", background: "#ddd" }} />
-                      展开 {replies.length} 条回复
+                      展开 {replies.length} 条回复 ▼
                     </div>
                   )}
                   {isExpanded && (
-                    <div style={{ background: "#f9f9f9", padding: "10px 10px 10px 14px", borderRadius: "8px" }}>
+                    <div style={{ background: "#f9f9f9", padding: "10px", borderRadius: "8px" }}>
                       {replies.map((reply) => {
                         const replyImages = parseForumImageUrls(reply.image_url);
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
@@ -342,7 +341,7 @@ function ForumCommentsOverlay({
                         );
                       })}
                       <div onClick={() => onToggleExpand(parent.id)} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", textAlign: "center", fontWeight: "bold" }}>
-                        收起回复
+                        —— 收起回复 ▲ ——
                       </div>
                     </div>
                   )}

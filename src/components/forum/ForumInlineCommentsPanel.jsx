@@ -23,8 +23,7 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const COMMENT_INPUT_ID_PREFIX = "forum-comment-input-inline-";
 const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
-const PARENT_COMMENT_INDENT = "16px";
-const REPLY_THREAD_INDENT = "72px";
+const REPLY_THREAD_INDENT = "46px";
 
 function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
@@ -92,7 +91,7 @@ function ForumInlineCommentsPanel({
           const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
           return (
-            <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px", marginLeft: PARENT_COMMENT_INDENT }}>
+            <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
               <div style={{ display: "flex", gap: "10px" }}>
                 <div onClick={() => userPointsCard.openByPhone(parent.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
                   <img
@@ -176,7 +175,7 @@ function ForumInlineCommentsPanel({
                     </div>
                   )}
                   {isExpanded && (
-                    <div style={{ background: "#f9f9f9", padding: "10px 10px 10px 14px", borderRadius: "8px" }}>
+                    <div style={{ background: "#f9f9f9", padding: "10px", borderRadius: "8px" }}>
                       {replies.map((reply) => {
                         const replyImages = parseForumImageUrls(reply.image_url);
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
