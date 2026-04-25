@@ -24,7 +24,7 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 const COMMENT_INPUT_ID_PREFIX = "forum-comment-input-inline-";
 const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
 const PARENT_COMMENT_INDENT = "16px";
-const REPLY_THREAD_INDENT = "60px";
+const REPLY_THREAD_INDENT = "72px";
 
 function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
