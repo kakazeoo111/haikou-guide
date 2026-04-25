@@ -23,8 +23,6 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const COMMENT_INPUT_ID_PREFIX = "forum-comment-input-inline-";
 const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
-const REPLY_THREAD_INDENT = "46px";
-
 function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
   return source.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -78,9 +76,9 @@ function ForumInlineCommentsPanel({
     <>
       <style>{BADGE_ANIMATION_STYLE}</style>
 
-      <div style={{ ...scrollContentStyle, padding: "20px 0 0" }}>
+      <div style={scrollContentStyle}>
         {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
-        {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "40px", color: "#bbb" }}>暂无相关评论...</div>}
+        {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>暂无相关评论...</div>}
 
         {parents.map((parent) => {
           const replies = children
@@ -164,7 +162,7 @@ function ForumInlineCommentsPanel({
               </div>
 
               {replies.length > 0 && (
-                <div style={{ marginLeft: REPLY_THREAD_INDENT, marginTop: "10px" }}>
+                <div style={{ marginLeft: "46px", marginTop: "10px" }}>
                   {!isExpanded && (
                     <div
                       onClick={() => onToggleExpand(parent.id)}

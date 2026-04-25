@@ -26,8 +26,6 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const COMMENT_INPUT_ID = "forum-comment-input-overlay";
 const COMMENT_IMAGE_INPUT_ID = "forum-comment-images-input-overlay";
-const REPLY_THREAD_INDENT = "46px";
-
 function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
   return source.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -254,7 +252,7 @@ function ForumCommentsOverlay({
               </div>
 
               {replies.length > 0 && (
-                <div style={{ marginLeft: REPLY_THREAD_INDENT, marginTop: "10px" }}>
+                <div style={{ marginLeft: "46px", marginTop: "10px" }}>
                   {!isExpanded && (
                     <div
                       onClick={() => onToggleExpand(parent.id)}
