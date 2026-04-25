@@ -5,8 +5,6 @@ import {
   fixedBottomBarStyle,
   likeBtnStyle,
   scrollContentStyle,
-  sortBtnStyle,
-  sortContainerStyle,
 } from "../../styles/appStyles";
 import {
   BADGE_ANIMATION_STYLE,
@@ -26,24 +24,15 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 const COMMENT_INPUT_ID_PREFIX = "forum-comment-input-inline-";
 const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
 
-function hasForumCommentImages(comment) {
-  return parseForumImageUrls(comment?.image_url).length > 0;
-}
-
-function sortAndFilterForumComments(comments, sortMode, showOnlyImages) {
+function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
-  const list = showOnlyImages ? source.filter(hasForumCommentImages) : source;
-  if (sortMode === "latest") return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  if (sortMode === "hot") return list.sort((a, b) => (Number(b.like_count || 0) - Number(a.like_count || 0)) || (new Date(b.created_at) - new Date(a.created_at)));
-  return list;
+  return source.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
 function ForumInlineCommentsPanel({
   postId,
   comments,
   loading,
-  sortMode,
-  showOnlyImages,
   expandedParentIds,
   currentUser,
   activeBadgeTitle,
@@ -52,8 +41,6 @@ function ForumInlineCommentsPanel({
   commentDraft,
   commentImages,
   submitting,
-  onSortChange,
-  onToggleShowOnlyImages,
   onToggleExpand,
   onReplySelect,
   onReplyCancel,
@@ -67,7 +54,7 @@ function ForumInlineCommentsPanel({
   formatCommentTime,
 }) {
   const userPointsCard = useUserPointsCard();
-  const sorted = sortAndFilterForumComments(comments, sortMode, showOnlyImages);
+  const sorted = sortForumComments(comments);
   const parents = sorted.filter((item) => !item.parent_id);
   const children = sorted.filter((item) => item.parent_id);
   const {
@@ -89,32 +76,6 @@ function ForumInlineCommentsPanel({
   return (
     <>
       <style>{BADGE_ANIMATION_STYLE}</style>
-
-      <div style={{ ...sortContainerStyle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: "15px" }}>
-          <button onClick={() => onSortChange("latest")} style={sortBtnStyle(sortMode === "latest")}>
-            按照最新
-          </button>
-          <button onClick={() => onSortChange("hot")} style={sortBtnStyle(sortMode === "hot")}>
-            按照最火
-          </button>
-        </div>
-        <div
-          onClick={onToggleShowOnlyImages}
-          style={{
-            fontSize: "12px",
-            color: showOnlyImages ? "#5aa77b" : "#999",
-            fontWeight: "bold",
-            cursor: "pointer",
-            background: showOnlyImages ? "#e8f5eb" : "#f5f5f5",
-            padding: "4px 10px",
-            borderRadius: "15px",
-            transition: "0.2s",
-          }}
-        >
-          🖼️ 仅看图片
-        </div>
-      </div>
 
       <div style={{ ...scrollContentStyle, padding: "20px 0 0" }}>
         {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}

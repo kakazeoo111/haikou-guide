@@ -8,8 +8,6 @@ import {
   likeBtnStyle,
   navHeaderStyle,
   scrollContentStyle,
-  sortBtnStyle,
-  sortContainerStyle,
 } from "../../styles/appStyles";
 import {
   BADGE_ANIMATION_STYLE,
@@ -29,22 +27,9 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 const COMMENT_INPUT_ID = "forum-comment-input-overlay";
 const COMMENT_IMAGE_INPUT_ID = "forum-comment-images-input-overlay";
 
-function hasForumCommentImages(comment) {
-  return parseForumImageUrls(comment?.image_url).length > 0;
-}
-
-function sortAndFilterForumComments(comments, sortMode, showOnlyImages) {
+function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
-  const list = showOnlyImages ? source.filter(hasForumCommentImages) : source;
-  if (sortMode === "latest") return list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  if (sortMode === "hot") {
-    return list.sort((a, b) => {
-      const likeDiff = Number(b.like_count || 0) - Number(a.like_count || 0);
-      if (likeDiff !== 0) return likeDiff;
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
-  }
-  return list;
+  return source.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 }
 
 function buildCommentTree(comments) {
@@ -65,8 +50,6 @@ function ForumCommentsOverlay({
   post,
   comments,
   loading,
-  sortMode,
-  showOnlyImages,
   expandedParentIds,
   currentUser,
   activeBadgeTitle,
@@ -92,10 +75,7 @@ function ForumCommentsOverlay({
 }) {
   const userPointsCard = useUserPointsCard();
   const postImages = useMemo(() => parseForumImageUrls(post?.image_url), [post?.image_url]);
-  const sortedComments = useMemo(
-    () => sortAndFilterForumComments(comments, sortMode, showOnlyImages),
-    [comments, sortMode, showOnlyImages],
-  );
+  const sortedComments = useMemo(() => sortForumComments(comments), [comments]);
   const { parents, children } = useMemo(() => buildCommentTree(sortedComments), [sortedComments]);
   const {
     badgeTheme,
@@ -121,32 +101,6 @@ function ForumCommentsOverlay({
         </span>
         <span style={{ fontWeight: "bold" }}>帖子评论</span>
         <span style={{ width: "40px" }} />
-      </div>
-
-      <div style={{ ...sortContainerStyle, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", gap: "15px" }}>
-          <button onClick={() => onSortChange("latest")} style={sortBtnStyle(sortMode === "latest")}>
-            按照最新
-          </button>
-          <button onClick={() => onSortChange("hot")} style={sortBtnStyle(sortMode === "hot")}>
-            按照最热
-          </button>
-        </div>
-        <div
-          onClick={onToggleShowOnlyImages}
-          style={{
-            fontSize: "12px",
-            color: showOnlyImages ? "#5aa77b" : "#999",
-            fontWeight: "bold",
-            cursor: "pointer",
-            background: showOnlyImages ? "#e8f5eb" : "#f5f5f5",
-            padding: "4px 10px",
-            borderRadius: "15px",
-            transition: "0.2s",
-          }}
-        >
-          {showOnlyImages ? "仅看图片" : "只看图片"}
-        </div>
       </div>
 
       <div style={scrollContentStyle}>
