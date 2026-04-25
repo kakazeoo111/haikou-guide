@@ -1,3 +1,5 @@
+import { attachBadgeProfileFields } from "./badgeProfileCache.js";
+
 function normalizeUploadedImages(files) {
   return files ? files.map((file) => `https://api.suzcore.top/uploads/${file.filename}`) : [];
 }
@@ -86,8 +88,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       });
       res.json({ ok: true, stats, myLikedIds: myLikes.map((row) => row.place_id) });
     } catch (error) {
-      console.error("»ñÈ¡¾°µãÔŞÍ³¼ÆÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `»ñÈ¡¾°µãÔŞÍ³¼ÆÊ§°Ü: ${error.message}` });
+      console.error("è·å–æ™¯ç‚¹èµç»Ÿè®¡å¤±è´¥:", error.message);
+      res.status(500).json({ ok: false, message: `è·å–æ™¯ç‚¹èµç»Ÿè®¡å¤±è´¥: ${error.message}` });
     }
   });
 
@@ -112,8 +114,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       const [countRow] = await pool.execute("SELECT COUNT(*) as count FROM place_likes WHERE place_id = ?", [placeId]);
       res.json({ ok: true, action, newCount: countRow[0].count });
     } catch (error) {
-      console.error("¾°µãµãÔŞÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `¾°µãµãÔŞÊ§°Ü: ${error.message}` });
+      console.error("æ™¯ç‚¹ç‚¹èµå¤±è´¥:", error.message);
+      res.status(500).json({ ok: false, message: `æ™¯ç‚¹ç‚¹èµå¤±è´¥: ${error.message}` });
     }
   });
 
@@ -122,10 +124,11 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     const placeId = req.params.placeId;
     try {
       const [rows] = await pool.execute(COMMENT_LIST_SQL, [phone || "", placeId]);
-      res.json({ ok: true, comments: rows.map((row) => ({ ...row, is_liked: row.is_liked > 0 })) });
+      const rowsWithBadge = await attachBadgeProfileFields(pool, rows);
+      res.json({ ok: true, comments: rowsWithBadge.map((row) => ({ ...row, is_liked: row.is_liked > 0 })) });
     } catch (error) {
-      console.error("»ñÈ¡ÆÀÂÛÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `»ñÈ¡ÆÀÂÛÊ§°Ü: ${error.message}` });
+      console.error("è·å–è¯„è®ºå¤±è´¥:", error.message);
+      res.status(500).json({ ok: false, message: `è·å–è¯„è®ºå¤±è´¥: ${error.message}` });
     }
   });
 
@@ -145,8 +148,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       }
       res.json({ ok: true });
     } catch (error) {
-      console.error("ÆÀÂÛµãÔŞÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `ÆÀÂÛµãÔŞÊ§°Ü: ${error.message}` });
+      console.error("è¯„è®ºç‚¹èµå¤±è´¥:", error.message);
+      res.status(500).json({ ok: false, message: `è¯„è®ºç‚¹èµå¤±è´¥: ${error.message}` });
     }
   });
 
@@ -164,8 +167,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       }
       res.json({ ok: true });
     } catch (error) {
-      console.error("·¢²¼ÆÀÂÛÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `·¢²¼ÆÀÂÛÊ§°Ü: ${error.message}` });
+      console.error("å‘å¸ƒè¯„è®ºå¤±è´¥:", error.message);
+      res.status(500).json({ ok: false, message: `å‘å¸ƒè¯„è®ºå¤±è´¥: ${error.message}` });
     }
   });
 
@@ -175,8 +178,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
       await pool.execute("DELETE FROM comments WHERE id = ? AND user_phone COLLATE utf8mb4_general_ci = ?", [commentId, phone]);
       res.json({ ok: true });
     } catch (error) {
-      console.error("É¾³ıÆÀÂÛÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `É¾³ıÆÀÂÛÊ§°Ü: ${error.message}` });
+      console.error("åˆ é™¤è¯„è®ºå¤±è´¥:", error.message);
+      res.status(500).json({ ok: false, message: `åˆ é™¤è¯„è®ºå¤±è´¥: ${error.message}` });
     }
   });
 }

@@ -6,6 +6,7 @@ import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
 
 const DEFAULT_BADGE_TITLE = "未解锁称号";
+const DEFAULT_BADGE_ICON = "🏅";
 
 const selfBadgeStyle = (textColor) => ({
   display: "inline-flex",
@@ -48,9 +49,24 @@ const callLabelStyle = (active) => ({
   whiteSpace: "nowrap",
 });
 
-function getSelfBadge(userPhone, currentUserPhone, activeBadgeTitle, badgeIcon) {
-  if (String(userPhone || "") !== String(currentUserPhone || "")) return null;
-  return { title: activeBadgeTitle || DEFAULT_BADGE_TITLE, icon: badgeIcon };
+function getSelfBadge(post, currentUserPhone, activeBadgeTitle, badgeIcon) {
+  const postUserPhone = String(post?.user_phone || "");
+  const isSelf = postUserPhone === String(currentUserPhone || "");
+  const postBadgeTitle = String(post?.badge_title || post?.badgeTitle || "").trim();
+  const postBadgeIcon = String(post?.badge_icon || post?.badgeIcon || "").trim();
+
+  if (postBadgeTitle) {
+    return {
+      title: postBadgeTitle,
+      icon: postBadgeIcon || (isSelf ? badgeIcon : DEFAULT_BADGE_ICON),
+    };
+  }
+
+  if (!isSelf) return null;
+  return {
+    title: activeBadgeTitle || DEFAULT_BADGE_TITLE,
+    icon: badgeIcon || DEFAULT_BADGE_ICON,
+  };
 }
 
 function getMotionIconStyle(baseStyle, isExplorerBadge) {
@@ -79,9 +95,9 @@ function ForumPostCard({
   const userPointsCard = useUserPointsCard();
   const postId = Number(post.id);
   const postImages = parseForumImageUrls(post.image_url);
-  const postBadge = getSelfBadge(post.user_phone, currentUser?.phone, activeBadgeTitle, badgeIcon);
+  const postBadge = getSelfBadge(post, currentUser?.phone, activeBadgeTitle, badgeIcon);
   const { motionBadgeVariant, parentBadgeBubbleStyle, parentMotionIconStyle } = buildBadgePresentation(currentUser, activeBadgeTitle, { icon: badgeIcon });
-  const isExplorerBadge = String(activeBadgeTitle || "") === "探店能手";
+  const isExplorerBadge = String(postBadge?.title || "") === "探店能手";
   const badgeGlyph = isExplorerBadge ? "✧" : motionBadgeVariant.glyph;
   const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
   const commentCount = Number(post.comment_count || 0);

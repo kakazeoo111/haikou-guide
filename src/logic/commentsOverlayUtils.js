@@ -5,6 +5,7 @@ export const PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH = "152px";
 export const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "128px";
 
 const DEFAULT_BADGE_TITLE = "未解锁称号";
+const DEFAULT_BADGE_ICON = "🏅";
 const PARENT_AVATAR_SIZE = 36;
 const REPLY_AVATAR_SIZE = 24;
 const PARENT_BADGE_BUBBLE_SIZE = 14;
@@ -140,9 +141,22 @@ export function handleAvatarLoadError(event, phone, username) {
 }
 
 export function getSelfBadge(comment, currentUser, activeBadgeTitle, badgeIcon) {
-  if (String(comment?.user_phone || "") !== String(currentUser?.phone || "")) return null;
+  const commentPhone = String(comment?.user_phone || "");
+  const currentUserPhone = String(currentUser?.phone || "");
+  const isSelf = commentPhone === currentUserPhone;
+  const commentBadgeTitle = String(comment?.badge_title || comment?.badgeTitle || "").trim();
+  const commentBadgeIcon = String(comment?.badge_icon || comment?.badgeIcon || "").trim();
+
+  if (commentBadgeTitle) {
+    return {
+      icon: commentBadgeIcon || (isSelf ? badgeIcon : DEFAULT_BADGE_ICON),
+      title: commentBadgeTitle,
+    };
+  }
+
+  if (!isSelf) return null;
   return {
-    icon: badgeIcon,
+    icon: badgeIcon || DEFAULT_BADGE_ICON,
     title: activeBadgeTitle || DEFAULT_BADGE_TITLE,
   };
 }

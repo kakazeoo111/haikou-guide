@@ -1,4 +1,6 @@
-﻿function normalizeForumImages(files) {
+﻿import { attachBadgeProfileFields } from "./badgeProfileCache.js";
+
+function normalizeForumImages(files) {
   const urls = (files || []).map((item) => `https://api.suzcore.top/uploads/${item.filename}`);
   if (!urls.length) return null;
   return JSON.stringify(urls);
@@ -236,7 +238,8 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
         [viewerPhone, search, search, search]
       );
 
-      const data = rows.map((row) => ({
+      const rowsWithBadge = await attachBadgeProfileFields(pool, rows);
+      const data = rowsWithBadge.map((row) => ({
         ...row,
         comment_count: Number(row.comment_count || 0),
         call_count: Number(row.call_count || 0),
@@ -319,7 +322,8 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       const active = await isForumPostActive(pool, postId);
       if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过7天" });
       const [rows] = await pool.execute(FORUM_COMMENT_LIST_SQL, [viewerPhone, postId]);
-      const data = rows.map((row) => ({
+      const rowsWithBadge = await attachBadgeProfileFields(pool, rows);
+      const data = rowsWithBadge.map((row) => ({
         ...row,
         like_count: Number(row.like_count || 0),
         is_liked: Number(row.is_liked || 0) > 0,
