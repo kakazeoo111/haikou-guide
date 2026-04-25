@@ -11,37 +11,34 @@ import {
   forumSortButtonStyle,
 } from "../../logic/forumModalUtils";
 
-const FORUM_CN_QUOTES = [
-  "爱不是把彼此困住，而是一起看更远的风景。",
-  "旅途最珍贵的不是终点，是有人陪你偏离一下路线。",
-  "自由大概就是，今天的风往哪吹，你就往哪走一小段。",
-  "有趣的人生，往往始于一次不那么标准的出发。",
-  "喜欢一座城市，有时只因为傍晚的光刚好落在你身上。",
-  "爱和旅行很像，都是越靠近真实，越让人上瘾。",
-  "愿你在陌生的地方，也能捡到一点熟悉的温柔。",
-  "有些快乐不需要解释，背上包出门就是答案。",
-  "真正的松弛，是允许自己在路上慢一点，再慢一点。",
-  "我们热爱远方，也热爱回头时那个更轻盈的自己。",
-];
-
-const FORUM_EN_QUOTES = [
-  "Freedom is sometimes just a ticket and enough courage for one soft detour.",
-  "Love feels lighter when it walks beside you, not ahead of you.",
-  "A good trip changes the map outside and the weather inside.",
-  "Some cities do not ask you to stay, only to feel more alive.",
-  "The most beautiful plans usually begin with a small and brave yes.",
-  "Travel teaches the heart how to be curious without being afraid.",
-  "Romance is not a place, but the way the world opens when you arrive together.",
-  "Take the road that leaves a little room for wonder.",
-  "A free soul does not rush. It notices.",
-  "Sometimes the best destination is the version of you that comes back softer.",
+const FORUM_DAILY_QUOTES = [
+  { lang: "zh", text: "爱不是把彼此困住，而是一起看更远的风景。" },
+  { lang: "zh", text: "旅途最珍贵的不是终点，是有人陪你偏离一下路线。" },
+  { lang: "zh", text: "自由大概就是，今天的风往哪吹，你就往哪走一小段。" },
+  { lang: "zh", text: "有趣的人生，往往始于一次不那么标准的出发。" },
+  { lang: "zh", text: "喜欢一座城市，有时只因为傍晚的光刚好落在你身上。" },
+  { lang: "zh", text: "爱和旅行很像，都是越靠近真实，越让人上瘾。" },
+  { lang: "zh", text: "愿你在陌生的地方，也能捡到一点熟悉的温柔。" },
+  { lang: "zh", text: "有些快乐不需要解释，背上包出门就是答案。" },
+  { lang: "zh", text: "真正的松弛，是允许自己在路上慢一点，再慢一点。" },
+  { lang: "zh", text: "我们热爱远方，也热爱回头时那个更轻盈的自己。" },
+  { lang: "en", text: "Freedom is sometimes just a ticket and enough courage for one soft detour." },
+  { lang: "en", text: "Love feels lighter when it walks beside you, not ahead of you." },
+  { lang: "en", text: "A good trip changes the map outside and the weather inside." },
+  { lang: "en", text: "Some cities do not ask you to stay, only to feel more alive." },
+  { lang: "en", text: "The most beautiful plans usually begin with a small and brave yes." },
+  { lang: "en", text: "Travel teaches the heart how to be curious without being afraid." },
+  { lang: "en", text: "Romance is not a place, but the way the world opens when you arrive together." },
+  { lang: "en", text: "Take the road that leaves a little room for wonder." },
+  { lang: "en", text: "A free soul does not rush. It notices." },
+  { lang: "en", text: "Sometimes the best destination is the version of you that comes back softer." },
 ];
 
 const QUOTE_WRAP_STYLE = {
   ...forumHintBannerStyle,
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: "10px",
   padding: "14px 16px",
 };
 const QUOTE_TAG_STYLE = {
@@ -64,11 +61,11 @@ const QUOTE_TEXT_STYLE = {
   fontWeight: 700,
   letterSpacing: "0.2px",
 };
-const QUOTE_EN_STYLE = {
-  fontSize: "12px",
-  lineHeight: 1.7,
-  color: "#5d786b",
+const QUOTE_TEXT_EN_STYLE = {
+  ...QUOTE_TEXT_STYLE,
+  fontWeight: 600,
   fontStyle: "italic",
+  lineHeight: 1.7,
 };
 
 function getDailyQuoteIndex(length) {
@@ -80,14 +77,11 @@ function getDailyQuoteIndex(length) {
 }
 
 function DailyForumQuote() {
-  const cnQuote = FORUM_CN_QUOTES[getDailyQuoteIndex(FORUM_CN_QUOTES.length)];
-  const enQuote = FORUM_EN_QUOTES[getDailyQuoteIndex(FORUM_EN_QUOTES.length)];
-
+  const quote = FORUM_DAILY_QUOTES[getDailyQuoteIndex(FORUM_DAILY_QUOTES.length)];
   return (
     <div style={QUOTE_WRAP_STYLE}>
       <span style={QUOTE_TAG_STYLE}>今日句子</span>
-      <div style={QUOTE_TEXT_STYLE}>{cnQuote}</div>
-      <div style={QUOTE_EN_STYLE}>{enQuote}</div>
+      <div style={quote.lang === "en" ? QUOTE_TEXT_EN_STYLE : QUOTE_TEXT_STYLE}>{quote.text}</div>
     </div>
   );
 }
