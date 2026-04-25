@@ -26,6 +26,7 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const COMMENT_INPUT_ID = "forum-comment-input-overlay";
 const COMMENT_IMAGE_INPUT_ID = "forum-comment-images-input-overlay";
+const PARENT_COMMENT_INDENT = "16px";
 const REPLY_THREAD_INDENT = "60px";
 
 function sortForumComments(comments) {
@@ -168,7 +169,7 @@ function ForumCommentsOverlay({
           const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
           return (
-            <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
+            <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px", marginLeft: PARENT_COMMENT_INDENT }}>
               <div style={{ display: "flex", gap: "10px" }}>
                 <div onClick={() => userPointsCard.openByPhone(parent.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
                   <img
