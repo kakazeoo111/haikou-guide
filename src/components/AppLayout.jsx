@@ -13,6 +13,12 @@ import HomePanels from "./HomePanels";
 import BadgeGrantModal from "./BadgeGrantModal";
 import { formatCommentTime } from "../logic/placeUtils";
 
+function isForumNotice(notice) {
+  const type = String(notice?.type || "");
+  const placeId = String(notice?.place_id || "");
+  return type.startsWith("forum_") || placeId.startsWith("forum_");
+}
+
 function AppLayout({
   activeTab,
   setActiveTab,
@@ -93,7 +99,7 @@ function AppLayout({
   onCloseBadgePicker,
   onSelectBadge,
 }) {
-  const unreadCount = notifications.filter((notice) => !notice.is_read).length;
+  const unreadCount = notifications.filter((notice) => !notice.is_read && !isForumNotice(notice)).length;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f4fbf6", position: "relative" }}>

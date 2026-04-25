@@ -12,11 +12,11 @@ import ForumPostFeed from "./forum/ForumPostFeed";
 
 const FORUM_POST_INPUT_ID = "forum-post-images-input";
 const FORUM_UNREAD_DOT_STYLE = {
-  width: "8px",
-  height: "8px",
+  width: "9px",
+  height: "9px",
   borderRadius: "50%",
-  background: "#ff4d6d",
-  boxShadow: "0 0 0 2px #ffe4ec",
+  background: "linear-gradient(135deg, #58b783 0%, #2f8f63 100%)",
+  boxShadow: "0 0 0 2px #e6f6ed, 0 3px 8px rgba(47, 143, 99, 0.28)",
 };
 
 function getPostIdFromNotice(notice) {

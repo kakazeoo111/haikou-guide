@@ -1,10 +1,10 @@
-function normalizeForumImages(files) {
+﻿function normalizeForumImages(files) {
   const urls = (files || []).map((item) => `https://api.suzcore.top/uploads/${item.filename}`);
   if (!urls.length) return null;
   return JSON.stringify(urls);
 }
 
-const FORUM_IMAGE_TOO_LARGE_MESSAGE = "������ͼƬ�ڴ���󣨲��ó���5MB��";
+const FORUM_IMAGE_TOO_LARGE_MESSAGE = "发布的图片内存过大（不得超过5MB）";
 
 function parsePositiveInt(value) {
   const normalized = Number(value);
@@ -48,7 +48,7 @@ function buildForumNoticePlaceId(postId) {
 function truncateForumCommentSnippet(content) {
   const text = String(content || "").trim();
   if (text.length <= FORUM_NOTICE_COMMENT_SNIPPET_LIMIT) return text;
-  return `${text.slice(0, FORUM_NOTICE_COMMENT_SNIPPET_LIMIT)}…`;
+  return `${text.slice(0, FORUM_NOTICE_COMMENT_SNIPPET_LIMIT)}...`;
 }
 
 async function getForumPostOwnerPhone(pool, postId) {
@@ -89,7 +89,7 @@ async function ensureForumNotificationTable(pool) {
 
 function createForumNoticeSender(pool, addNotice) {
   if (typeof addNotice === "function") return addNotice;
-  console.warn("forumRoutes: addNotice 未注入，已切换为论坛路由内置通知写入");
+  console.warn("forumRoutes: addNotice not injected, fallback to internal forum notice writer");
   return async (receiverPhone, senderPhone, type, placeId, content = "") => {
     if (receiverPhone === senderPhone) return;
     try {
@@ -98,7 +98,7 @@ function createForumNoticeSender(pool, addNotice) {
         [receiverPhone, senderPhone, type, placeId, content],
       );
     } catch (error) {
-      console.error("论坛通知写入失败:", error.message);
+      console.error("Forum notice write failed:", error.message);
     }
   };
 }
@@ -143,7 +143,7 @@ function handleMulterError(res, error) {
     res.status(400).json({ ok: false, message: FORUM_IMAGE_TOO_LARGE_MESSAGE });
     return false;
   }
-  res.status(400).json({ ok: false, message: error.message || "ͼƬ�ϴ�ʧ��" });
+  res.status(400).json({ ok: false, message: error.message || "图片上传失败" });
   return false;
 }
 
@@ -244,8 +244,8 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       }));
       res.json({ ok: true, data, sortMode });
     } catch (error) {
-      console.error("��̳���ӻ�ȡʧ��:", error.message);
-      res.status(500).json({ ok: false, message: `��̳���ӻ�ȡʧ��: ${error.message}` });
+      console.error("论坛帖子获取失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛帖子获取失败: ${error.message}` });
     }
   });
 
@@ -256,20 +256,20 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     const normalizedPhone = String(phone || "").trim();
     const message = String(content || "").trim();
     const imageUrl = normalizeForumImages(req.files);
-    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "�ֻ��Ų���Ϊ��" });
-    if (!message && !imageUrl) return res.status(400).json({ ok: false, message: "�������ݲ���Ϊ��" });
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
+    if (!message && !imageUrl) return res.status(400).json({ ok: false, message: "发布内容不能为空" });
 
     try {
       const [users] = await pool.execute("SELECT phone FROM users WHERE phone = ? LIMIT 1", [normalizedPhone]);
-      if (!users.length) return res.status(404).json({ ok: false, message: "�û������ڣ������µ�¼" });
+      if (!users.length) return res.status(404).json({ ok: false, message: "用户不存在，请重新登录" });
       const [result] = await pool.execute(
         "INSERT INTO forum_posts (user_phone, content, image_url) VALUES (?, ?, ?)",
         [normalizedPhone, message, imageUrl]
       );
-      res.json({ ok: true, message: "���ӷ����ɹ�", postId: Number(result.insertId) });
+      res.json({ ok: true, message: "帖子发布成功", postId: Number(result.insertId) });
     } catch (error) {
-      console.error("��̳���ӷ���ʧ��:", error.message);
-      res.status(500).json({ ok: false, message: `��̳���ӷ���ʧ��: ${error.message}` });
+      console.error("论坛帖子发布失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛帖子发布失败: ${error.message}` });
     }
   });
 
@@ -277,15 +277,15 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     const { phone, postId } = req.body;
     const normalizedPhone = String(phone || "").trim();
     const normalizedPostId = parsePositiveInt(postId);
-    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "�ֻ��Ų���Ϊ��" });
-    if (!normalizedPostId) return res.status(400).json({ ok: false, message: "����ID��Ч" });
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
+    if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
 
     try {
       const [users] = await pool.execute("SELECT phone FROM users WHERE phone = ? LIMIT 1", [normalizedPhone]);
-      if (!users.length) return res.status(404).json({ ok: false, message: "�û������ڣ������µ�¼" });
+      if (!users.length) return res.status(404).json({ ok: false, message: "用户不存在，请重新登录" });
 
       const active = await isForumPostActive(pool, normalizedPostId);
-      if (!active) return res.status(404).json({ ok: false, message: "���Ӳ����ڻ��ѳ���7��" });
+      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过7天" });
 
       const [rows] = await pool.execute(
         "SELECT id FROM forum_post_calls WHERE post_id = ? AND user_phone = ? LIMIT 1",
@@ -305,19 +305,19 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       const callCount = Number(countRows[0]?.count || 0);
       res.json({ ok: true, action, callCount });
     } catch (error) {
-      console.error("��̳��callʧ��:", error.message);
-      res.status(500).json({ ok: false, message: `��̳��callʧ��: ${error.message}` });
+      console.error("论坛打call失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛打call失败: ${error.message}` });
     }
   });
 
   app.get("/api/forum/comments/:postId", async (req, res) => {
     const postId = parsePositiveInt(req.params.postId);
     const viewerPhone = String(req.query.phone || "").trim();
-    if (!postId) return res.status(400).json({ ok: false, message: "����ID��Ч" });
+    if (!postId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
 
     try {
       const active = await isForumPostActive(pool, postId);
-      if (!active) return res.status(404).json({ ok: false, message: "���Ӳ����ڻ��ѳ���7��" });
+      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过7天" });
       const [rows] = await pool.execute(FORUM_COMMENT_LIST_SQL, [viewerPhone, postId]);
       const data = rows.map((row) => ({
         ...row,
@@ -326,8 +326,8 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       }));
       res.json({ ok: true, data });
     } catch (error) {
-      console.error("��̳���ۻ�ȡʧ��:", error.message);
-      res.status(500).json({ ok: false, message: `��̳���ۻ�ȡʧ��: ${error.message}` });
+      console.error("论坛评论获取失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛评论获取失败: ${error.message}` });
     }
   });
 
@@ -335,12 +335,12 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     const { phone, commentId } = req.body;
     const normalizedPhone = String(phone || "").trim();
     const normalizedCommentId = parsePositiveInt(commentId);
-    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "�ֻ��Ų���Ϊ��" });
-    if (!normalizedCommentId) return res.status(400).json({ ok: false, message: "����ID��Ч" });
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
+    if (!normalizedCommentId) return res.status(400).json({ ok: false, message: "评论ID无效" });
 
     try {
       const owner = await getForumCommentOwner(pool, normalizedCommentId);
-      if (!owner) return res.status(404).json({ ok: false, message: "�������۲�����" });
+      if (!owner) return res.status(404).json({ ok: false, message: "目标评论不存在" });
 
       const [rows] = await pool.execute(
         "SELECT id FROM forum_comment_likes WHERE comment_id = ? AND user_phone = ? LIMIT 1",
@@ -358,8 +358,8 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
       const likeCount = Number(countRows[0]?.count || 0);
       res.json({ ok: true, action, likeCount });
     } catch (error) {
-      console.error("��̳���۵���ʧ��:", error.message);
-      res.status(500).json({ ok: false, message: `��̳���۵���ʧ��: ${error.message}` });
+      console.error("论坛评论点赞失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛评论点赞失败: ${error.message}` });
     }
   });
 
@@ -372,16 +372,16 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     const normalizedParentId = parentId ? parsePositiveInt(parentId) : null;
     const message = String(content || "").trim();
     const imageUrl = normalizeForumImages(req.files);
-    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "�ֻ��Ų���Ϊ��" });
-    if (!normalizedPostId) return res.status(400).json({ ok: false, message: "����ID��Ч" });
-    if (!message && !imageUrl) return res.status(400).json({ ok: false, message: "�������ݺ�ͼƬ����ͬʱΪ��" });
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
+    if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
+    if (!message && !imageUrl) return res.status(400).json({ ok: false, message: "评论内容和图片不能同时为空" });
 
     try {
       const active = await isForumPostActive(pool, normalizedPostId);
-      if (!active) return res.status(404).json({ ok: false, message: "���Ӳ����ڻ��ѳ���7��" });
+      if (!active) return res.status(404).json({ ok: false, message: "帖子不存在或已超过7天" });
       if (normalizedParentId) {
         const [parents] = await pool.execute("SELECT id FROM forum_comments WHERE id = ? AND post_id = ? LIMIT 1", [normalizedParentId, normalizedPostId]);
-        if (!parents.length) return res.status(400).json({ ok: false, message: "�ظ�Ŀ�겻����" });
+        if (!parents.length) return res.status(400).json({ ok: false, message: "回复目标不存在" });
       }
       await pool.execute(
         "INSERT INTO forum_comments (post_id, parent_id, user_phone, content, image_url) VALUES (?, ?, ?, ?, ?)",
@@ -397,10 +397,10 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
           await sendNotice(parentAuthorPhone.user_phone, normalizedPhone, "forum_reply", noticePlaceId, snippet);
         }
       }
-      res.json({ ok: true, message: "���۷����ɹ�" });
+      res.json({ ok: true, message: "评论发布成功" });
     } catch (error) {
-      console.error("��̳���۷���ʧ��:", error.message);
-      res.status(500).json({ ok: false, message: `��̳���۷���ʧ��: ${error.message}` });
+      console.error("论坛评论发布失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛评论发布失败: ${error.message}` });
     }
   });
 }
