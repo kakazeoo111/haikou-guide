@@ -23,6 +23,7 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const COMMENT_INPUT_ID_PREFIX = "forum-comment-input-inline-";
 const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
+const REPLY_THREAD_INDENT = "60px";
 
 function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
@@ -163,7 +164,7 @@ function ForumInlineCommentsPanel({
               </div>
 
               {replies.length > 0 && (
-                <div style={{ marginLeft: "46px", marginTop: "10px" }}>
+                <div style={{ marginLeft: REPLY_THREAD_INDENT, marginTop: "10px" }}>
                   {!isExpanded && (
                     <div
                       onClick={() => onToggleExpand(parent.id)}
@@ -174,7 +175,7 @@ function ForumInlineCommentsPanel({
                     </div>
                   )}
                   {isExpanded && (
-                    <div style={{ background: "#f9f9f9", padding: "10px", borderRadius: "8px" }}>
+                    <div style={{ background: "#f9f9f9", padding: "10px 10px 10px 14px", borderRadius: "8px" }}>
                       {replies.map((reply) => {
                         const replyImages = parseForumImageUrls(reply.image_url);
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
