@@ -1,5 +1,5 @@
 import XhsImageUploadButton from "../common/XhsImageUploadButton";
-import { forumPostCardStyle, forumPostLabelStyle, forumSubmitPostButtonStyle, forumTextAreaStyle, MAX_FORUM_IMAGES } from "../../logic/forumModalUtils";
+import { forumPostCardStyle, forumSubmitPostButtonStyle, forumTextAreaStyle, MAX_FORUM_IMAGES } from "../../logic/forumModalUtils";
 
 const previewGridStyle = { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "10px", maxWidth: "280px" };
 const previewImgStyle = { width: "100%", aspectRatio: "1 / 1", borderRadius: "10px", objectFit: "cover" };
@@ -24,11 +24,12 @@ const countTextStyle = { fontSize: "12px", color: "#6e867a", fontWeight: 600 };
 function ForumPostComposer({ postContent, onContentChange, postImages, onRemoveImage, onSelectImages, onSubmitPost, submitting, inputId }) {
   return (
     <div style={forumPostCardStyle}>
-      <div style={forumPostLabelStyle}>
-        <span>✍️</span>
-        <span>发动态</span>
-      </div>
-      <textarea value={postContent} onChange={(event) => onContentChange(event.target.value)} placeholder="发布你的7天动态..." style={forumTextAreaStyle} />
+      <textarea
+        value={postContent}
+        onChange={(event) => onContentChange(event.target.value)}
+        placeholder="你可以在这里分享你的有趣..."
+        style={forumTextAreaStyle}
+      />
       {postImages.length > 0 && (
         <div style={previewGridStyle}>
           {postImages.map((file, index) => (

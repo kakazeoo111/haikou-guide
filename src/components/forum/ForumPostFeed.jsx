@@ -11,6 +11,87 @@ import {
   forumSortButtonStyle,
 } from "../../logic/forumModalUtils";
 
+const FORUM_CN_QUOTES = [
+  "爱不是把彼此困住，而是一起看更远的风景。",
+  "旅途最珍贵的不是终点，是有人陪你偏离一下路线。",
+  "自由大概就是，今天的风往哪吹，你就往哪走一小段。",
+  "有趣的人生，往往始于一次不那么标准的出发。",
+  "喜欢一座城市，有时只因为傍晚的光刚好落在你身上。",
+  "爱和旅行很像，都是越靠近真实，越让人上瘾。",
+  "愿你在陌生的地方，也能捡到一点熟悉的温柔。",
+  "有些快乐不需要解释，背上包出门就是答案。",
+  "真正的松弛，是允许自己在路上慢一点，再慢一点。",
+  "我们热爱远方，也热爱回头时那个更轻盈的自己。",
+];
+
+const FORUM_EN_QUOTES = [
+  "Freedom is sometimes just a ticket and enough courage for one soft detour.",
+  "Love feels lighter when it walks beside you, not ahead of you.",
+  "A good trip changes the map outside and the weather inside.",
+  "Some cities do not ask you to stay, only to feel more alive.",
+  "The most beautiful plans usually begin with a small and brave yes.",
+  "Travel teaches the heart how to be curious without being afraid.",
+  "Romance is not a place, but the way the world opens when you arrive together.",
+  "Take the road that leaves a little room for wonder.",
+  "A free soul does not rush. It notices.",
+  "Sometimes the best destination is the version of you that comes back softer.",
+];
+
+const QUOTE_WRAP_STYLE = {
+  ...forumHintBannerStyle,
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  padding: "14px 16px",
+};
+const QUOTE_TAG_STYLE = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "6px",
+  width: "fit-content",
+  padding: "4px 10px",
+  borderRadius: "999px",
+  fontSize: "11px",
+  fontWeight: 700,
+  color: "#2e6a4a",
+  background: "rgba(255,255,255,0.72)",
+  border: "1px solid rgba(209, 232, 219, 0.9)",
+};
+const QUOTE_TEXT_STYLE = {
+  fontSize: "17px",
+  lineHeight: 1.55,
+  color: "#2f4c3f",
+  fontWeight: 700,
+  letterSpacing: "0.2px",
+};
+const QUOTE_EN_STYLE = {
+  fontSize: "12px",
+  lineHeight: 1.7,
+  color: "#5d786b",
+  fontStyle: "italic",
+};
+
+function getDailyQuoteIndex(length) {
+  const today = new Date();
+  const seed = Number(
+    `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`,
+  );
+  return seed % length;
+}
+
+function DailyForumQuote() {
+  const cnQuote = FORUM_CN_QUOTES[getDailyQuoteIndex(FORUM_CN_QUOTES.length)];
+  const enQuote = FORUM_EN_QUOTES[getDailyQuoteIndex(FORUM_EN_QUOTES.length)];
+
+  return (
+    <div style={QUOTE_WRAP_STYLE}>
+      <span style={QUOTE_TAG_STYLE}>今日句子</span>
+      <div style={QUOTE_TEXT_STYLE}>{cnQuote}</div>
+      <div style={QUOTE_EN_STYLE}>{enQuote}</div>
+    </div>
+  );
+}
+
 function ForumPostFeed({
   posts,
   loadingPosts,
@@ -44,7 +125,7 @@ function ForumPostFeed({
 }) {
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "14px 14px 24px 14px" }}>
-      <div style={forumHintBannerStyle}>💬 记录你 7 天内的心情，7 天后自动消散</div>
+      <DailyForumQuote />
 
       <ForumPostComposer
         postContent={postContent}
