@@ -1,5 +1,7 @@
+import { getPublicUploadBaseUrl, toPublicUploadUrl } from "./uploadUrl.js";
+
 export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
-  const UPLOAD_BASE_URL = "https://api.suzcore.top/uploads/";
+  const UPLOAD_BASE_URL = getPublicUploadBaseUrl();
 
   app.get("/api/announcement", async (req, res) => {
     try {
@@ -24,7 +26,7 @@ export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
   app.post("/api/feedback/submit-legacy-disabled", upload.single("image"), async (req, res) => {
     try {
       const { phone, content } = req.body;
-      const imageUrl = req.file ? `https://api.suzcore.top/uploads/${req.file.filename}` : null;
+      const imageUrl = req.file ? toPublicUploadUrl(req.file.filename) : null;
       await pool.execute("INSERT INTO feedback (phone, content, image_url) VALUES (?, ?, ?)", [phone, content || "", imageUrl]);
       res.json({ ok: true, message: "反馈已收到" });
     } catch (error) {

@@ -17,7 +17,7 @@ import {
   getSelfBadge,
 } from "../../logic/commentsOverlayUtils";
 import { getAvatarWithFallback } from "../../logic/avatarFallback";
-import { parseForumImageUrls } from "../../logic/forumImageUtils";
+import { parseForumImageEntries, parseForumImageUrls } from "../../logic/forumImageUtils";
 import { buildImageLoadingProps } from "../../logic/imageProps";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
@@ -73,7 +73,8 @@ function ForumCommentsOverlay({
   formatCommentTime,
 }) {
   const userPointsCard = useUserPointsCard();
-  const postImages = useMemo(() => parseForumImageUrls(post?.image_url), [post?.image_url]);
+  const postImageEntries = useMemo(() => parseForumImageEntries(post?.image_url), [post?.image_url]);
+  const postImages = useMemo(() => postImageEntries.map((item) => item.url), [postImageEntries]);
   const sortedComments = useMemo(() => sortForumComments(comments), [comments]);
   const { parents, children } = useMemo(() => buildCommentTree(sortedComments), [sortedComments]);
   const {
@@ -132,10 +133,10 @@ function ForumCommentsOverlay({
                 maxWidth: postImages.length === 1 ? "180px" : "280px",
               }}
             >
-              {postImages.map((url, index) => (
+              {postImageEntries.map((entry, index) => (
                 <img
                   key={`${post?.id || "post"}-${index}`}
-                  src={url}
+                  src={entry.thumbnail || entry.url}
                   {...buildImageLoadingProps()}
                   style={{
                     width: "100%",
@@ -162,7 +163,8 @@ function ForumCommentsOverlay({
             .filter((child) => String(child.parent_id) === String(parent.id))
             .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           const isExpanded = expandedParentIds.includes(parent.id);
-          const parentImages = parseForumImageUrls(parent.image_url);
+          const parentImageEntries = parseForumImageEntries(parent.image_url);
+          const parentImages = parentImageEntries.map((item) => item.url);
           const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
           return (
@@ -221,10 +223,10 @@ function ForumCommentsOverlay({
                         maxWidth: PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH,
                       }}
                     >
-                      {parentImages.map((url, idx) => (
+                      {parentImageEntries.map((entry, idx) => (
                         <img
                           key={idx}
-                          src={url}
+                          src={entry.thumbnail || entry.url}
                           {...buildImageLoadingProps()}
                           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                           onClick={() => onZoomImage(parentImages, idx)}
@@ -265,7 +267,8 @@ function ForumCommentsOverlay({
                   {isExpanded && (
                     <div style={{ background: "#f9f9f9", padding: "10px", borderRadius: "8px" }}>
                       {replies.map((reply) => {
-                        const replyImages = parseForumImageUrls(reply.image_url);
+                        const replyImageEntries = parseForumImageEntries(reply.image_url);
+                        const replyImages = replyImageEntries.map((item) => item.url);
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
                         return (
                           <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
@@ -310,10 +313,10 @@ function ForumCommentsOverlay({
                               </div>
                               {replyImages.length > 0 && (
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px", marginTop: "8px", maxWidth: REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH }}>
-                                  {replyImages.map((url, idx) => (
+                                  {replyImageEntries.map((entry, idx) => (
                                     <img
                                       key={idx}
-                                      src={url}
+                                      src={entry.thumbnail || entry.url}
                                       {...buildImageLoadingProps()}
                                       style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                                       onClick={() => onZoomImage(replyImages, idx)}

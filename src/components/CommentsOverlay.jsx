@@ -1,5 +1,5 @@
 import { bottomInputContainer, bottomRealInput, btnSendStyle, fixedBottomBarStyle, fullPageOverlayStyle, likeBtnStyle, navHeaderStyle, scrollContentStyle, sortBtnStyle, sortContainerStyle } from "../styles/appStyles";
-import { BADGE_ANIMATION_STYLE, PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH, REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH, buildBadgePresentation, getAvatarSrc, getSelfBadge, handleAvatarLoadError, parseCommentImageUrls, sortAndFilterComments } from "../logic/commentsOverlayUtils";
+import { BADGE_ANIMATION_STYLE, PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH, REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH, buildBadgePresentation, getAvatarSrc, getSelfBadge, handleAvatarLoadError, parseCommentImageEntries, sortAndFilterComments } from "../logic/commentsOverlayUtils";
 import { useUserPointsCard } from "../logic/useUserPointsCard";
 import UserPointsCardModal from "./UserPointsCardModal";
 import LikeHeartIcon from "./LikeHeartIcon";
@@ -78,7 +78,8 @@ function CommentsOverlay({
             .filter((child) => String(child.parent_id) === String(parent.id))
             .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
           const isExpanded = expandedParentIds.includes(parent.id);
-          const parentImages = parseCommentImageUrls(parent.image_url);
+          const parentImageEntries = parseCommentImageEntries(parent.image_url);
+          const parentImages = parentImageEntries.map((item) => item.url);
           const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
           return (
@@ -124,10 +125,10 @@ function CommentsOverlay({
                         maxWidth: PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH,
                       }}
                     >
-                      {parentImages.map((url, idx) => (
+                      {parentImageEntries.map((entry, idx) => (
                         <img
                           key={idx}
-                          src={url}
+                          src={entry.thumbnail || entry.url}
                           loading="lazy"
                           decoding="async"
                           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
@@ -167,7 +168,8 @@ function CommentsOverlay({
                   {isExpanded && (
                     <div style={{ background: "#f9f9f9", padding: "10px", borderRadius: "8px" }}>
                       {replies.map((reply) => {
-                        const replyImages = parseCommentImageUrls(reply.image_url);
+                        const replyImageEntries = parseCommentImageEntries(reply.image_url);
+                        const replyImages = replyImageEntries.map((item) => item.url);
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
                         return (
                           <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
@@ -201,10 +203,10 @@ function CommentsOverlay({
                               </div>
                               {replyImages.length > 0 && (
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px", marginTop: "8px", maxWidth: REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH }}>
-                                  {replyImages.map((url, idx) => (
+                                  {replyImageEntries.map((entry, idx) => (
                                     <img
                                       key={idx}
-                                      src={url}
+                                      src={entry.thumbnail || entry.url}
                                       loading="lazy"
                                       decoding="async"
                                       style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}

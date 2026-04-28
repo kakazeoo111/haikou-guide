@@ -1,11 +1,12 @@
-import { buildLocalAvatarDataUri, normalizeAvatarUrl } from "./avatarFallback";
+﻿import { buildLocalAvatarDataUri, normalizeAvatarUrl } from "./avatarFallback";
 import { getBadgeEmoji, getBadgeTheme } from "./badgeTheme";
+import { parseImageEntries, parseImageUrls } from "./imageEntryUtils";
 
 export const PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH = "152px";
 export const REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH = "128px";
 
 const DEFAULT_BADGE_TITLE = "未解锁称号";
-const DEFAULT_BADGE_ICON = "🏅";
+const DEFAULT_BADGE_ICON = "馃弲";
 const PARENT_AVATAR_SIZE = 36;
 const REPLY_AVATAR_SIZE = 24;
 const PARENT_BADGE_BUBBLE_SIZE = 14;
@@ -103,18 +104,12 @@ function hashString(value) {
   return Math.abs(hash);
 }
 
+export function parseCommentImageEntries(imgData) {
+  return parseImageEntries(imgData);
+}
+
 export function parseCommentImageUrls(imgData) {
-  if (!imgData || imgData === "[]" || imgData === "null") return [];
-  if (typeof imgData !== "string") return [];
-  if (!imgData.startsWith("[")) return [imgData];
-  try {
-    const parsed = JSON.parse(imgData);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map((url) => String(url).replace("http://", "https://")).filter(Boolean);
-  } catch (error) {
-    console.error("评论图片数据解析失败:", error);
-    return [];
-  }
+  return parseImageUrls(imgData);
 }
 
 function hasCommentImages(comment) {
@@ -251,3 +246,6 @@ export function buildBadgePresentation(currentUser, activeBadgeTitle, activeBadg
     replyMotionIconStyle: createMotionIconStyle(REPLY_BADGE_BUBBLE_SIZE, motionBadgeVariant),
   };
 }
+
+
+

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { getAvatarWithFallback } from "../logic/avatarFallback";
 import FeedbackThreadModal from "./FeedbackThreadModal";
 import { buildImageLoadingProps } from "../logic/imageProps";
-import { optimizeUploadImages } from "../logic/uploadImageOptimizer";
+import { appendOptimizedImagesWithThumbnails } from "../logic/uploadImageOptimizer";
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
 
 async function readJsonSafely(response) {
@@ -125,12 +125,11 @@ function NoticeListModal({
     if (!message) return alert("补充回信不能为空");
     setFollowupSubmitting(true);
     try {
-      const optimizedImages = await optimizeUploadImages(followupImages);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("feedbackId", threadRootId);
       formData.append("content", message);
-      optimizedImages.forEach((file) => formData.append("images", file));
+      await appendOptimizedImagesWithThumbnails(formData, followupImages);
       const res = await fetch(`${authApiBase}/api/feedback/followup`, {
         method: "POST",
         body: formData,

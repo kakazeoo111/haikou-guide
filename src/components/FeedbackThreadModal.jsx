@@ -1,5 +1,5 @@
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
-import { parseFeedbackImageUrls } from "../logic/feedbackImageUtils";
+import { parseFeedbackImageEntries } from "../logic/feedbackImageUtils";
 import XhsImageUploadButton from "./common/XhsImageUploadButton";
 
 const MESSAGE_WRAP_RADIUS = "14px";
@@ -9,19 +9,19 @@ const MAX_FOLLOWUP_IMAGES = 9;
 const FOLLOWUP_IMAGE_INPUT_ID = "followup-images-input";
 
 function renderReplyPair(item, formatCommentTime) {
-  const imageUrls = parseFeedbackImageUrls(item.image_url);
-  const adminReplyImageUrls = parseFeedbackImageUrls(item.admin_reply_image_url);
+  const imageEntries = parseFeedbackImageEntries(item.image_url);
+  const adminReplyImageEntries = parseFeedbackImageEntries(item.admin_reply_image_url);
   return (
     <div key={item.id} style={{ marginBottom: "14px" }}>
       <div style={{ background: USER_CARD_BG, borderRadius: MESSAGE_WRAP_RADIUS, padding: "12px", border: "1px solid #e8f1eb" }}>
         <div style={{ fontSize: "12px", color: "#4e7f65", marginBottom: "6px", fontWeight: 700 }}>你的反馈</div>
         <div style={{ fontSize: "14px", color: "#222", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{item.content || "（空内容）"}</div>
-        {imageUrls.length > 0 && (
+        {imageEntries.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px" }}>
-            {imageUrls.map((url, idx) => (
+            {imageEntries.map((entry, idx) => (
               <img
                 key={`${item.id}-${idx}`}
-                src={url}
+                src={entry.thumbnail || entry.url}
                 alt="feedback-img"
                 style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "10px", objectFit: "cover" }}
               />
@@ -43,12 +43,12 @@ function renderReplyPair(item, formatCommentTime) {
         >
           <div style={{ fontSize: "12px", color: "#2f8a5a", marginBottom: "6px", fontWeight: 700 }}>站主回信</div>
           <div style={{ fontSize: "14px", color: "#1f4330", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{item.admin_reply}</div>
-          {adminReplyImageUrls.length > 0 && (
+          {adminReplyImageEntries.length > 0 && (
             <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px" }}>
-              {adminReplyImageUrls.map((url, idx) => (
+              {adminReplyImageEntries.map((entry, idx) => (
                 <img
                   key={`reply-${item.id}-${idx}`}
-                  src={url}
+                  src={entry.thumbnail || entry.url}
                   alt="admin-reply-img"
                   style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "10px", objectFit: "cover" }}
                 />

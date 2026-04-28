@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { btnMainStyle, feedbackItemStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
-import { parseFeedbackImageUrls } from "../logic/feedbackImageUtils";
+import { parseFeedbackImageEntries, parseFeedbackImageUrls } from "../logic/feedbackImageUtils";
 import XhsImageUploadButton from "./common/XhsImageUploadButton";
 
 const MAX_REPLY_IMAGES = 9;
@@ -87,6 +87,7 @@ function AdminFeedbackModal({
           const isPending = pendingId === item.id;
           const canDelete = item.is_read || item.is_resolved;
           const phone = item.user_phone || item.phone;
+          const imageEntries = parseFeedbackImageEntries(item.image_url);
           const imageUrls = parseFeedbackImageUrls(item.image_url);
           return (
             <div key={item.id} style={{ ...feedbackItemStyle, borderRadius: "20px", border: "1px solid #e8f0eb", background: "#f9fcf9", padding: "12px" }}>
@@ -104,12 +105,12 @@ function AdminFeedbackModal({
               <div style={{ fontSize: "14px", marginTop: "8px", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{item.content || "（无文本内容）"}</div>
               {imageUrls.length > 0 && (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", maxWidth: "220px" }}>
-                  {imageUrls.map((url, idx) => (
+                  {imageEntries.map((entry, idx) => (
                     <img
                       key={`${item.id}-${idx}`}
-                      src={url}
+                      src={entry.thumbnail || entry.url}
                       style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover", cursor: "zoom-in" }}
-                      onClick={() => onZoomImage(url)}
+                      onClick={() => onZoomImage(imageUrls[idx] || entry.url)}
                       alt="feedback-image"
                     />
                   ))}

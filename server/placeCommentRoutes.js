@@ -1,7 +1,9 @@
 import { attachBadgeProfileFields } from "./badgeProfileCache.js";
+import { buildUploadedImagePayload, getUploadedImageAndThumbFiles } from "./uploadImagePayload.js";
 
 function normalizeUploadedImages(files) {
-  return files ? files.map((file) => `https://api.suzcore.top/uploads/${file.filename}`) : [];
+  const { images, thumbnails } = getUploadedImageAndThumbFiles(files);
+  return buildUploadedImagePayload(images, thumbnails);
 }
 
 async function ensurePlaceCommentTables(pool) {
@@ -153,7 +155,7 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     }
   });
 
-  app.post("/api/comments/add", upload.array("images", 9), async (req, res) => {
+  app.post("/api/comments/add", upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
     try {
       const { phone, placeId, content, parentId } = req.body;
       const imageUrls = normalizeUploadedImages(req.files);

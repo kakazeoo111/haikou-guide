@@ -1,4 +1,4 @@
-import { optimizeUploadImages } from "./uploadImageOptimizer";
+import { appendOptimizedImagesWithThumbnails } from "./uploadImageOptimizer";
 
 export function createInteractionHandlers(ctx) {
   const {
@@ -123,14 +123,13 @@ export function createInteractionHandlers(ctx) {
   const handleSubmitRec = async () => {
     if (!newRec.name || !newRec.lat) return alert("请先在建议列表中选择一个精确地点");
     try {
-      const optimizedImages = await optimizeUploadImages(recImages);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("place_name", newRec.name);
       formData.append("description", newRec.desc);
       formData.append("lat", newRec.lat);
       formData.append("lng", newRec.lng);
-      optimizedImages.forEach((file) => formData.append("images", file));
+      await appendOptimizedImagesWithThumbnails(formData, recImages);
       const res = await fetch(`${authApiBase}/api/recommendations/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return;
@@ -150,13 +149,12 @@ export function createInteractionHandlers(ctx) {
     if (!viewingCommentsPlace) return;
     if (!newComment.trim() && commentImages.length === 0) return;
     try {
-      const optimizedImages = await optimizeUploadImages(commentImages);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("placeId", viewingCommentsPlace.id);
       formData.append("content", newComment);
       if (replyTo) formData.append("parentId", replyTo.id);
-      optimizedImages.forEach((file) => formData.append("images", file));
+      await appendOptimizedImagesWithThumbnails(formData, commentImages);
       const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return;

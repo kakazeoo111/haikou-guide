@@ -1,5 +1,8 @@
+import { buildUploadedImagePayload, getUploadedImageAndThumbFiles } from "./uploadImagePayload.js";
+
 function normalizeUploadedImages(files) {
-  return files ? files.map((file) => `https://api.suzcore.top/uploads/${file.filename}`) : [];
+  const { images, thumbnails } = getUploadedImageAndThumbFiles(files);
+  return buildUploadedImagePayload(images, thumbnails);
 }
 
 async function ensureRecommendationTables(pool) {
@@ -63,12 +66,12 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
       const data = rows.map((row) => ({ ...row, is_liked: row.is_liked > 0 }));
       res.json({ ok: true, data });
     } catch (error) {
-      console.error("»ñÈ¡ÍÆ¼öÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `»ñÈ¡ÍÆ¼öÊ§°Ü: ${error.message}` });
+      console.error("ï¿½ï¿½È¡ï¿½Æ¼ï¿½Ê§ï¿½ï¿½:", error.message);
+      res.status(500).json({ ok: false, message: `ï¿½ï¿½È¡ï¿½Æ¼ï¿½Ê§ï¿½ï¿½: ${error.message}` });
     }
   });
 
-  app.post("/api/recommendations/add", upload.array("images", 9), async (req, res) => {
+  app.post("/api/recommendations/add", upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
     const { phone, place_name, description, lat, lng } = req.body;
     const imageUrls = normalizeUploadedImages(req.files);
     try {
@@ -76,10 +79,10 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
         "INSERT INTO recommendations (user_phone, place_name, description, lat, lng, image_url) VALUES (?, ?, ?, ?, ?, ?)",
         [phone, place_name, description || "", lat, lng, JSON.stringify(imageUrls)]
       );
-      res.json({ ok: true, message: "ÍÆ¼ö³É¹¦" });
+      res.json({ ok: true, message: "ï¿½Æ¼ï¿½ï¿½É¹ï¿½" });
     } catch (error) {
-      console.error("Ìá½»ÍÆ¼öÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `Ìá½»ÍÆ¼öÊ§°Ü: ${error.message}` });
+      console.error("ï¿½á½»ï¿½Æ¼ï¿½Ê§ï¿½ï¿½:", error.message);
+      res.status(500).json({ ok: false, message: `ï¿½á½»ï¿½Æ¼ï¿½Ê§ï¿½ï¿½: ${error.message}` });
     }
   });
 
@@ -100,8 +103,8 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
       if (owner.length > 0) await addNotice(owner[0].user_phone, phone, "like_place", `rec_${id}`);
       res.json({ ok: true, action: "liked" });
     } catch (error) {
-      console.error("ÍÆ¼öµãÔÞÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `ÍÆ¼öµãÔÞÊ§°Ü: ${error.message}` });
+      console.error("ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½:", error.message);
+      res.status(500).json({ ok: false, message: `ï¿½Æ¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê§ï¿½ï¿½: ${error.message}` });
     }
   });
 
@@ -114,8 +117,8 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
       );
       res.json({ ok: result.affectedRows > 0 });
     } catch (error) {
-      console.error("É¾³ýÍÆ¼öÊ§°Ü:", error.message);
-      res.status(500).json({ ok: false, message: `É¾³ýÍÆ¼öÊ§°Ü: ${error.message}` });
+      console.error("É¾ï¿½ï¿½ï¿½Æ¼ï¿½Ê§ï¿½ï¿½:", error.message);
+      res.status(500).json({ ok: false, message: `É¾ï¿½ï¿½ï¿½Æ¼ï¿½Ê§ï¿½ï¿½: ${error.message}` });
     }
   });
 }

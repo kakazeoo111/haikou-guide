@@ -1,9 +1,11 @@
 ﻿import { attachBadgeProfileFields } from "./badgeProfileCache.js";
+import { buildUploadedImagePayload, getUploadedImageAndThumbFiles } from "./uploadImagePayload.js";
 
 function normalizeForumImages(files) {
-  const urls = (files || []).map((item) => `https://api.suzcore.top/uploads/${item.filename}`);
-  if (!urls.length) return null;
-  return JSON.stringify(urls);
+  const { images, thumbnails } = getUploadedImageAndThumbFiles(files);
+  const payload = buildUploadedImagePayload(images, thumbnails);
+  if (!payload.length) return null;
+  return JSON.stringify(payload);
 }
 
 const FORUM_IMAGE_TOO_LARGE_MESSAGE = "发布的图片内存过大（不得超过5MB）";
@@ -149,9 +151,9 @@ function handleMulterError(res, error) {
   return false;
 }
 
-function runUploadArray(upload, field, maxCount, req, res) {
+function runUploadImages(upload, req, res) {
   return new Promise((resolve) => {
-    upload.array(field, maxCount)(req, res, (error) => resolve(handleMulterError(res, error)));
+    upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }])(req, res, (error) => resolve(handleMulterError(res, error)));
   });
 }
 
@@ -253,7 +255,7 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
   });
 
   app.post("/api/forum/post/add", async (req, res) => {
-    const uploadOk = await runUploadArray(upload, "images", 9, req, res);
+    const uploadOk = await runUploadImages(upload, req, res);
     if (!uploadOk) return;
     const { phone, content } = req.body;
     const normalizedPhone = String(phone || "").trim();
@@ -368,7 +370,7 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
   });
 
   app.post("/api/forum/comment/add", async (req, res) => {
-    const uploadOk = await runUploadArray(upload, "images", 9, req, res);
+    const uploadOk = await runUploadImages(upload, req, res);
     if (!uploadOk) return;
     const { phone, postId, parentId, content } = req.body;
     const normalizedPhone = String(phone || "").trim();
@@ -444,3 +446,5 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     }
   });
 }
+
+

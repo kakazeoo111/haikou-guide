@@ -1,5 +1,6 @@
-import { getAvatarWithFallback } from "./avatarFallback";
+﻿import { getAvatarWithFallback } from "./avatarFallback";
 import { parseRecommendationAlbum } from "./placeUtils";
+import { parseImageUrls } from "./imageEntryUtils";
 
 const WARMUP_LIMIT_RECOMMENDATIONS = 6;
 const WARMUP_LIMIT_COMMENTS = 10;
@@ -15,19 +16,7 @@ function normalizeUrl(url) {
 }
 
 function parseCommentImageUrls(imageValue) {
-  if (!imageValue || imageValue === "null" || imageValue === "[]") return [];
-  if (Array.isArray(imageValue)) return imageValue.map(normalizeUrl).filter(Boolean);
-  const normalized = String(imageValue || "").trim();
-  if (!normalized) return [];
-  if (!normalized.startsWith("[")) return [normalizeUrl(normalized)].filter(Boolean);
-  try {
-    const parsed = JSON.parse(normalized);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(normalizeUrl).filter(Boolean);
-  } catch (error) {
-    console.error("评论图片预热解析失败:", error);
-    return [];
-  }
+  return parseImageUrls(imageValue).map(normalizeUrl).filter(Boolean);
 }
 
 function warmImageUrl(url) {

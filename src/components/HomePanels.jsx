@@ -214,7 +214,7 @@ function HomePanels({
           {filteredPlaces.map((place, index) => {
             const isMarked = targetPlaces.some((target) => target.id === place.id);
             const isFav = favoriteIds.includes(String(place.id));
-            const coverImage = (place.album && place.album[0]) || DEFAULT_PLACE_COVER;
+            const coverImage = place.albumEntries?.[0]?.thumbnail || (place.album && place.album[0]) || DEFAULT_PLACE_COVER;
             const isAboveFold = index < FIRST_FOLD_CARD_COUNT;
             const recommendCardId = place.type === "recommend" ? getRecommendCardDomId(place.realId) : "";
             return (

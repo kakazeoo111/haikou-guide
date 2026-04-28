@@ -1,4 +1,5 @@
 import { buildUserBadgeData } from "./badgesService.js";
+import { toPublicHttpsUrl } from "./uploadUrl.js";
 const PHONE_REGEX = /^1\d{10}$/;
 const POINTS_PER_VOTE = 10;
 const ACTIVE_WINDOW_DAYS = 30;
@@ -93,12 +94,15 @@ function pickTimeColumn(columns) {
   return "";
 }
 function toHttpsUrl(url) {
+  if (!url) return "";
+  if (typeof url === "object") {
+    const src = String(url.url || url.src || url.original || "").trim();
+    if (!src) return "";
+    return toPublicHttpsUrl(src);
+  }
   const normalized = String(url || "").trim();
   if (!normalized) return "";
-  if (normalized.startsWith("http://")) return normalized.replace("http://", "https://");
-  if (normalized.startsWith("https://")) return normalized;
-  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
-  return "";
+  return toPublicHttpsUrl(normalized);
 }
 
 function parseRecommendationImageUrls(imageValue) {
@@ -257,8 +261,9 @@ function pickActiveBadgeIcon(badgeData) {
 function normalizeAvatarUrl(url, phone) {
   const normalized = String(url || "").trim();
   if (!normalized) return `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || "user"}`;
-  if (normalized.startsWith("http://") || normalized.startsWith("https://")) return normalized.replace("http://", "https://");
-  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
+  if (normalized.startsWith("http://") || normalized.startsWith("https://") || normalized.startsWith("/uploads/")) {
+    return toPublicHttpsUrl(normalized);
+  }
   return `https://api.dicebear.com/7.x/avataaars/svg?seed=${phone || "user"}`;
 }
 export function registerUserSummaryRoutes(app, { pool }) {

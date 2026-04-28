@@ -1,23 +1,17 @@
+﻿import { parseImageEntries } from "./imageEntryUtils";
+
 export function formatCommentTime(dateStr) {
   if (!dateStr) return "刚刚";
   const date = new Date(dateStr);
   return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
+export function parseRecommendationAlbumEntries(imageUrl) {
+  return parseImageEntries(imageUrl);
+}
+
 export function parseRecommendationAlbum(imageUrl) {
-  if (!imageUrl || imageUrl === "null" || imageUrl === "[]") return [];
-  if (Array.isArray(imageUrl)) return imageUrl.map((url) => String(url).replace("http://", "https://")).filter(Boolean);
-  if (typeof imageUrl === "string" && imageUrl.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(imageUrl);
-      if (!Array.isArray(parsed)) return [];
-      return parsed.map((url) => String(url).replace("http://", "https://")).filter(Boolean);
-    } catch (error) {
-      console.error("推荐图片解析失败:", error);
-      return [];
-    }
-  }
-  return [String(imageUrl).replace("http://", "https://")];
+  return parseRecommendationAlbumEntries(imageUrl).map((item) => item.url);
 }
 
 export function getDist(l1, l2) {
@@ -43,19 +37,24 @@ function buildAllSourcePlaces({ places, recommendations, placeStats, myLikedPlac
       distVal: getDist(userLocation, p),
       likes: placeStats[String(p.id)] || 0,
       isPlaceLiked: myLikedPlaceIds.includes(String(p.id)),
+      albumEntries: parseRecommendationAlbumEntries(p.album),
     })),
-    ...recommendations.map((r) => ({
-      ...r,
-      id: `rec_${r.id}`,
-      realId: r.id,
-      name: r.place_name,
-      desc: r.description,
-      type: "recommend",
-      distVal: getDist(userLocation, { lat: r.lat, lng: r.lng }),
-      likes: r.like_count || 0,
-      isPlaceLiked: r.is_liked,
-      album: parseRecommendationAlbum(r.image_url),
-    })),
+    ...recommendations.map((r) => {
+      const albumEntries = parseRecommendationAlbumEntries(r.image_url);
+      return {
+        ...r,
+        id: `rec_${r.id}`,
+        realId: r.id,
+        name: r.place_name,
+        desc: r.description,
+        type: "recommend",
+        distVal: getDist(userLocation, { lat: r.lat, lng: r.lng }),
+        likes: r.like_count || 0,
+        isPlaceLiked: r.is_liked,
+        albumEntries,
+        album: albumEntries.map((item) => item.url),
+      };
+    }),
   ];
 }
 

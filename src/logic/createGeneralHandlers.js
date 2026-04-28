@@ -2,7 +2,7 @@ import { parseRecommendationAlbum } from "./placeUtils";
 import { uploadAvatar } from "./avatarUploadHandler";
 import { normalizeAvatarUrl } from "./avatarFallback";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./clientCache";
-import { optimizeUploadImages } from "./uploadImageOptimizer";
+import { appendOptimizedImagesWithThumbnails } from "./uploadImageOptimizer";
 import { warmCommentAvatars, warmCommentImages, warmRecommendationImages } from "./imageWarmup";
 const GEOLOCATION_REFRESH_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 export function createGeneralHandlers(ctx) {
@@ -177,13 +177,12 @@ export function createGeneralHandlers(ctx) {
 
   const handleFeedbackReply = async ({ feedbackId, letter, markResolved, images }) => {
     try {
-      const optimizedImages = await optimizeUploadImages(images || []);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("feedbackId", feedbackId);
       formData.append("letter", letter);
       formData.append("markResolved", markResolved ? "true" : "false");
-      optimizedImages.forEach((file) => formData.append("images", file));
+      await appendOptimizedImagesWithThumbnails(formData, images || []);
       const res = await fetch(`${authApiBase}/api/feedback/reply`, {
         method: "POST",
         body: formData,
@@ -205,11 +204,10 @@ export function createGeneralHandlers(ctx) {
   const handleFeedbackSubmit = async () => {
     if (!currentUser?.phone) return alert("请先登录后再提交反馈");
     try {
-      const optimizedImages = await optimizeUploadImages(feedbackImages || []);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("content", feedbackContent);
-      optimizedImages.forEach((file) => formData.append("images", file));
+      await appendOptimizedImagesWithThumbnails(formData, feedbackImages || []);
       const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return;

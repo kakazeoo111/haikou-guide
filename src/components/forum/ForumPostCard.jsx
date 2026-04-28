@@ -1,6 +1,6 @@
 import { BADGE_ANIMATION_STYLE, buildBadgePresentation } from "../../logic/commentsOverlayUtils";
 import { getAvatarWithFallback } from "../../logic/avatarFallback";
-import { parseForumImageUrls } from "../../logic/forumImageUtils";
+import { parseForumImageEntries } from "../../logic/forumImageUtils";
 import { buildImageLoadingProps } from "../../logic/imageProps";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
@@ -94,7 +94,8 @@ function ForumPostCard({
 }) {
   const userPointsCard = useUserPointsCard();
   const postId = Number(post.id);
-  const postImages = parseForumImageUrls(post.image_url);
+  const postImageEntries = parseForumImageEntries(post.image_url);
+  const postImages = postImageEntries.map((item) => item.url);
   const postBadge = getSelfBadge(post, currentUser?.phone, activeBadgeTitle, badgeIcon);
   const { motionBadgeVariant, parentBadgeBubbleStyle, parentMotionIconStyle } = buildBadgePresentation(currentUser, activeBadgeTitle, { icon: badgeIcon });
   const isExplorerBadge = String(postBadge?.title || "") === "探店能手";
@@ -124,10 +125,10 @@ function ForumPostCard({
 
         {postImages.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", maxWidth: "320px" }}>
-            {postImages.map((url, index) => (
+            {postImageEntries.map((entry, index) => (
               <img
                 key={`${post.id}-${index}`}
-                src={url}
+                src={entry.thumbnail || entry.url}
                 {...buildImageLoadingProps()}
                 alt="forum-post-img"
                 style={{ width: "100%", aspectRatio: "1 / 1", borderRadius: "8px", objectFit: "cover", cursor: "zoom-in" }}

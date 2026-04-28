@@ -5,7 +5,7 @@ import { getBadgeEmoji, getBadgeTheme } from "../logic/badgeTheme";
 import { APP_CACHE_TTL_MS, readCachedValue } from "../logic/clientCache";
 import { getAvatarWithFallback } from "../logic/avatarFallback";
 import { buildImageLoadingProps } from "../logic/imageProps";
-import { formatCommentTime, parseRecommendationAlbum } from "../logic/placeUtils";
+import { formatCommentTime, parseRecommendationAlbum, parseRecommendationAlbumEntries } from "../logic/placeUtils";
 import { DEFAULT_PLACE_COVER } from "../constants/imageFallbacks";
 
 const MY_RECOMMEND_THUMB_SIZE_PX = 78;
@@ -256,7 +256,8 @@ function ProfileOverlay({
             )}
             {myRecommendations.map((item) => {
               const album = parseRecommendationAlbum(item.image_url);
-              const cover = album[0] || DEFAULT_PLACE_COVER;
+              const albumEntries = parseRecommendationAlbumEntries(item.image_url);
+              const cover = albumEntries[0]?.thumbnail || album[0] || DEFAULT_PLACE_COVER;
               return (
                 <div
                   key={item.id}

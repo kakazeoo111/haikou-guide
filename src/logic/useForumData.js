@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { optimizeUploadImages } from "./uploadImageOptimizer";
+import { appendOptimizedImagesWithThumbnails } from "./uploadImageOptimizer";
 import {
   FORUM_IMAGE_TOO_LARGE_MESSAGE,
   MAX_FORUM_IMAGES,
@@ -145,11 +145,10 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     if (!content && postImages.length === 0) return alert("发布内容不能为空");
     setSubmittingPost(true);
     try {
-      const optimizedPostImages = await optimizeUploadImages(postImages);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("content", content);
-      optimizedPostImages.forEach((file) => formData.append("images", file));
+      await appendOptimizedImagesWithThumbnails(formData, postImages);
       const res = await fetch(`${authApiBase}/api/forum/post/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "发帖失败");
@@ -171,13 +170,12 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     const replyTarget = replyTargetMap[postId];
     setSubmittingCommentPostIds((prev) => [...prev, postId]);
     try {
-      const optimizedCommentImages = await optimizeUploadImages(commentImages);
       const formData = new FormData();
       formData.append("phone", currentUser.phone);
       formData.append("postId", String(postId));
       formData.append("content", content);
       formData.append("parentId", replyTarget ? String(replyTarget.id) : "");
-      optimizedCommentImages.forEach((file) => formData.append("images", file));
+      await appendOptimizedImagesWithThumbnails(formData, commentImages);
       const res = await fetch(`${authApiBase}/api/forum/comment/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "评论发布失败");

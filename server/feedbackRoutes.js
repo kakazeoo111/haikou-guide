@@ -1,3 +1,5 @@
+import { buildUploadedImagePayload, getUploadedImageAndThumbFiles } from "./uploadImagePayload.js";
+
 const FEEDBACK_ADMIN_COLUMNS = [
   { name: "is_read", ddl: "ALTER TABLE feedback ADD COLUMN is_read TINYINT(1) NOT NULL DEFAULT 0" },
   { name: "is_resolved", ddl: "ALTER TABLE feedback ADD COLUMN is_resolved TINYINT(1) NOT NULL DEFAULT 0" },
@@ -20,9 +22,10 @@ function parseOptionalBoolean(value) {
 }
 
 function toUploadedImageJson(files) {
-  const urls = (files || []).map((item) => `https://api.suzcore.top/uploads/${item.filename}`);
-  if (!urls.length) return null;
-  return JSON.stringify(urls);
+  const { images, thumbnails } = getUploadedImageAndThumbFiles(files);
+  const payload = buildUploadedImagePayload(images, thumbnails);
+  if (!payload.length) return null;
+  return JSON.stringify(payload);
 }
 
 function parseFeedbackId(value) {
@@ -95,7 +98,7 @@ async function fetchAllFeedbackRows(pool) {
 export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE }) {
   await ensureFeedbackAdminColumns(pool);
 
-  app.post("/api/feedback/submit", upload.array("images", 9), async (req, res) => {
+  app.post("/api/feedback/submit", upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
     try {
       const { phone, content } = req.body;
       const imageUrl = toUploadedImageJson(req.files);
@@ -169,7 +172,7 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
     }
   });
 
-  app.post("/api/feedback/reply", upload.array("images", 9), async (req, res) => {
+  app.post("/api/feedback/reply", upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
     const { phone, feedbackId, letter, markResolved } = req.body;
     if (!isAdminPhone(phone, ADMIN_PHONE)) return res.status(403).json({ ok: false, message: "无权限发送回信" });
 
@@ -232,7 +235,7 @@ export async function registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE })
     }
   });
 
-  app.post("/api/feedback/followup", upload.array("images", 9), async (req, res) => {
+  app.post("/api/feedback/followup", upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
     const { phone, feedbackId, content } = req.body;
     const normalizedId = parseFeedbackId(feedbackId);
     if (!normalizedId) return res.status(400).json({ ok: false, message: "反馈ID无效" });
