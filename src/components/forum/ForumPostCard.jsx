@@ -5,8 +5,8 @@ import { buildImageLoadingProps } from "../../logic/imageProps";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
 
-const DEFAULT_BADGE_TITLE = "未解锁称号";
-const DEFAULT_BADGE_ICON = "🏅";
+const DEFAULT_BADGE_TITLE = "Locked Badge";
+const DEFAULT_BADGE_ICON = "*";
 
 const selfBadgeStyle = (textColor) => ({
   display: "inline-flex",
@@ -99,9 +99,10 @@ function ForumPostCard({
   const postBadge = getSelfBadge(post, currentUser?.phone, activeBadgeTitle, badgeIcon);
   const { motionBadgeVariant, parentBadgeBubbleStyle, parentMotionIconStyle } = buildBadgePresentation(currentUser, activeBadgeTitle, { icon: badgeIcon });
   const isExplorerBadge = String(postBadge?.title || "") === "探店能手";
-  const badgeGlyph = isExplorerBadge ? "✧" : motionBadgeVariant.glyph;
+  const badgeGlyph = isExplorerBadge ? "✨" : motionBadgeVariant.glyph;
   const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
   const commentCount = Number(post.comment_count || 0);
+  const commentTriggerText = commentCount > 0 ? `展开 ${commentCount} 条评论` : "发表评论";
 
   return (
     <>
@@ -109,7 +110,12 @@ function ForumPostCard({
         <style>{BADGE_ANIMATION_STYLE}</style>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
           <div onClick={() => userPointsCard.openByPhone(post.user_phone)} style={{ width: "32px", height: "32px", position: "relative", cursor: "pointer" }}>
-            <img src={getAvatarWithFallback(post.avatar_url, post.user_phone, post.username)} {...buildImageLoadingProps()} alt="forum-user-avatar" style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }} />
+            <img
+              src={getAvatarWithFallback(post.avatar_url, post.user_phone, post.username)}
+              {...buildImageLoadingProps()}
+              alt="forum-user-avatar"
+              style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover" }}
+            />
             {postBadge && (
               <div style={parentBadgeBubbleStyle}>
                 <span style={postMotionStyle}>{badgeGlyph}</span>
@@ -121,7 +127,7 @@ function ForumPostCard({
           <div style={{ fontSize: "11px", color: "#9db0a7", marginLeft: "auto" }}>{formatCommentTime(post.created_at)}</div>
         </div>
 
-        <div style={{ marginTop: "8px", whiteSpace: "pre-wrap", color: "#233a2f", lineHeight: 1.55, fontSize: "14px" }}>{post.content || "（图片帖）"}</div>
+        <div style={{ marginTop: "8px", whiteSpace: "pre-wrap", color: "#233a2f", lineHeight: 1.55, fontSize: "14px" }}>{post.content || "Image post"}</div>
 
         {postImages.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px", marginTop: "8px", maxWidth: "320px" }}>
@@ -139,18 +145,18 @@ function ForumPostCard({
         )}
 
         <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          {commentCount > 0 && !commentsOpen && (
+          {!commentsOpen && (
             <span
               onClick={() => onOpenComments(postId)}
               style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px", fontWeight: 600 }}
             >
               <span style={{ width: "20px", height: "1px", background: "#ddd" }} />
-              展开 {commentCount} 条评论 ▼
+              {commentTriggerText}
             </span>
           )}
           <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px" }}>
             <span onClick={() => onToggleCall(postId)} style={callBtnStyle(Boolean(post.is_called), callingPost)}>
-              <span style={{ fontSize: "13px" }}>{post.is_called ? "⚡" : "✧"}</span>
+              <span style={{ fontSize: "13px" }}>⚡</span>
               <span>{Number(post.call_count || 0)}</span>
             </span>
             <span style={callLabelStyle(Boolean(post.is_called))}>{post.is_called ? "已共鸣" : "打call"}</span>
