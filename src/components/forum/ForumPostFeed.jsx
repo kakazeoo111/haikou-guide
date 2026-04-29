@@ -118,6 +118,7 @@ function ForumPostFeed({
   onOpenForumNotices,
   onOpenNotice,
   onOpenComments,
+  onStartComment,
   onToggleReplyExpand,
   onReplySelect,
   onReplyCancel,
@@ -192,6 +193,7 @@ function ForumPostFeed({
               callingPost={callingPostIds.includes(postId)}
               commentsOpen={commentsOpen}
               onOpenComments={onOpenComments}
+              onStartComment={onStartComment}
               onToggleCall={onToggleCall}
               onZoomImage={onZoomImage}
               formatCommentTime={formatCommentTime}

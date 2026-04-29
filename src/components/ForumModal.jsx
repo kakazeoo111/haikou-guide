@@ -18,6 +18,10 @@ const FORUM_UNREAD_DOT_STYLE = {
   boxShadow: "0 0 0 2px #ffe4ec",
 };
 
+function focusInlineCommentInput(postId) {
+  setTimeout(() => document.getElementById(`forum-comment-input-inline-${postId}`)?.focus(), 0);
+}
+
 function getPostIdFromNotice(notice) {
   const placeId = String(notice?.place_id || "");
   const matched = placeId.match(/^forum_(\d+)$/);
@@ -98,9 +102,17 @@ function ForumModal({
     await forum.openComments(postId);
   };
 
+  const handleStartPostComment = async (postId) => {
+    forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: null }));
+    if (Number(forum.activeCommentPostId) !== Number(postId)) {
+      await forum.openComments(postId);
+    }
+    focusInlineCommentInput(postId);
+  };
+
   const handleReplySelect = (postId, comment) => {
     forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }));
-    setTimeout(() => document.getElementById(`forum-comment-input-inline-${postId}`)?.focus(), 0);
+    focusInlineCommentInput(postId);
   };
 
   const handleReplyCancel = (postId) => {
@@ -169,6 +181,7 @@ function ForumModal({
         onOpenForumNotices={handleOpenForumNotices}
         onOpenNotice={openNotice}
         onOpenComments={handleOpenComments}
+        onStartComment={handleStartPostComment}
         onSortComments={forum.setCommentSortMode}
         onToggleCommentImageOnly={handleToggleCommentImageOnly}
         onToggleReplyExpand={handleToggleReplyExpand}

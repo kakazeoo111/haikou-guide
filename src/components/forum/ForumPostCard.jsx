@@ -49,6 +49,26 @@ const callLabelStyle = (active) => ({
   whiteSpace: "nowrap",
 });
 
+const commentActionWrapStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  color: "#999",
+  fontSize: "12px",
+  fontWeight: 600,
+};
+
+const commentActionStyle = {
+  cursor: "pointer",
+  userSelect: "none",
+};
+
+const commentActionLineStyle = {
+  width: "20px",
+  height: "1px",
+  background: "#ddd",
+};
+
 function getSelfBadge(post, currentUserPhone, activeBadgeTitle, badgeIcon) {
   const postUserPhone = String(post?.user_phone || "");
   const isSelf = postUserPhone === String(currentUserPhone || "");
@@ -88,6 +108,7 @@ function ForumPostCard({
   callingPost,
   commentsOpen,
   onOpenComments,
+  onStartComment,
   onToggleCall,
   onZoomImage,
   formatCommentTime,
@@ -102,7 +123,7 @@ function ForumPostCard({
   const badgeGlyph = isExplorerBadge ? "✨" : motionBadgeVariant.glyph;
   const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
   const commentCount = Number(post.comment_count || 0);
-  const commentTriggerText = commentCount > 0 ? `展开 ${commentCount} 条评论` : "发表评论";
+  const expandCommentText = commentCount > 0 ? `展开 ${commentCount} 条评论` : "";
 
   return (
     <>
@@ -145,15 +166,19 @@ function ForumPostCard({
         )}
 
         <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-          {!commentsOpen && (
-            <span
-              onClick={() => onOpenComments(postId)}
-              style={{ display: "inline-flex", alignItems: "center", gap: "8px", cursor: "pointer", color: "#999", fontSize: "12px", fontWeight: 600 }}
-            >
-              <span style={{ width: "20px", height: "1px", background: "#ddd" }} />
-              {commentTriggerText}
+          <span style={commentActionWrapStyle}>
+            <span onClick={() => (commentsOpen ? onOpenComments(postId) : onStartComment(postId))} style={commentActionStyle}>
+              {commentsOpen ? "收起评论 ▲" : "回复"}
             </span>
-          )}
+            {!commentsOpen && commentCount > 0 && (
+              <>
+                <span style={commentActionLineStyle} />
+                <span onClick={() => onOpenComments(postId)} style={commentActionStyle}>
+                  {expandCommentText}
+                </span>
+              </>
+            )}
+          </span>
           <div style={{ marginLeft: "auto", display: "inline-flex", alignItems: "center", gap: "8px" }}>
             <span onClick={() => onToggleCall(postId)} style={callBtnStyle(Boolean(post.is_called), callingPost)}>
               <span style={{ fontSize: "13px" }}>⚡</span>
