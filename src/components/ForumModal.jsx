@@ -51,16 +51,22 @@ function ForumModal({
 
   useEffect(() => {
     forum.loadPosts("", forum.sortMode);
+    // forum handlers are rebuilt every render; initial load is keyed by the logged-in user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.phone]);
 
   useEffect(() => {
     if (forum.searchKeyword.trim()) return;
     forum.loadPosts("", forum.sortMode);
+    // forum handlers are rebuilt every render; this auto-refresh is keyed by the search text.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [forum.searchKeyword]);
 
   useEffect(() => {
     if (!currentUser?.phone) return;
     onRefreshNotices?.(false);
+    // onRefreshNotices comes from parent handlers that are rebuilt each render; user changes drive this refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.phone]);
 
   const handleToggleSortMode = () => {

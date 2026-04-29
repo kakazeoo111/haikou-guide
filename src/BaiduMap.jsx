@@ -143,7 +143,7 @@ function useMapBootstrap(isMobile, userLocation, mapRef, setMapError, containerI
       console.error("地图初始化异常:", error);
       setMapError(FALLBACK_INIT);
     }
-  }, [isMobile, mapRef, setMapError, containerId]);
+  }, [isMobile, mapRef, setMapError, containerId, userLocation]);
 }
 
 function useMapOverlays(targetPlaces, userLocation, routePath, isMobile, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError) {

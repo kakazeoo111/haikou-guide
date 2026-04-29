@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { AUTH_API_BASE } from "../appConfig";
 
-const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
+const PHONE_PATTERN = /^1\d{10}$/;
+const authApiBase = AUTH_API_BASE;
 
 export function useUserPointsCard() {
   const [visible, setVisible] = useState(false);
@@ -11,7 +13,7 @@ export function useUserPointsCard() {
 
   const openByPhone = async (phone) => {
     const normalizedPhone = String(phone || "").trim();
-    if (!/^1\d{10}$/.test(normalizedPhone)) return;
+    if (!PHONE_PATTERN.test(normalizedPhone)) return;
     setVisible(true);
     setLoading(true);
     setData(null);

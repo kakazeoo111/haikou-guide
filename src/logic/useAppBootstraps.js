@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { JUMP_TO_RECOMMEND_EVENT } from "../constants/jumpEvents";
 import { scrollToRecommendCard } from "./recommendJump";
+import { toPublicHttpsUrl } from "../appConfig";
 
 const MOBILE_BREAKPOINT = 768;
 const COUNTDOWN_STEP = 1;
@@ -8,12 +9,7 @@ const COUNTDOWN_INTERVAL_MS = 1000;
 const PHONE_PATTERN = /^1\d{10}$/;
 
 function normalizeProfileAvatarUrl(url) {
-  const normalized = String(url || "").trim();
-  if (!normalized) return "";
-  if (normalized.startsWith("http://")) return normalized.replace("http://", "https://");
-  if (normalized.startsWith("https://")) return normalized;
-  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
-  return normalized;
+  return toPublicHttpsUrl(url);
 }
 
 function warmAvatar(url) {

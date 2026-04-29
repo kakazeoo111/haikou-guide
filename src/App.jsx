@@ -9,6 +9,7 @@ import { useCountdown, useInitClientState, useRecommendJumpListener, useValidate
 import { useBadgeCenter } from "./logic/useBadgeCenter";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./logic/clientCache";
 import { setupWechatAggressiveLazyLoading } from "./logic/wechatImageLazyPatch";
+import { AUTH_API_BASE } from "./appConfig";
 function hasValidRouteCoordinate(place) { return Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)); }
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -55,7 +56,7 @@ function App() {
   const [showAdminFeedback, setShowAdminFeedback] = useState(false);
   const [allFeedbacks, setAllFeedbacks] = useState([]);
   const ADMIN_PHONE = import.meta.env.VITE_ADMIN_PHONE;
-  const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
+  const authApiBase = AUTH_API_BASE;
   const places = placesData;
   const getNoticeDismissKey = (phone) => `haikou_notice_dismissed_${phone}`;
   useValidateEnv(ADMIN_PHONE, authApiBase);
@@ -132,15 +133,17 @@ function App() {
     const cachedFavorites = readCachedValue(`favorites_${phone}`, APP_CACHE_TTL_MS.favorites);
     const cachedStats = readCachedValue(`place_stats_${phone}`, APP_CACHE_TTL_MS.placeStats);
     const cachedAnnouncement = readCachedValue("announcement", APP_CACHE_TTL_MS.announcement);
-    if (cachedFavorites?.ok) setFavoriteIds((cachedFavorites.favIds || []).map((id) => String(id)));
-    if (cachedStats?.ok) {
-      setPlaceStats(cachedStats.stats || {});
-      setMyLikedPlaceIds((cachedStats.myLikedIds || []).map((id) => String(id)));
-    }
-    if (cachedAnnouncement?.ok && cachedAnnouncement.content) {
-      setNoticeContent(cachedAnnouncement.content);
-      setShowNotice(localStorage.getItem(getNoticeDismissKey(phone)) !== "1");
-    }
+    queueMicrotask(() => {
+      if (cachedFavorites?.ok) setFavoriteIds((cachedFavorites.favIds || []).map((id) => String(id)));
+      if (cachedStats?.ok) {
+        setPlaceStats(cachedStats.stats || {});
+        setMyLikedPlaceIds((cachedStats.myLikedIds || []).map((id) => String(id)));
+      }
+      if (cachedAnnouncement?.ok && cachedAnnouncement.content) {
+        setNoticeContent(cachedAnnouncement.content);
+        setShowNotice(localStorage.getItem(getNoticeDismissKey(phone)) !== "1");
+      }
+    });
     fetch(`${authApiBase}/api/favorites/${phone}`)
       .then((res) => res.json())
       .then((data) => {
@@ -169,11 +172,15 @@ function App() {
         setShowNotice(localStorage.getItem(getNoticeDismissKey(phone)) !== "1");
       })
       .catch((error) => console.error("获取公告失败:", error));
+    // generalHandlers is rebuilt every render; this bootstrap is intentionally keyed by user/API only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.phone, authApiBase]);
   useEffect(() => {
     if (!currentUser?.phone) return;
     if (activeTab !== "home" && activeTab !== "forum" && activeTab !== "profile") return;
     generalHandlers.fetchNotices(false);
+    // generalHandlers is rebuilt every render; tab and user are the actual refresh triggers.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, currentUser?.phone]);
 
   useEffect(() => {
@@ -182,6 +189,8 @@ function App() {
       generalHandlers.fetchNotices(false);
     }, 15000);
     return () => clearInterval(timer);
+    // generalHandlers is rebuilt every render; the polling lifecycle is keyed by the logged-in user.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.phone]);
   if (!currentUser) {
     return (

@@ -8,6 +8,7 @@ export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
       const [rows] = await pool.execute("SELECT content FROM announcements WHERE id = 1");
       res.json({ ok: true, content: rows[0]?.content || "暂无公告" });
     } catch (error) {
+      console.error("获取公告失败:", error.message);
       res.status(500).json({ ok: false });
     }
   });
@@ -19,6 +20,7 @@ export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
       await pool.execute("UPDATE announcements SET content = ? WHERE id = 1", [newContent]);
       res.json({ ok: true });
     } catch (error) {
+      console.error("更新公告失败:", error.message);
       res.status(500).json({ ok: false });
     }
   });
@@ -42,6 +44,7 @@ export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
       const [rows] = await pool.execute("SELECT * FROM feedback ORDER BY created_at DESC");
       res.json({ ok: true, data: rows });
     } catch (error) {
+      console.error("获取反馈列表失败:", error.message);
       res.status(500).json({ ok: false });
     }
   });
@@ -65,6 +68,7 @@ export function registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }) {
       const [rows] = await pool.execute("SELECT place_id FROM favorites WHERE user_phone = ?", [req.params.phone]);
       res.json({ ok: true, favIds: rows.map((row) => row.place_id) });
     } catch (error) {
+      console.error("获取收藏失败:", error.message);
       res.status(500).json({ ok: false });
     }
   });

@@ -117,13 +117,15 @@ function usePlannerState(visible) {
 
   useEffect(() => {
     if (!visible) return;
-    setSelectedIds([]);
-    setStartMode(START_MODE_CURRENT);
-    setCustomOriginText("");
-    setCustomOriginPoint(null);
-    setOriginSuggestions([]);
-    setOriginSearchMessage("");
-    setPreviewRoute(null);
+    queueMicrotask(() => {
+      setSelectedIds([]);
+      setStartMode(START_MODE_CURRENT);
+      setCustomOriginText("");
+      setCustomOriginPoint(null);
+      setOriginSuggestions([]);
+      setOriginSearchMessage("");
+      setPreviewRoute(null);
+    });
   }, [visible]);
 
   return {

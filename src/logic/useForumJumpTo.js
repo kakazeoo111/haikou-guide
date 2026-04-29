@@ -46,6 +46,6 @@ export function useForumJumpTo({ posts, loadComments, loadingPosts, onOpenCommen
     Promise.resolve(loadComments?.(jumpPostId)).catch((error) => console.error("论坛跳转加载评论失败:", error));
     onOpenComments?.(jumpPostId);
     scrollToForumPost(jumpPostId);
-    setJumpPostId(null);
+    queueMicrotask(() => setJumpPostId(null));
   }, [jumpPostId, loadingPosts, posts, loadComments, onOpenComments]);
 }

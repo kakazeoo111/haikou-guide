@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { getAvatarWithFallback } from "../logic/avatarFallback";
+import { AUTH_API_BASE, toPublicHttpsUrl } from "../appConfig";
 import LikeHeartIcon from "./LikeHeartIcon";
 
-const authApiBase = import.meta.env.VITE_AUTH_API_BASE;
+const authApiBase = AUTH_API_BASE;
 
 function formatDateTime(value) {
   if (!value) return "刚刚";
@@ -12,12 +13,7 @@ function formatDateTime(value) {
 }
 
 function toHttpsUrl(url) {
-  const normalized = String(url || "").trim();
-  if (!normalized) return "";
-  if (normalized.startsWith("http://")) return normalized.replace("http://", "https://");
-  if (normalized.startsWith("https://")) return normalized;
-  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
-  return "";
+  return toPublicHttpsUrl(url);
 }
 
 function parseCommentImageUrls(imageValue) {
@@ -115,14 +111,18 @@ function UserRecommendedPlaceReadonly({ place, visible }) {
 
   useEffect(() => {
     if (!visible || !place?.id) {
-      setLoading(false);
-      setError("");
-      setComments([]);
+      queueMicrotask(() => {
+        setLoading(false);
+        setError("");
+        setComments([]);
+      });
       return;
     }
     const controller = new AbortController();
-    setLoading(true);
-    setError("");
+    queueMicrotask(() => {
+      setLoading(true);
+      setError("");
+    });
     fetch(`${authApiBase}/api/comments/rec_${place.id}`, { signal: controller.signal })
       .then((response) => response.json())
       .then((result) => {

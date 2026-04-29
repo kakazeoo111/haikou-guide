@@ -1,3 +1,5 @@
+import { toPublicHttpsUrl } from "../appConfig";
+
 const AVATAR_GRADIENTS = [
   ["#e7f7ef", "#b7e3cc"],
   ["#e7f2ff", "#bdd8ff"],
@@ -45,12 +47,7 @@ function buildAvatarSvg(seed, label) {
 export function normalizeAvatarUrl(url) {
   const normalized = String(url || "").trim();
   if (EMPTY_AVATAR_TOKENS.has(normalized)) return "";
-  if (normalized.startsWith("data:image/")) return normalized;
-  if (normalized.startsWith("https://")) return normalized;
-  if (normalized.startsWith("http://")) return normalized.replace(/^http:\/\//i, "https://");
-  if (normalized.startsWith("//")) return `https:${normalized}`;
-  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
-  return "";
+  return toPublicHttpsUrl(normalized);
 }
 
 export function buildLocalAvatarDataUri(phone, username) {

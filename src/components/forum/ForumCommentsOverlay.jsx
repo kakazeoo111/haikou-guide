@@ -58,8 +58,6 @@ function ForumCommentsOverlay({
   commentImages,
   submitting,
   onClose,
-  onSortChange,
-  onToggleShowOnlyImages,
   onToggleExpand,
   onReplySelect,
   onReplyCancel,

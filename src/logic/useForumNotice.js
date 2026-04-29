@@ -10,13 +10,17 @@ export function useForumNotice(phone) {
 
   useEffect(() => {
     if (!normalizedPhone) {
-      setShowNotice(false);
-      setDontShowAgain(false);
+      queueMicrotask(() => {
+        setShowNotice(false);
+        setDontShowAgain(false);
+      });
       return;
     }
     const suppressed = localStorage.getItem(storageKey) === "1";
-    setDontShowAgain(suppressed);
-    setShowNotice(!suppressed);
+    queueMicrotask(() => {
+      setDontShowAgain(suppressed);
+      setShowNotice(!suppressed);
+    });
   }, [normalizedPhone, storageKey]);
 
   const updateDontShowAgain = (nextValue) => {

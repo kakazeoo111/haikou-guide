@@ -39,6 +39,7 @@ async function ensureNotificationTypeColumn(pool) {
         const [rows] = await pool.execute(sql, [req.params.phone]);
         res.json({ ok: true, data: rows });
       } catch (error) {
+        console.error("获取通知失败:", error.message);
         res.status(500).json({ ok: false });
       }
     });
@@ -48,6 +49,7 @@ async function ensureNotificationTypeColumn(pool) {
         await pool.execute("UPDATE notifications SET is_read = 1 WHERE receiver_phone = ?", [req.body.phone]);
         res.json({ ok: true });
       } catch (error) {
+        console.error("标记通知已读失败:", error.message);
         res.status(500).json({ ok: false });
       }
     });
@@ -63,6 +65,7 @@ async function ensureNotificationTypeColumn(pool) {
         );
         res.json({ ok: true });
       } catch (error) {
+        console.error("标记论坛通知已读失败:", error.message);
         res.status(500).json({ ok: false });
       }
     });

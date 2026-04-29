@@ -210,7 +210,7 @@ function UserPointsCardModal({ visible, loading, data, onClose }) {
 
   useEffect(() => {
     if (!visible) {
-      setAvatarPreviewVisible(false);
+      queueMicrotask(() => setAvatarPreviewVisible(false));
     }
   }, [visible]);
 

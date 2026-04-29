@@ -1,6 +1,7 @@
 ﻿import { getAvatarWithFallback } from "./avatarFallback";
 import { parseRecommendationAlbum } from "./placeUtils";
 import { parseImageUrls } from "./imageEntryUtils";
+import { toPublicHttpsUrl } from "../appConfig";
 
 const WARMUP_LIMIT_RECOMMENDATIONS = 6;
 const WARMUP_LIMIT_COMMENTS = 10;
@@ -9,10 +10,7 @@ const WARMUP_IMAGES_PER_ITEM = 2;
 const warmedImageSet = new Set();
 
 function normalizeUrl(url) {
-  const normalized = String(url || "").trim();
-  if (!normalized) return "";
-  if (normalized.startsWith("/uploads/")) return `https://api.suzcore.top${normalized}`;
-  return normalized.replace(/^http:\/\//i, "https://");
+  return toPublicHttpsUrl(url);
 }
 
 function parseCommentImageUrls(imageValue) {

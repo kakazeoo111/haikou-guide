@@ -45,7 +45,6 @@ function ForumInlineCommentsPanel({
   onReplyCancel,
   onCommentDraftChange,
   onSelectCommentImages,
-  onRemoveCommentImage,
   onSubmitComment,
   onLikeComment,
   onDeleteComment,

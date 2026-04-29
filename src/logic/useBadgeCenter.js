@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchBadgeSummary, getBadgeTitleOrDefault, selectActiveBadge, updateManualBadgeGrant } from "./badgeClient";
 
 const DEFAULT_BADGE_TITLE = "\u672a\u89e3\u9501\u79f0\u53f7";
@@ -17,36 +17,42 @@ export function useBadgeCenter({ authApiBase, currentUser, adminPhone }) {
   const [showBadgePicker, setShowBadgePicker] = useState(false);
   const [showBadgeGrantModal, setShowBadgeGrantModal] = useState(false);
 
-  const refreshBadgeSummary = async (phone) => {
+  const refreshBadgeSummary = useCallback(async (phone) => {
     const summary = await fetchBadgeSummary(authApiBase, phone);
     setBadgeSummary(summary);
     setActiveBadgeTitle(getBadgeTitleOrDefault(summary));
     setActiveBadgeMeta(getActiveBadge(summary));
     return summary;
-  };
+  }, [authApiBase]);
 
   useEffect(() => {
     if (!currentUser?.phone) {
-      setBadgeSummary(null);
-      setActiveBadgeTitle(DEFAULT_BADGE_TITLE);
-      setActiveBadgeMeta(getActiveBadge(null));
+      queueMicrotask(() => {
+        setBadgeSummary(null);
+        setActiveBadgeTitle(DEFAULT_BADGE_TITLE);
+        setActiveBadgeMeta(getActiveBadge(null));
+      });
       return;
     }
-    refreshBadgeSummary(currentUser.phone).catch((error) => {
-      console.error("Fetch badge summary failed:", error);
-      setActiveBadgeTitle(DEFAULT_BADGE_TITLE);
-      setActiveBadgeMeta(getActiveBadge(null));
+    queueMicrotask(() => {
+      refreshBadgeSummary(currentUser.phone).catch((error) => {
+        console.error("Fetch badge summary failed:", error);
+        setActiveBadgeTitle(DEFAULT_BADGE_TITLE);
+        setActiveBadgeMeta(getActiveBadge(null));
+      });
     });
-  }, [authApiBase, currentUser?.phone]);
+  }, [currentUser?.phone, refreshBadgeSummary]);
 
   useEffect(() => {
     if (!showBadgePicker || !currentUser?.phone) return undefined;
-    refreshBadgeSummary(currentUser.phone).catch((error) => console.error("Refresh badge summary failed:", error));
+    queueMicrotask(() => {
+      refreshBadgeSummary(currentUser.phone).catch((error) => console.error("Refresh badge summary failed:", error));
+    });
     const timer = setInterval(() => {
       refreshBadgeSummary(currentUser.phone).catch((error) => console.error("Poll badge summary failed:", error));
     }, 15000);
     return () => clearInterval(timer);
-  }, [showBadgePicker, currentUser?.phone, authApiBase]);
+  }, [showBadgePicker, currentUser?.phone, refreshBadgeSummary]);
 
   const openManageBadgeModal = () => {
     if (!currentUser || currentUser.phone !== adminPhone) {

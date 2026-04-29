@@ -6,7 +6,6 @@ import OpenApiClient from "@alicloud/openapi-client";
 import DypnsapiClient from "@alicloud/dypnsapi20170525";
 import path from "path";
 import { fileURLToPath } from "url";
-import multer from "multer";
 import fs from "fs";
 import { ensureBadgeGrantTable } from "./badgesService.js";
 import { registerBadgeRoutes } from "./badgesRoutes.js";
@@ -19,6 +18,8 @@ import { registerPlaceCommentRoutes } from "./placeCommentRoutes.js";
 import { registerNotificationRoutes } from "./notificationRoutes.js";
 import { registerMiscRoutes } from "./miscRoutes.js";
 import { registerUserSummaryRoutes } from "./userSummaryRoutes.js";
+import { applyProxySettings, setApiNoStoreHeaders, STATIC_UPLOAD_OPTIONS } from "./cacheHeaders.js";
+import { createUploadMiddleware } from "./uploadPolicy.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,35 +29,19 @@ const app = express();
 const port = process.env.SMS_SERVER_PORT || 3001;
 const ADMIN_PHONE = "13707584213";
 const otpStore = new Map();
-const UPLOAD_CACHE_MAX_AGE_SECONDS = 31536000;
+const startupWarnings = [];
 
+applyProxySettings(app);
 app.disable("x-powered-by");
 app.use(cors());
 app.use(express.json());
+app.use("/api", setApiNoStoreHeaders);
 
 const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-app.use(
-  "/uploads",
-  express.static(uploadDir, {
-    maxAge: "365d",
-    immutable: true,
-    setHeaders: (res) => {
-      res.setHeader("Cache-Control", `public, max-age=${UPLOAD_CACHE_MAX_AGE_SECONDS}, immutable, stale-while-revalidate=86400`);
-    },
-  }),
-);
+app.use("/uploads", express.static(uploadDir, STATIC_UPLOAD_OPTIONS));
 
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => cb(null, uploadDir),
-    filename: (req, file, cb) => {
-      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    },
-  }),
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
+const upload = createUploadMiddleware(uploadDir);
 
 function getPositiveIntEnv(name, fallback) {
   const value = Number.parseInt(process.env[name] || "", 10);
@@ -66,6 +51,15 @@ function getPositiveIntEnv(name, fallback) {
 function getNonNegativeIntEnv(name, fallback) {
   const value = Number.parseInt(process.env[name] || "", 10);
   return Number.isInteger(value) && value >= 0 ? value : fallback;
+}
+
+async function runStartupStep(label, task) {
+  try {
+    await task();
+  } catch (error) {
+    startupWarnings.push(label);
+    console.error(`${label}失败:`, error.message);
+  }
 }
 
 const pool = mysql.createPool({
@@ -122,41 +116,33 @@ async function addNotice(receiver, sender, type, placeId, content = "") {
   }
 }
 
-app.get("/api/health", (req, res) => res.json({ ok: true, db: "connected" }));
+app.get("/api/health", (req, res) => {
+  res.json({
+    ok: true,
+    server: "running",
+    db: startupWarnings.length > 0 ? "unavailable" : "initialized",
+    startupWarnings,
+  });
+});
 
-try {
-  await ensureUsersProfileColumns(pool);
-} catch (error) {
-  console.error("用户资料字段初始化失败:", error.message);
-}
-try {
-  await ensureBadgeGrantTable(pool);
-} catch (error) {
-  console.error("称号授权表初始化失败:", error.message);
-}
+await runStartupStep("用户资料字段初始化", () => ensureUsersProfileColumns(pool));
+await runStartupStep("称号授权表初始化", () => ensureBadgeGrantTable(pool));
+await runStartupStep("称号路由初始化", () => registerBadgeRoutes(app, { pool, ADMIN_PHONE }));
+await runStartupStep("认证路由初始化", () => registerAuthRoutes(app, { pool, otpStore, smsClient }));
+await runStartupStep("推荐路由初始化", () => registerRecommendationRoutes(app, { pool, upload, addNotice }));
+await runStartupStep("评论路由初始化", () => registerPlaceCommentRoutes(app, { pool, upload, addNotice }));
+await runStartupStep("通知路由初始化", () => registerNotificationRoutes(app, { pool }));
+await runStartupStep("杂项路由初始化", () => registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }));
+await runStartupStep("用户摘要路由初始化", () => registerUserSummaryRoutes(app, { pool }));
+await runStartupStep("反馈管理路由初始化", () => registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE }));
+await runStartupStep("论坛路由初始化", () => registerForumRoutes(app, { pool, upload, addNotice }));
+await runStartupStep("在线人数路由初始化", () => registerOnlineRoutes(app));
 
-registerBadgeRoutes(app, { pool, ADMIN_PHONE });
-registerAuthRoutes(app, { pool, otpStore, smsClient });
-await registerRecommendationRoutes(app, { pool, upload, addNotice });
-await registerPlaceCommentRoutes(app, { pool, upload, addNotice });
-await registerNotificationRoutes(app, { pool });
-registerMiscRoutes(app, { pool, upload, ADMIN_PHONE });
-registerUserSummaryRoutes(app, { pool });
-
-try {
-  await registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE });
-} catch (error) {
-  console.error("反馈管理路由初始化失败:", error.message);
-}
-try {
-  await registerForumRoutes(app, { pool, upload, addNotice });
-} catch (error) {
-  console.error("论坛路由初始化失败.:", error.message);
-}
-try {
-  registerOnlineRoutes(app);
-} catch (error) {
-  console.error("在线人数路由初始化失败:", error.message);
-}
+app.use((error, req, res, next) => {
+  if (!error) return next();
+  const isUploadError = error.name === "MulterError" || error.message.includes("上传");
+  console.error("请求处理失败:", error.message);
+  res.status(isUploadError ? 400 : 500).json({ ok: false, message: error.message || "服务器处理失败" });
+});
 
 app.listen(port, () => console.log(`🚀 后端已启动：${port}`));
