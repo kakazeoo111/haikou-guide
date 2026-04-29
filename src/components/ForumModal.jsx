@@ -19,7 +19,15 @@ const FORUM_UNREAD_DOT_STYLE = {
 };
 
 function focusInlineCommentInput(postId) {
-  setTimeout(() => document.getElementById(`forum-comment-input-inline-${postId}`)?.focus(), 0);
+  setTimeout(() => {
+    const input = document.getElementById(`forum-comment-input-inline-${postId}`);
+    if (!input) return;
+    try {
+      input.focus({ preventScroll: true });
+    } catch {
+      input.focus();
+    }
+  }, 0);
 }
 
 function getPostIdFromNotice(notice) {
@@ -102,14 +110,6 @@ function ForumModal({
     await forum.openComments(postId);
   };
 
-  const handleStartPostComment = async (postId) => {
-    forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: null }));
-    if (Number(forum.activeCommentPostId) !== Number(postId)) {
-      await forum.openComments(postId);
-    }
-    focusInlineCommentInput(postId);
-  };
-
   const handleReplySelect = (postId, comment) => {
     forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }));
     focusInlineCommentInput(postId);
@@ -181,7 +181,6 @@ function ForumModal({
         onOpenForumNotices={handleOpenForumNotices}
         onOpenNotice={openNotice}
         onOpenComments={handleOpenComments}
-        onStartComment={handleStartPostComment}
         onSortComments={forum.setCommentSortMode}
         onToggleCommentImageOnly={handleToggleCommentImageOnly}
         onToggleReplyExpand={handleToggleReplyExpand}

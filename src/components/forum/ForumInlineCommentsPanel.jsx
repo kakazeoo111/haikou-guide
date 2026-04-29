@@ -23,6 +23,34 @@ import XhsImageUploadButton from "../common/XhsImageUploadButton";
 
 const COMMENT_INPUT_ID_PREFIX = "forum-comment-input-inline-";
 const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
+
+const inlineCommentsPanelStyle = {
+  marginTop: "8px",
+  border: "1px solid #ebf2ee",
+  borderRadius: "18px",
+  background: "#fff",
+  overflow: "hidden",
+  display: "flex",
+  flexDirection: "column",
+  maxHeight: "min(72vh, 620px)",
+  boxShadow: "0 6px 18px rgba(90, 167, 123, 0.08)",
+};
+
+const inlineScrollContentStyle = {
+  ...scrollContentStyle,
+  flex: "1 1 auto",
+  minHeight: "170px",
+  padding: "16px",
+};
+
+const inlineBottomBarStyle = {
+  ...fixedBottomBarStyle,
+  flex: "0 0 auto",
+  padding: "10px 14px",
+  paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
+  boxShadow: "0 -4px 14px rgba(45, 75, 60, 0.06)",
+};
+
 function sortForumComments(comments) {
   const source = Array.isArray(comments) ? [...comments] : [];
   return source.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -76,21 +104,22 @@ function ForumInlineCommentsPanel({
     <>
       <style>{BADGE_ANIMATION_STYLE}</style>
 
-      <div style={scrollContentStyle}>
-        {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
-        {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>暂无相关评论...</div>}
+      <div style={inlineCommentsPanelStyle}>
+        <div style={inlineScrollContentStyle}>
+          {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
+          {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "60px", color: "#bbb" }}>暂无相关评论...</div>}
 
-        {parents.map((parent) => {
-          const replies = children
-            .filter((child) => String(child.parent_id) === String(parent.id))
-            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-          const isExpanded = expandedParentIds.includes(parent.id);
-          const parentImageEntries = parseForumImageEntries(parent.image_url);
-          const parentImages = parentImageEntries.map((item) => item.url);
-          const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
+          {parents.map((parent) => {
+            const replies = children
+              .filter((child) => String(child.parent_id) === String(parent.id))
+              .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            const isExpanded = expandedParentIds.includes(parent.id);
+            const parentImageEntries = parseForumImageEntries(parent.image_url);
+            const parentImages = parentImageEntries.map((item) => item.url);
+            const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
-          return (
-            <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
+            return (
+              <div key={parent.id} style={{ marginBottom: "25px", borderBottom: "1px solid #f2f2f2", paddingBottom: "15px" }}>
               <div style={{ display: "flex", gap: "10px" }}>
                 <div onClick={() => userPointsCard.openByPhone(parent.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
                   <img
@@ -241,50 +270,50 @@ function ForumInlineCommentsPanel({
                   )}
                 </div>
               )}
-            </div>
-          );
-        })}
-        <div onClick={onCloseComments} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", textAlign: "center", fontWeight: "bold", marginTop: "6px" }}>
-          —— 收起评论区 ▲ ——
+              </div>
+            );
+          })}
+          <div onClick={onCloseComments} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", textAlign: "center", fontWeight: "bold", marginTop: "6px" }}>
+            —— 收起评论区 ▲ ——
+          </div>
         </div>
-        <div style={{ height: "120px" }} />
-      </div>
 
-      <div style={fixedBottomBarStyle}>
-        {replyTarget && (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 10px 8px", fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>
-            <span>{`正在回复 @${replyTarget.username}`}</span>
-            <span onClick={onReplyCancel} style={{ cursor: "pointer", color: "#999", fontSize: "16px" }}>
-              ×
-            </span>
+        <div style={inlineBottomBarStyle}>
+          {replyTarget && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 10px 8px", fontSize: "12px", color: "#5aa77b", fontWeight: "bold" }}>
+              <span>正在回复 @{replyTarget.username}</span>
+              <span onClick={onReplyCancel} style={{ cursor: "pointer", color: "#999", fontSize: "16px" }}>
+                ×
+              </span>
+            </div>
+          )}
+          <div style={bottomInputContainer}>
+            <input
+              id={commentInputId}
+              value={commentDraft}
+              onChange={(event) => onCommentDraftChange(event.target.value)}
+              placeholder={replyTarget ? `回复 @${replyTarget.username}...` : "写点评..."}
+              style={bottomRealInput}
+            />
+            <XhsImageUploadButton
+              onClick={() => document.getElementById(commentImageInputId)?.click()}
+              ariaLabel="upload-forum-comment-images"
+              size={32}
+              radius={10}
+              iconSize={16}
+              style={{ boxShadow: "none", borderWidth: "1px" }}
+            />
+            <input id={commentImageInputId} type="file" hidden multiple accept="image/*" onChange={onSelectCommentImages} />
+            <button onClick={onSubmitComment} disabled={submitting} style={{ ...btnSendStyle, opacity: submitting ? 0.6 : 1 }}>
+              {submitting ? "发布中..." : "发布"}
+            </button>
           </div>
-        )}
-        <div style={bottomInputContainer}>
-          <input
-            id={commentInputId}
-            value={commentDraft}
-            onChange={(event) => onCommentDraftChange(event.target.value)}
-            placeholder={replyTarget ? `回复 @${replyTarget.username}...` : "写点评..."}
-            style={bottomRealInput}
-          />
-          <XhsImageUploadButton
-            onClick={() => document.getElementById(commentImageInputId)?.click()}
-            ariaLabel="upload-forum-comment-images"
-            size={32}
-            radius={10}
-            iconSize={16}
-            style={{ boxShadow: "none", borderWidth: "1px" }}
-          />
-          <input id={commentImageInputId} type="file" hidden multiple accept="image/*" onChange={onSelectCommentImages} />
-          <button onClick={onSubmitComment} disabled={submitting} style={{ ...btnSendStyle, opacity: submitting ? 0.6 : 1 }}>
-            {submitting ? "发布中..." : "发布"}
-          </button>
+          {commentImages.length > 0 && (
+            <div style={{ fontSize: "10px", color: "#5aa77b", marginTop: "5px", fontWeight: "bold" }}>
+              已选择 {commentImages.length} 张图片
+            </div>
+          )}
         </div>
-        {commentImages.length > 0 && (
-          <div style={{ fontSize: "10px", color: "#5aa77b", marginTop: "5px", fontWeight: "bold" }}>
-            已选择 {commentImages.length} 张图片
-          </div>
-        )}
       </div>
 
       <UserPointsCardModal visible={userPointsCard.visible} loading={userPointsCard.loading} data={userPointsCard.data} onClose={userPointsCard.close} />

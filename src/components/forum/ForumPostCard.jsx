@@ -108,7 +108,6 @@ function ForumPostCard({
   callingPost,
   commentsOpen,
   onOpenComments,
-  onStartComment,
   onToggleCall,
   onZoomImage,
   formatCommentTime,
@@ -123,7 +122,7 @@ function ForumPostCard({
   const badgeGlyph = isExplorerBadge ? "✨" : motionBadgeVariant.glyph;
   const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
   const commentCount = Number(post.comment_count || 0);
-  const expandCommentText = commentCount > 0 ? `展开 ${commentCount} 条评论` : "";
+  const expandCommentText = commentCount > 0 ? `展开 ${commentCount} 条评论 ▼` : "";
 
   return (
     <>
@@ -167,8 +166,8 @@ function ForumPostCard({
 
         <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
           <span style={commentActionWrapStyle}>
-            <span onClick={() => (commentsOpen ? onOpenComments(postId) : onStartComment(postId))} style={commentActionStyle}>
-              {commentsOpen ? "收起评论 ▲" : "回复"}
+            <span onClick={() => onOpenComments(postId)} style={commentActionStyle}>
+              {commentsOpen ? "收起评论 ▲" : "评论"}
             </span>
             {!commentsOpen && commentCount > 0 && (
               <>
