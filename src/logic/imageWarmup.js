@@ -1,6 +1,6 @@
-﻿import { getAvatarWithFallback } from "./avatarFallback";
-import { parseRecommendationAlbum } from "./placeUtils";
-import { parseImageUrls } from "./imageEntryUtils";
+import { getAvatarWithFallback } from "./avatarFallback";
+import { parseRecommendationAlbumEntries } from "./placeUtils";
+import { parseImageEntries } from "./imageEntryUtils";
 import { toPublicHttpsUrl } from "../appConfig";
 
 const WARMUP_LIMIT_RECOMMENDATIONS = 6;
@@ -13,8 +13,11 @@ function normalizeUrl(url) {
   return toPublicHttpsUrl(url);
 }
 
-function parseCommentImageUrls(imageValue) {
-  return parseImageUrls(imageValue).map(normalizeUrl).filter(Boolean);
+function parseCommentPreviewUrls(imageValue) {
+  return parseImageEntries(imageValue)
+    .map((entry) => entry.thumbnail || entry.url)
+    .map(normalizeUrl)
+    .filter(Boolean);
 }
 
 function warmImageUrl(url) {
@@ -31,15 +34,18 @@ function warmImageUrl(url) {
 export function warmRecommendationImages(items) {
   const recommendations = Array.isArray(items) ? items : [];
   recommendations.slice(0, WARMUP_LIMIT_RECOMMENDATIONS).forEach((item) => {
-    const album = parseRecommendationAlbum(item?.image_url);
-    album.slice(0, WARMUP_IMAGES_PER_ITEM).forEach(warmImageUrl);
+    const previewUrls = parseRecommendationAlbumEntries(item?.image_url)
+      .map((entry) => entry.thumbnail || entry.url)
+      .map(normalizeUrl)
+      .filter(Boolean);
+    previewUrls.slice(0, WARMUP_IMAGES_PER_ITEM).forEach(warmImageUrl);
   });
 }
 
 export function warmCommentImages(items) {
   const comments = Array.isArray(items) ? items : [];
   comments.slice(0, WARMUP_LIMIT_COMMENTS).forEach((item) => {
-    const commentImages = parseCommentImageUrls(item?.image_url);
+    const commentImages = parseCommentPreviewUrls(item?.image_url);
     commentImages.slice(0, WARMUP_IMAGES_PER_ITEM).forEach(warmImageUrl);
   });
 }

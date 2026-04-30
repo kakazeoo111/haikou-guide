@@ -95,7 +95,7 @@ export function createGeneralHandlers(ctx) {
       return;
     }
     const allSource = [
-      ...places.map((p) => ({ ...p, id: String(p.id) })),
+      ...places.map((p) => ({ ...p, id: String(p.id), album: parseRecommendationAlbum(p.album) })),
       ...recommendations.map((r) => ({ ...r, id: `rec_${r.id}`, name: r.place_name, album: parseRecommendationAlbum(r.image_url) })),
     ];
     const targetPlace = allSource.find((p) => String(p.id) === String(notice.place_id));

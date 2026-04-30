@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { JUMP_TO_RECOMMEND_EVENT } from "../constants/jumpEvents";
 import { scrollToRecommendCard } from "./recommendJump";
-import { toPublicHttpsUrl } from "../appConfig";
+import { getUrlOrigin, PUBLIC_UPLOAD_BASE_URL, toPublicHttpsUrl } from "../appConfig";
 
 const MOBILE_BREAKPOINT = 768;
 const COUNTDOWN_STEP = 1;
@@ -19,6 +19,27 @@ function warmAvatar(url) {
   image.decoding = "async";
   image.fetchPriority = "high";
   image.src = normalized;
+}
+
+function ensureResourceHint(rel, href, useCrossOrigin = false) {
+  if (!href || typeof document === "undefined") return;
+  const key = encodeURIComponent(`${rel}:${href}`);
+  if (document.head.querySelector(`link[data-hk-resource-hint="${key}"]`)) return;
+  const link = document.createElement("link");
+  link.rel = rel;
+  link.href = href;
+  link.setAttribute("data-hk-resource-hint", key);
+  if (useCrossOrigin) link.crossOrigin = "anonymous";
+  document.head.appendChild(link);
+}
+
+function primeCrossOriginResourceHints(urls) {
+  const origins = [...new Set((Array.isArray(urls) ? urls : []).map(getUrlOrigin).filter(Boolean))];
+  origins.forEach((origin) => {
+    const { host } = new URL(origin);
+    ensureResourceHint("dns-prefetch", `//${host}`);
+    ensureResourceHint("preconnect", origin, true);
+  });
 }
 
 async function syncCachedUserProfile({ authApiBase, savedUser, setCurrentUser }) {
@@ -55,6 +76,7 @@ export function useValidateEnv(ADMIN_PHONE, authApiBase) {
 
 export function useInitClientState({ authApiBase, setCurrentUser, setActiveTab, setIsMobile, setUserLocation }) {
   useEffect(() => {
+    primeCrossOriginResourceHints([authApiBase, PUBLIC_UPLOAD_BASE_URL]);
     try {
       const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
       if (savedUser) {

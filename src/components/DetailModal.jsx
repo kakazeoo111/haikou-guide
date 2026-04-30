@@ -1,9 +1,15 @@
 import { albumThumbStyle, btnMainStyle, horizontalScrollWrapper, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
+import { buildImageLoadingProps } from "../logic/imageProps";
 
 const ALBUM_THUMB_HEIGHT_PX = 150;
 
 function DetailModal({ place, onClose, onPreviewAlbum }) {
   if (!place) return null;
+  const albumEntries = Array.isArray(place.albumEntries) && place.albumEntries.length > 0
+    ? place.albumEntries
+    : Array.isArray(place.album)
+      ? place.album.map((url) => ({ url, thumbnail: url }))
+      : [];
 
   return (
     <div style={modalOverlayStyle} onClick={onClose}>
@@ -16,15 +22,13 @@ function DetailModal({ place, onClose, onPreviewAlbum }) {
         </div>
         <p style={{ color: "#666", fontSize: "14px", margin: "10px 0" }}>{place.desc}</p>
         <div style={horizontalScrollWrapper}>
-          {place.album?.map((img, idx) => (
+          {albumEntries.map((entry, idx) => (
             <img
-              key={`${img}-${idx}`}
-              src={img}
+              key={`${entry.url}-${idx}`}
+              src={entry.thumbnail || entry.url}
               style={albumThumbStyle}
               height={ALBUM_THUMB_HEIGHT_PX}
-              loading="lazy"
-              decoding="async"
-              fetchPriority="low"
+              {...buildImageLoadingProps()}
               onClick={() => onPreviewAlbum(idx)}
               alt="detail-album"
             />

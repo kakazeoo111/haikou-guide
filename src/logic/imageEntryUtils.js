@@ -1,21 +1,25 @@
-function toHttpsUrl(url) {
+import { toPublicHttpsUrl, toPublicUploadUrl } from "../appConfig";
+
+function normalizeImageUrl(url) {
   const normalized = String(url || "").trim();
   if (!normalized) return "";
-  if (normalized.startsWith("http://")) return normalized.replace(/^http:\/\//i, "https://");
+  const publicUrl = toPublicHttpsUrl(normalized);
+  if (publicUrl) return publicUrl;
+  if (!normalized.startsWith("/") && !normalized.includes("://")) return toPublicUploadUrl(normalized);
   return normalized;
 }
 
 function normalizeImageEntry(item) {
   if (!item) return null;
   if (typeof item === "string") {
-    const url = toHttpsUrl(item);
+    const url = normalizeImageUrl(item);
     if (!url) return null;
     return { url, thumbnail: url };
   }
   if (typeof item !== "object") return null;
-  const url = toHttpsUrl(item.url || item.src || item.original || item.full);
+  const url = normalizeImageUrl(item.url || item.src || item.original || item.full);
   if (!url) return null;
-  const thumbnail = toHttpsUrl(item.thumbnail || item.thumb || item.preview) || url;
+  const thumbnail = normalizeImageUrl(item.thumbnail || item.thumb || item.preview) || url;
   return { url, thumbnail };
 }
 

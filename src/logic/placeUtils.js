@@ -31,14 +31,18 @@ function shouldDisplayPlace(placeId) {
 
 function buildAllSourcePlaces({ places, recommendations, placeStats, myLikedPlaceIds, userLocation }) {
   return [
-    ...places.map((p) => ({
-      ...p,
-      id: String(p.id),
-      distVal: getDist(userLocation, p),
-      likes: placeStats[String(p.id)] || 0,
-      isPlaceLiked: myLikedPlaceIds.includes(String(p.id)),
-      albumEntries: parseRecommendationAlbumEntries(p.album),
-    })),
+    ...places.map((p) => {
+      const albumEntries = parseRecommendationAlbumEntries(p.album);
+      return {
+        ...p,
+        id: String(p.id),
+        distVal: getDist(userLocation, p),
+        likes: placeStats[String(p.id)] || 0,
+        isPlaceLiked: myLikedPlaceIds.includes(String(p.id)),
+        albumEntries,
+        album: albumEntries.map((item) => item.url),
+      };
+    }),
     ...recommendations.map((r) => {
       const albumEntries = parseRecommendationAlbumEntries(r.image_url);
       return {
