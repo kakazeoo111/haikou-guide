@@ -5,6 +5,8 @@ import {
   fixedBottomBarStyle,
   likeBtnStyle,
   scrollContentStyle,
+  sortBtnStyle,
+  sortContainerStyle,
 } from "../../styles/appStyles";
 import {
   BADGE_ANIMATION_STYLE,
@@ -12,6 +14,7 @@ import {
   REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH,
   buildBadgePresentation,
   getSelfBadge,
+  sortAndFilterComments,
 } from "../../logic/commentsOverlayUtils";
 import { getAvatarWithFallback } from "../../logic/avatarFallback";
 import { parseForumImageEntries } from "../../logic/forumImageUtils";
@@ -51,15 +54,12 @@ const inlineBottomBarStyle = {
   boxShadow: "0 -4px 14px rgba(45, 75, 60, 0.06)",
 };
 
-function sortForumComments(comments) {
-  const source = Array.isArray(comments) ? [...comments] : [];
-  return source.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-}
-
 function ForumInlineCommentsPanel({
   postId,
   comments,
   loading,
+  commentSort,
+  showOnlyImages,
   expandedParentIds,
   currentUser,
   activeBadgeTitle,
@@ -73,15 +73,18 @@ function ForumInlineCommentsPanel({
   onReplyCancel,
   onCommentDraftChange,
   onSelectCommentImages,
+  onClearCommentImages,
   onSubmitComment,
   onLikeComment,
   onDeleteComment,
   onZoomImage,
   onCloseComments,
   formatCommentTime,
+  onCommentSortChange,
+  onToggleShowOnlyImages,
 }) {
   const userPointsCard = useUserPointsCard();
-  const sorted = sortForumComments(comments);
+  const sorted = sortAndFilterComments(comments, commentSort, showOnlyImages);
   const parents = sorted.filter((item) => !item.parent_id);
   const children = sorted.filter((item) => item.parent_id);
   const {
@@ -106,8 +109,34 @@ function ForumInlineCommentsPanel({
 
       <div style={inlineCommentsPanelStyle}>
         <div style={inlineScrollContentStyle}>
+          <div style={{ ...sortContainerStyle, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 12px", borderBottom: "none" }}>
+            <div style={{ display: "flex", gap: "15px" }}>
+              <button onClick={() => onCommentSortChange("latest")} style={sortBtnStyle(commentSort === "latest")}>
+                按照最新
+              </button>
+              <button onClick={() => onCommentSortChange("hot")} style={sortBtnStyle(commentSort === "hot")}>
+                按照最火
+              </button>
+            </div>
+            <div
+              onClick={onToggleShowOnlyImages}
+              style={{
+                fontSize: "12px",
+                color: showOnlyImages ? "#5aa77b" : "#999",
+                fontWeight: "bold",
+                cursor: "pointer",
+                background: showOnlyImages ? "#e8f5eb" : "#f5f5f5",
+                padding: "4px 10px",
+                borderRadius: "15px",
+                transition: "0.2s",
+              }}
+            >
+              {showOnlyImages ? "✅ 仅看图片" : "🖼️ 仅看图片"}
+            </div>
+          </div>
+
           {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
-          {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "60px", color: "#bbb" }}>暂无相关评论...</div>}
+          {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>暂无相关评论...</div>}
 
           {parents.map((parent) => {
             const replies = children
@@ -145,7 +174,7 @@ function ForumInlineCommentsPanel({
                       </div>
                     )}
                   </div>
-                  <div style={{ fontSize: "15px", color: "#222", margin: "4px 0" }}>{parent.content || "（图片评论）"}</div>
+                  <div style={{ fontSize: "15px", color: "#222", margin: "4px 0" }}>{parent.content}</div>
                   {parentImages.length > 0 && (
                     <div
                       style={{
@@ -182,7 +211,7 @@ function ForumInlineCommentsPanel({
                       <LikeHeartIcon liked={Boolean(parent.is_liked)} size={14} />
                       <span>{Number(parent.like_count || 0)}</span>
                     </span>
-                    {String(parent.user_phone || "") === String(currentUser?.phone || "") && (
+                    {parent.user_phone === currentUser.phone && (
                       <span onClick={() => onDeleteComment(parent.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
                         删除
                       </span>
@@ -236,7 +265,7 @@ function ForumInlineCommentsPanel({
                               </div>
                               <div style={{ fontSize: "14px", color: "#333" }}>
                                 <span style={{ color: "#5aa77b" }}>回复：</span>
-                                {reply.content || "（图片回复）"}
+                                {reply.content}
                               </div>
                               {replyImages.length > 0 && (
                                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "4px", marginTop: "8px", maxWidth: REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH }}>
@@ -273,6 +302,7 @@ function ForumInlineCommentsPanel({
               </div>
             );
           })}
+          <div style={{ height: "120px" }}></div>
           <div onClick={onCloseComments} style={{ color: "#5aa77b", fontSize: "12px", cursor: "pointer", textAlign: "center", fontWeight: "bold", marginTop: "6px" }}>
             —— 收起评论区 ▲ ——
           </div>
@@ -310,7 +340,10 @@ function ForumInlineCommentsPanel({
           </div>
           {commentImages.length > 0 && (
             <div style={{ fontSize: "10px", color: "#5aa77b", marginTop: "5px", fontWeight: "bold" }}>
-              已选择 {commentImages.length} 张图片
+              📸 已选择 {commentImages.length} 张照片 (最多9张)
+              <span onClick={onClearCommentImages} style={{ marginLeft: "10px", color: "#999", cursor: "pointer" }}>
+                [重选]
+              </span>
             </div>
           )}
         </div>

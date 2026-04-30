@@ -102,11 +102,19 @@ function ForumModal({
     onNoticeClick?.(notice);
   };
 
+  const resetCommentPanelState = (postId) => {
+    forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: null }));
+    forum.setShowOnlyImageCommentMap((prev) => ({ ...prev, [postId]: false }));
+    forum.setCommentSortMode("default");
+  };
+
   const handleOpenComments = async (postId) => {
     if (Number(forum.activeCommentPostId) === Number(postId)) {
+      resetCommentPanelState(postId);
       forum.setActiveCommentPostId(null);
       return;
     }
+    resetCommentPanelState(postId);
     await forum.openComments(postId);
   };
 
@@ -188,6 +196,7 @@ function ForumModal({
         onReplyCancel={handleReplyCancel}
         onCommentDraftChange={(postId, value) => forum.setCommentDraftMap((prev) => ({ ...prev, [postId]: value }))}
         onSelectCommentImages={forum.handleSelectCommentImages}
+        onClearCommentImages={(postId) => forum.setCommentImagesMap((prev) => ({ ...prev, [postId]: [] }))}
         onRemoveCommentImage={forum.handleRemoveCommentImage}
         onSubmitComment={forum.handleSubmitComment}
         onLikeComment={forum.handleLikeComment}

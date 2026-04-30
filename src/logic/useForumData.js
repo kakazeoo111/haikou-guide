@@ -50,7 +50,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
   const [commentImagesMap, setCommentImagesMap] = useState({});
   const [replyTargetMap, setReplyTargetMap] = useState({});
   const [activeCommentPostId, setActiveCommentPostId] = useState(null);
-  const [commentSortMode, setCommentSortMode] = useState("latest");
+  const [commentSortMode, setCommentSortMode] = useState("default");
   const [expandedCommentParentIdsMap, setExpandedCommentParentIdsMap] = useState({});
   const [showOnlyImageCommentMap, setShowOnlyImageCommentMap] = useState({});
 
@@ -285,6 +285,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     setSortMode,
     setReplyTargetMap,
     setCommentDraftMap,
+    setCommentImagesMap,
     setActiveCommentPostId,
     setCommentSortMode,
     setExpandedCommentParentIdsMap,

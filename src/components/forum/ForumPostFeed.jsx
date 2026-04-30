@@ -101,6 +101,8 @@ function ForumPostFeed({
   activeCommentPostId,
   commentsMap,
   loadingCommentPostIds,
+  commentSortMode,
+  showOnlyImageCommentMap,
   expandedCommentParentIdsMap,
   replyTargetMap,
   commentDraftMap,
@@ -118,11 +120,14 @@ function ForumPostFeed({
   onOpenForumNotices,
   onOpenNotice,
   onOpenComments,
+  onSortComments,
+  onToggleCommentImageOnly,
   onToggleReplyExpand,
   onReplySelect,
   onReplyCancel,
   onCommentDraftChange,
   onSelectCommentImages,
+  onClearCommentImages,
   onRemoveCommentImage,
   onSubmitComment,
   onLikeComment,
@@ -201,6 +206,8 @@ function ForumPostFeed({
                 postId={postId}
                 comments={commentsMap[postId] || []}
                 loading={loadingCommentPostIds.includes(postId)}
+                commentSort={commentSortMode}
+                showOnlyImages={Boolean(showOnlyImageCommentMap[postId])}
                 expandedParentIds={expandedCommentParentIdsMap[postId] || []}
                 currentUser={currentUser}
                 activeBadgeTitle={activeBadgeTitle}
@@ -214,6 +221,7 @@ function ForumPostFeed({
                 onReplyCancel={() => onReplyCancel(postId)}
                 onCommentDraftChange={(value) => onCommentDraftChange(postId, value)}
                 onSelectCommentImages={(event) => onSelectCommentImages(postId, event)}
+                onClearCommentImages={() => onClearCommentImages(postId)}
                 onRemoveCommentImage={(index) => onRemoveCommentImage(postId, index)}
                 onSubmitComment={() => onSubmitComment(postId)}
                 onLikeComment={(commentId) => onLikeComment(postId, commentId)}
@@ -221,6 +229,8 @@ function ForumPostFeed({
                 onZoomImage={onZoomImage}
                 onCloseComments={() => onOpenComments(postId)}
                 formatCommentTime={formatCommentTime}
+                onCommentSortChange={onSortComments}
+                onToggleShowOnlyImages={() => onToggleCommentImageOnly(postId)}
               />
             )}
           </div>
