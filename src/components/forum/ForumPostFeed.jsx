@@ -1,5 +1,6 @@
 import ForumPostCard from "./ForumPostCard";
 import ForumPostComposer from "./ForumPostComposer";
+import ForumInlineCommentsPanel from "./ForumInlineCommentsPanel";
 import { getForumPostDomId } from "../../logic/useForumJumpTo";
 import {
   forumHintBannerStyle,
@@ -98,6 +99,15 @@ function ForumPostFeed({
   badgeIcon,
   badgeTheme,
   activeCommentPostId,
+  commentsMap,
+  loadingCommentPostIds,
+  commentSortMode,
+  showOnlyImageCommentMap,
+  expandedCommentParentIdsMap,
+  replyTargetMap,
+  commentDraftMap,
+  commentImagesMap,
+  submittingCommentPostIds,
   onPostContentChange,
   onRemovePostImage,
   onSelectPostImages,
@@ -110,6 +120,17 @@ function ForumPostFeed({
   onOpenForumNotices,
   onOpenNotice,
   onOpenComments,
+  onSortComments,
+  onToggleCommentImageOnly,
+  onToggleReplyExpand,
+  onReplySelect,
+  onReplyCancel,
+  onCommentDraftChange,
+  onSelectCommentImages,
+  onClearCommentImages,
+  onSubmitComment,
+  onLikeComment,
+  onDeleteComment,
   onToggleCall,
   onZoomImage,
   formatCommentTime,
@@ -179,6 +200,37 @@ function ForumPostFeed({
               onZoomImage={onZoomImage}
               formatCommentTime={formatCommentTime}
             />
+            {commentsOpen && (
+              <ForumInlineCommentsPanel
+                postId={postId}
+                comments={commentsMap[postId] || []}
+                loading={loadingCommentPostIds.includes(postId)}
+                commentSort={commentSortMode}
+                showOnlyImages={Boolean(showOnlyImageCommentMap[postId])}
+                expandedParentIds={expandedCommentParentIdsMap[postId] || []}
+                currentUser={currentUser}
+                activeBadgeTitle={activeBadgeTitle}
+                activeBadgeMeta={activeBadgeMeta}
+                replyTarget={replyTargetMap[postId] || null}
+                commentDraft={commentDraftMap[postId] || ""}
+                commentImages={commentImagesMap[postId] || []}
+                submitting={submittingCommentPostIds.includes(postId)}
+                onToggleExpand={(parentId) => onToggleReplyExpand(postId, parentId)}
+                onReplySelect={(comment) => onReplySelect(postId, comment)}
+                onReplyCancel={() => onReplyCancel(postId)}
+                onCommentDraftChange={(value) => onCommentDraftChange(postId, value)}
+                onSelectCommentImages={(event) => onSelectCommentImages(postId, event)}
+                onClearCommentImages={() => onClearCommentImages(postId)}
+                onSubmitComment={() => onSubmitComment(postId)}
+                onLikeComment={(commentId) => onLikeComment(postId, commentId)}
+                onDeleteComment={(commentId) => onDeleteComment(postId, commentId)}
+                onZoomImage={onZoomImage}
+                onCloseComments={() => onOpenComments(postId)}
+                formatCommentTime={formatCommentTime}
+                onCommentSortChange={onSortComments}
+                onToggleShowOnlyImages={() => onToggleCommentImageOnly(postId)}
+              />
+            )}
           </div>
         );
       })}
