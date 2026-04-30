@@ -35,6 +35,37 @@ function CommentsOverlay({
   const sorted = sortAndFilterComments(comments, commentSort, showOnlyImages);
   const parents = sorted.filter((c) => !c.parent_id);
   const children = sorted.filter((c) => c.parent_id);
+  const commentById = new Map(sorted.map((item) => [String(item.id), item]));
+  const parentIdSet = new Set(parents.map((item) => String(item.id)));
+
+  const resolveRootParentId = (comment) => {
+    let current = comment;
+    const seenIds = new Set([String(comment.id)]);
+    while (current?.parent_id) {
+      const parent = commentById.get(String(current.parent_id));
+      if (!parent) return null;
+      const parentId = String(parent.id);
+      if (seenIds.has(parentId)) return null;
+      if (!parent.parent_id) return Number(parent.id);
+      seenIds.add(parentId);
+      current = parent;
+    }
+    return null;
+  };
+
+  const repliesByParentId = {};
+  children.forEach((child) => {
+    const rootParentId = resolveRootParentId(child);
+    if (!rootParentId || !parentIdSet.has(String(rootParentId))) return;
+    const replyTo = commentById.get(String(child.parent_id));
+    const enrichedReply = { ...child, _replyToName: replyTo?.username || "" };
+    if (!repliesByParentId[rootParentId]) repliesByParentId[rootParentId] = [];
+    repliesByParentId[rootParentId].push(enrichedReply);
+  });
+  Object.values(repliesByParentId).forEach((replyList) => {
+    replyList.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  });
+
   const { badgeTheme, badgeIcon, motionBadgeVariant, selfBadgeStyle, parentAvatarWrapStyle, replyAvatarWrapStyle, parentBadgeBubbleStyle, replyBadgeBubbleStyle, parentMotionIconStyle, replyMotionIconStyle } = buildBadgePresentation(currentUser, activeBadgeTitle, activeBadgeMeta);
   return (
     <div style={fullPageOverlayStyle}>
@@ -74,9 +105,7 @@ function CommentsOverlay({
       <div style={scrollContentStyle}>
         {parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>💬 暂无相关点评...</div>}
         {parents.map((parent) => {
-          const replies = children
-            .filter((child) => String(child.parent_id) === String(parent.id))
-            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+          const replies = repliesByParentId[parent.id] || [];
           const isExpanded = expandedParentIds.includes(parent.id);
           const parentImageEntries = parseCommentImageEntries(parent.image_url);
           const parentImages = parentImageEntries.map((item) => item.url);
@@ -198,7 +227,9 @@ function CommentsOverlay({
                                 )}
                               </div>
                               <div style={{ fontSize: "14px", color: "#333" }}>
-                                <span style={{ color: "#5aa77b" }}>回复：</span>
+                                <span style={{ color: "#5aa77b" }}>
+                                  {reply._replyToName ? `回复 @${reply._replyToName}：` : "回复："}
+                                </span>
                                 {reply.content}
                               </div>
                               {replyImages.length > 0 && (
@@ -218,6 +249,9 @@ function CommentsOverlay({
                               )}
                               <div style={{ display: "flex", alignItems: "center", gap: "12px", fontSize: "11px", color: "#bbb", marginTop: "5px" }}>
                                 <span>{formatCommentTime(reply.created_at)}</span>
+                                <span onClick={() => onSetReplyTo(reply)} style={{ cursor: "pointer", fontWeight: "bold", color: "#5aa77b" }}>
+                                  回复
+                                </span>
                                 <span onClick={() => onLikeComment(reply.id)} style={likeBtnStyle(reply.is_liked)}>
                                   <LikeHeartIcon liked={Boolean(reply.is_liked)} size={14} />
                                   <span>{Number(reply.like_count || 0)}</span>
