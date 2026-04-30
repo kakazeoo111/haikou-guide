@@ -18,18 +18,6 @@ const FORUM_UNREAD_DOT_STYLE = {
   boxShadow: "0 0 0 2px #ffe4ec",
 };
 
-function focusInlineCommentInput(postId) {
-  setTimeout(() => {
-    const input = document.getElementById(`forum-comment-input-inline-${postId}`);
-    if (!input) return;
-    try {
-      input.focus({ preventScroll: true });
-    } catch {
-      input.focus();
-    }
-  }, 0);
-}
-
 function getPostIdFromNotice(notice) {
   const placeId = String(notice?.place_id || "");
   const matched = placeId.match(/^forum_(\d+)$/);
@@ -120,7 +108,6 @@ function ForumModal({
 
   const handleReplySelect = (postId, comment) => {
     forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }));
-    focusInlineCommentInput(postId);
   };
 
   const handleReplyCancel = (postId) => {

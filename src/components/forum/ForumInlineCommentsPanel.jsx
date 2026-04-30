@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   bottomInputContainer,
   bottomRealInput,
@@ -51,6 +52,9 @@ const inlineBottomBarStyle = {
   padding: "10px 14px",
   paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
   boxShadow: "0 -4px 14px rgba(45, 75, 60, 0.06)",
+  position: "sticky",
+  bottom: 0,
+  zIndex: 2,
 };
 
 function ForumInlineCommentsPanel({
@@ -131,12 +135,44 @@ function ForumInlineCommentsPanel({
 
   const commentInputId = `${COMMENT_INPUT_ID_PREFIX}${postId}`;
   const commentImageInputId = `${COMMENT_IMAGE_INPUT_ID_PREFIX}${postId}`;
+  const commentInputRef = useRef(null);
+
+  useEffect(() => {
+    if (!replyTarget) return;
+    const input = commentInputRef.current;
+    if (!input) return;
+
+    const focusAndScroll = () => {
+      try {
+        input.focus();
+      } catch {
+        // ignore focus failure and keep scrolling fallback
+      }
+      const cursor = String(input.value || "").length;
+      if (typeof input.setSelectionRange === "function") input.setSelectionRange(cursor, cursor);
+      try {
+        input.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
+      } catch {
+        input.scrollIntoView();
+      }
+      const panel = input.closest("[data-forum-inline-comments='1']");
+      try {
+        panel?.scrollIntoView({ block: "end", inline: "nearest", behavior: "smooth" });
+      } catch {
+        panel?.scrollIntoView();
+      }
+    };
+
+    focusAndScroll();
+    const timer = setTimeout(focusAndScroll, 280);
+    return () => clearTimeout(timer);
+  }, [replyTarget]);
 
   return (
     <>
       <style>{BADGE_ANIMATION_STYLE}</style>
 
-      <div style={inlineCommentsPanelStyle}>
+      <div style={inlineCommentsPanelStyle} data-forum-inline-comments="1">
         <div style={inlineScrollContentStyle}>
           <div style={{ ...sortContainerStyle, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 12px", borderBottom: "none" }}>
             <div style={{ display: "flex", gap: "15px" }}>
@@ -350,6 +386,7 @@ function ForumInlineCommentsPanel({
           )}
           <div style={bottomInputContainer}>
             <input
+              ref={commentInputRef}
               id={commentInputId}
               value={commentDraft}
               onChange={(event) => onCommentDraftChange(event.target.value)}
