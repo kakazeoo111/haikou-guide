@@ -108,6 +108,7 @@ function ForumModal({
 
   const handleReplySelect = (postId, comment) => {
     forum.setReplyTargetMap((prev) => ({ ...prev, [postId]: comment }));
+    setTimeout(() => document.getElementById(`forum-comment-input-inline-${postId}`)?.focus(), 0);
   };
 
   const handleReplyCancel = (postId) => {

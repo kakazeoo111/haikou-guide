@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import {
   bottomInputContainer,
   bottomRealInput,
@@ -14,12 +13,12 @@ import {
   PARENT_COMMENT_IMAGE_GRID_MAX_WIDTH,
   REPLY_COMMENT_IMAGE_GRID_MAX_WIDTH,
   buildBadgePresentation,
+  getAvatarSrc,
   getSelfBadge,
+  handleAvatarLoadError,
+  parseCommentImageEntries,
   sortAndFilterComments,
 } from "../../logic/commentsOverlayUtils";
-import { getAvatarWithFallback } from "../../logic/avatarFallback";
-import { parseForumImageEntries } from "../../logic/forumImageUtils";
-import { buildImageLoadingProps } from "../../logic/imageProps";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
 import LikeHeartIcon from "../LikeHeartIcon";
@@ -30,13 +29,10 @@ const COMMENT_IMAGE_INPUT_ID_PREFIX = "forum-comment-images-input-inline-";
 
 const inlineCommentsPanelStyle = {
   marginTop: "8px",
-  border: "1px solid #ebf2ee",
-  borderRadius: "18px",
   background: "#fff",
-  overflow: "hidden",
+  overflow: "visible",
   display: "flex",
   flexDirection: "column",
-  boxShadow: "0 6px 18px rgba(90, 167, 123, 0.08)",
 };
 
 const inlineScrollContentStyle = {
@@ -49,12 +45,7 @@ const inlineScrollContentStyle = {
 const inlineBottomBarStyle = {
   ...fixedBottomBarStyle,
   flex: "0 0 auto",
-  padding: "10px 14px",
-  paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
-  boxShadow: "0 -4px 14px rgba(45, 75, 60, 0.06)",
-  position: "sticky",
-  bottom: 0,
-  zIndex: 2,
+  padding: "12px 20px",
 };
 
 function ForumInlineCommentsPanel({
@@ -135,44 +126,12 @@ function ForumInlineCommentsPanel({
 
   const commentInputId = `${COMMENT_INPUT_ID_PREFIX}${postId}`;
   const commentImageInputId = `${COMMENT_IMAGE_INPUT_ID_PREFIX}${postId}`;
-  const commentInputRef = useRef(null);
-
-  useEffect(() => {
-    if (!replyTarget) return;
-    const input = commentInputRef.current;
-    if (!input) return;
-
-    const focusAndScroll = () => {
-      try {
-        input.focus();
-      } catch {
-        // ignore focus failure and keep scrolling fallback
-      }
-      const cursor = String(input.value || "").length;
-      if (typeof input.setSelectionRange === "function") input.setSelectionRange(cursor, cursor);
-      try {
-        input.scrollIntoView({ block: "center", inline: "nearest", behavior: "smooth" });
-      } catch {
-        input.scrollIntoView();
-      }
-      const panel = input.closest("[data-forum-inline-comments='1']");
-      try {
-        panel?.scrollIntoView({ block: "end", inline: "nearest", behavior: "smooth" });
-      } catch {
-        panel?.scrollIntoView();
-      }
-    };
-
-    focusAndScroll();
-    const timer = setTimeout(focusAndScroll, 280);
-    return () => clearTimeout(timer);
-  }, [replyTarget]);
 
   return (
     <>
       <style>{BADGE_ANIMATION_STYLE}</style>
 
-      <div style={inlineCommentsPanelStyle} data-forum-inline-comments="1">
+      <div style={inlineCommentsPanelStyle}>
         <div style={inlineScrollContentStyle}>
           <div style={{ ...sortContainerStyle, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0 12px", borderBottom: "none" }}>
             <div style={{ display: "flex", gap: "15px" }}>
@@ -206,7 +165,7 @@ function ForumInlineCommentsPanel({
           {parents.map((parent) => {
             const replies = repliesByParentId[parent.id] || [];
             const isExpanded = expandedParentIds.includes(parent.id);
-            const parentImageEntries = parseForumImageEntries(parent.image_url);
+            const parentImageEntries = parseCommentImageEntries(parent.image_url);
             const parentImages = parentImageEntries.map((item) => item.url);
             const parentBadge = getSelfBadge(parent, currentUser, activeBadgeTitle, badgeIcon);
 
@@ -215,8 +174,8 @@ function ForumInlineCommentsPanel({
               <div style={{ display: "flex", gap: "10px" }}>
                 <div onClick={() => userPointsCard.openByPhone(parent.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
                   <img
-                    src={getAvatarWithFallback(parent.avatar_url, parent.user_phone, parent.username)}
-                    {...buildImageLoadingProps()}
+                    src={getAvatarSrc(parent.avatar_url, parent.user_phone, parent.username)}
+                    onError={(event) => handleAvatarLoadError(event, parent.user_phone, parent.username)}
                     style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
                     alt="avatar"
                   />
@@ -257,7 +216,8 @@ function ForumInlineCommentsPanel({
                         <img
                           key={idx}
                           src={entry.thumbnail || entry.url}
-                          {...buildImageLoadingProps()}
+                          loading="lazy"
+                          decoding="async"
                           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                           onClick={() => onZoomImage(parentImages, idx)}
                           alt="forum-comment-img"
@@ -297,15 +257,15 @@ function ForumInlineCommentsPanel({
                   {isExpanded && (
                     <div style={{ background: "#f9f9f9", padding: "10px", borderRadius: "8px" }}>
                       {replies.map((reply) => {
-                        const replyImageEntries = parseForumImageEntries(reply.image_url);
+                        const replyImageEntries = parseCommentImageEntries(reply.image_url);
                         const replyImages = replyImageEntries.map((item) => item.url);
                         const replyBadge = getSelfBadge(reply, currentUser, activeBadgeTitle, badgeIcon);
                         return (
                           <div key={reply.id} style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
                             <div onClick={() => userPointsCard.openByPhone(reply.user_phone)} style={{ ...replyAvatarWrapStyle, cursor: "pointer" }}>
                               <img
-                                src={getAvatarWithFallback(reply.avatar_url, reply.user_phone, reply.username)}
-                                {...buildImageLoadingProps()}
+                                src={getAvatarSrc(reply.avatar_url, reply.user_phone, reply.username)}
+                                onError={(event) => handleAvatarLoadError(event, reply.user_phone, reply.username)}
                                 style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
                                 alt="avatar"
                               />
@@ -338,7 +298,8 @@ function ForumInlineCommentsPanel({
                                     <img
                                       key={idx}
                                       src={entry.thumbnail || entry.url}
-                                      {...buildImageLoadingProps()}
+                                      loading="lazy"
+                                      decoding="async"
                                       style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                                       onClick={() => onZoomImage(replyImages, idx)}
                                       alt="forum-reply-img"
@@ -386,7 +347,6 @@ function ForumInlineCommentsPanel({
           )}
           <div style={bottomInputContainer}>
             <input
-              ref={commentInputRef}
               id={commentInputId}
               value={commentDraft}
               onChange={(event) => onCommentDraftChange(event.target.value)}
