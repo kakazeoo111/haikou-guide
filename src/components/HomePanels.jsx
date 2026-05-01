@@ -22,7 +22,8 @@ import { getAvatarWithFallback } from "../logic/avatarFallback";
 import LikeHeartIcon from "./LikeHeartIcon";
 
 const UNREAD_BADGE_LIMIT = 99;
-const FIRST_FOLD_CARD_COUNT = 4;
+const FIRST_FOLD_CARD_COUNT = 3;
+const HIGH_PRIORITY_CARD_COUNT = 1;
 const LIST_THUMB_SIZE_PX = 70;
 const FORUM_DOT_SIZE_PX = 8;
 const FAVORITE_ICON_SIZE = "32px";
@@ -216,6 +217,8 @@ function HomePanels({
             const isFav = favoriteIds.includes(String(place.id));
             const coverImage = place.albumEntries?.[0]?.thumbnail || (place.album && place.album[0]) || DEFAULT_PLACE_COVER;
             const isAboveFold = index < FIRST_FOLD_CARD_COUNT;
+            const isHighPriorityCover = index < HIGH_PRIORITY_CARD_COUNT;
+            const coverPriority = isHighPriorityCover ? "high" : isAboveFold ? "auto" : undefined;
             const recommendCardId = place.type === "recommend" ? getRecommendCardDomId(place.realId) : "";
             return (
               <div id={recommendCardId || undefined} key={place.id} style={{ ...listCardPerformanceStyle, padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
@@ -245,7 +248,7 @@ function HomePanels({
                     style={listThumbStyle}
                     width={LIST_THUMB_SIZE_PX}
                     height={LIST_THUMB_SIZE_PX}
-                    {...buildImageLoadingProps({ eager: isAboveFold, priority: isAboveFold ? "high" : "low" })}
+                    {...buildImageLoadingProps({ eager: isAboveFold, priority: coverPriority })}
                     onClick={() => onOpenDetail(place, 0, true)}
                     alt="place-cover"
                   />

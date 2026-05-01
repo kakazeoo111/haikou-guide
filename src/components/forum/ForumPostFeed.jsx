@@ -94,7 +94,6 @@ function ForumPostFeed({
   callingPostIds,
   currentUser,
   activeBadgeTitle,
-  activeBadgeMeta,
   badgeIcon,
   badgeTheme,
   activeCommentPostId,

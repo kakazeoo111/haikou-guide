@@ -1,7 +1,9 @@
 export function buildImageLoadingProps({ eager = false, priority } = {}) {
-  return {
+  const props = {
     loading: eager ? "eager" : "lazy",
     decoding: "async",
-    fetchPriority: priority || (eager ? "high" : "low"),
   };
+  const finalPriority = priority || (eager ? "high" : "");
+  if (finalPriority) props.fetchPriority = finalPriority;
+  return props;
 }

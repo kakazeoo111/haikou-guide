@@ -155,7 +155,6 @@ function ForumModal({
         callingPostIds={forum.callingPostIds}
         currentUser={currentUser}
         activeBadgeTitle={activeBadgeTitle}
-        activeBadgeMeta={activeBadgeMeta}
         badgeIcon={badgeIcon}
         badgeTheme={badgeTheme}
         activeCommentPostId={forum.activeCommentPostId}
