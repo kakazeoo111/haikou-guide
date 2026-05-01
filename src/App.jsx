@@ -9,6 +9,7 @@ import { useCountdown, useInitClientState, useRecommendJumpListener, useValidate
 import { useBadgeCenter } from "./logic/useBadgeCenter";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./logic/clientCache";
 import { setupWechatAggressiveLazyLoading } from "./logic/wechatImageLazyPatch";
+import { setupIOSLazyImageRefresh } from "./logic/iosImageRefresh";
 import { AUTH_API_BASE } from "./appConfig";
 function hasValidRouteCoordinate(place) { return Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)); }
 function App() {
@@ -119,7 +120,11 @@ function App() {
   const handleOpenAnnouncement = () => setShowNotice(true);
   useEffect(() => {
     const cleanupWechatLazyPatch = setupWechatAggressiveLazyLoading();
-    return cleanupWechatLazyPatch;
+    const cleanupIOSLazyRefresh = setupIOSLazyImageRefresh();
+    return () => {
+      cleanupWechatLazyPatch();
+      cleanupIOSLazyRefresh();
+    };
   }, []);
   useEffect(() => {
     if (!zoomMode || !scrollContainerRef.current) return;
