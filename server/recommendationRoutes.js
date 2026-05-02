@@ -6,6 +6,10 @@ function normalizeUploadedImages(files) {
   return buildUploadedImagePayload(images, thumbnails);
 }
 
+function isAdminPhone(phone, adminPhone) {
+  return String(phone || "") === String(adminPhone || "");
+}
+
 async function ensureRecommendationTables(pool) {
   await pool.execute(
     `CREATE TABLE IF NOT EXISTS recommendations (
@@ -57,7 +61,7 @@ const RECOMMENDATION_LIST_SQL = `
   ORDER BY r.created_at DESC
 `;
 
-export async function registerRecommendationRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }) {
+export async function registerRecommendationRoutes(app, { pool, upload, addNotice, ADMIN_PHONE, requireAuth, optionalAuth }) {
   await ensureRecommendationTables(pool);
 
   app.get("/api/recommendations", optionalAuth, async (req, res) => {
@@ -116,11 +120,16 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
     const { recId } = req.body;
     const phone = req.authUser.phone;
     try {
-      const [result] = await pool.execute(
-        "DELETE FROM recommendations WHERE id = ? AND user_phone COLLATE utf8mb4_general_ci = ?",
-        [recId, phone]
-      );
-      res.json({ ok: result.affectedRows > 0 });
+      const [rows] = await pool.execute("SELECT id, user_phone FROM recommendations WHERE id = ? LIMIT 1", [recId]);
+      const target = rows[0];
+      if (!target) return res.status(404).json({ ok: false, message: "推荐不存在" });
+      const canDelete = isAdminPhone(phone, ADMIN_PHONE) || String(target.user_phone || "") === String(phone || "");
+      if (!canDelete) return res.status(403).json({ ok: false, message: "只能删除自己的推荐" });
+
+      await pool.execute("DELETE FROM recommendation_likes WHERE recommendation_id = ?", [recId]);
+      await pool.execute("DELETE FROM comments WHERE place_id = ?", [`rec_${recId}`]);
+      await pool.execute("DELETE FROM recommendations WHERE id = ?", [recId]);
+      res.json({ ok: true });
     } catch (error) {
       console.error("ɾ���Ƽ�ʧ��:", error.message);
       res.status(500).json({ ok: false, message: `ɾ���Ƽ�ʧ��: ${error.message}` });

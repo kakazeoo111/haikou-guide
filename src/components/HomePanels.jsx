@@ -220,6 +220,7 @@ function HomePanels({
             const isHighPriorityCover = index < HIGH_PRIORITY_CARD_COUNT;
             const coverPriority = isHighPriorityCover ? "high" : isAboveFold ? "auto" : undefined;
             const recommendCardId = place.type === "recommend" ? getRecommendCardDomId(place.realId) : "";
+            const canDeleteRecommend = place.type === "recommend" && (currentUser.phone === adminPhone || place.user_phone === currentUser.phone);
             return (
               <div id={recommendCardId || undefined} key={place.id} style={{ ...listCardPerformanceStyle, padding: "16px", background: "#f9fcf9", borderRadius: "20px", marginBottom: "15px", border: "1px solid #f0f5f1", position: "relative" }}>
                 {filter === "top10" && <div style={rankBadgeStyle(index)}>{index + 1}</div>}
@@ -234,7 +235,7 @@ function HomePanels({
                     />
                     <span style={{ fontSize: "12px", fontWeight: "bold" }}>{place.username} 分享</span>
                     <span style={{ fontSize: "10px", color: "#999" }}>{formatCommentTime(place.created_at)}</span>
-                    {place.user_phone === currentUser.phone && (
+                    {canDeleteRecommend && (
                       <span onClick={(e) => onDeleteRec(e, place.realId)} style={{ fontSize: "10px", color: "red", marginLeft: "auto", cursor: "pointer" }}>
                         删除
                       </span>

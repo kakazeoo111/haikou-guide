@@ -73,16 +73,21 @@ export function createInteractionHandlers(ctx) {
     if (data.ok) fetchRecommendations(false);
   };
 
-  const handleDeleteRec = async (e, recId) => {
+  const handleDeleteRec = async (e, recId, confirm) => {
     e.stopPropagation();
-    if (!window.confirm("确定删除这条分享吗？")) return;
+    const accepted = await (confirm ? confirm({
+      title: "删除推荐",
+      message: "确定删除这条推荐吗？相关点赞和评论也会一起删除。",
+    }) : Promise.resolve(window.confirm("确定删除这条分享吗？")));
+    if (!accepted) return;
     const res = await authFetch(`${authApiBase}/api/recommendations/delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, recId }),
     });
     const data = await res.json();
-    if (data.ok) fetchRecommendations(false);
+    if (!data.ok) return alert(data.message || "推荐删除失败");
+    fetchRecommendations(false);
   };
 
   const handleRecommendInputChange = (val) => {
@@ -169,14 +174,20 @@ export function createInteractionHandlers(ctx) {
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
+  const handleDeleteComment = async (commentId, confirm) => {
     if (!viewingCommentsPlace) return;
-    if (!window.confirm("确定删除？")) return;
-    await authFetch(`${authApiBase}/api/comments/delete`, {
+    const accepted = await (confirm ? confirm({
+      title: "删除评论",
+      message: "确定删除这条评论吗？如果它下面有回复，也会一起删除。",
+    }) : Promise.resolve(window.confirm("确定删除？")));
+    if (!accepted) return;
+    const res = await authFetch(`${authApiBase}/api/comments/delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, commentId }),
     });
+    const data = await res.json();
+    if (!data.ok) return alert(data.message || "评论删除失败");
     fetchComments(viewingCommentsPlace.id);
   };
 

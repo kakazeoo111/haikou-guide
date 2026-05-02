@@ -31,6 +31,7 @@ function ForumModal({
   currentUser,
   adminPhone,
   authApiBase,
+  confirm,
   activeBadgeTitle,
   activeBadgeMeta,
   notifications,
@@ -174,7 +175,7 @@ function ForumModal({
         onOpenNotice={openNotice}
         onOpenComments={handleOpenComments}
         onToggleCall={forum.handleToggleCall}
-        onDeletePost={forum.handleDeletePost}
+        onDeletePost={(postId) => forum.handleDeletePost(postId, confirm)}
         onZoomImage={onZoomImage}
         formatCommentTime={formatCommentTime}
         forumUnreadDotStyle={FORUM_UNREAD_DOT_STYLE}
@@ -205,7 +206,7 @@ function ForumModal({
         onClearCommentImages={() => forum.setCommentImagesMap((prev) => ({ ...prev, [activePostId]: [] }))}
         onSubmitComment={() => forum.handleSubmitComment(activePostId)}
         onLikeComment={(commentId) => forum.handleLikeComment(activePostId, commentId)}
-        onDeleteComment={(commentId) => forum.handleDeleteComment(activePostId, commentId)}
+        onDeleteComment={(commentId) => forum.handleDeleteComment(activePostId, commentId, confirm)}
         onZoomImage={onZoomImage}
         formatCommentTime={formatCommentTime}
         onCommentSortChange={forum.setCommentSortMode}

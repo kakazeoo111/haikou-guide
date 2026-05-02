@@ -12,6 +12,7 @@ import ForumModal from "./ForumModal";
 import HomePanels from "./HomePanels";
 import BadgeGrantModal from "./BadgeGrantModal";
 import { formatCommentTime } from "../logic/placeUtils";
+import { useConfirmDialog } from "../logic/confirmDialog.jsx";
 
 function isForumNotice(notice) {
   const type = String(notice?.type || "");
@@ -100,9 +101,12 @@ function AppLayout({
   onSelectBadge,
 }) {
   const unreadCount = notifications.filter((notice) => !notice.is_read && !isForumNotice(notice)).length;
+  const confirmDialog = useConfirmDialog();
+  const ConfirmDialog = confirmDialog.ConfirmDialog;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f4fbf6", position: "relative" }}>
+      <ConfirmDialog />
       {activeTab === "profile" && (
         <ProfileOverlay
           currentUser={currentUser}
@@ -144,7 +148,7 @@ function AppLayout({
         onCommentImagesChange={setCommentImages}
         onAddComment={interactionHandlers.handleAddComment}
         onLikeComment={interactionHandlers.handleLikeComment}
-        onDeleteComment={interactionHandlers.handleDeleteComment}
+        onDeleteComment={(commentId) => interactionHandlers.handleDeleteComment(commentId, confirmDialog.confirm)}
         onZoomImage={(images, index) => {
           setZoomedSingleImage({ images, index });
           setInitialSlide(index || 0);
@@ -259,6 +263,7 @@ function AppLayout({
           currentUser={currentUser}
           adminPhone={ADMIN_PHONE}
           authApiBase={authApiBase}
+          confirm={confirmDialog.confirm}
           activeBadgeTitle={activeBadgeTitle}
           activeBadgeMeta={activeBadgeMeta}
           notifications={notifications}
@@ -302,7 +307,7 @@ function AppLayout({
         onSearchChange={setSearch}
         onShowRecommendModal={() => setShowAddRecommend(true)}
         onFilterChange={setFilter}
-        onDeleteRec={interactionHandlers.handleDeleteRec}
+        onDeleteRec={(event, recId) => interactionHandlers.handleDeleteRec(event, recId, confirmDialog.confirm)}
         onToggleFavorite={generalHandlers.toggleFavorite}
         onOpenDetail={generalHandlers.handleOpenDetail}
         onToggleTarget={(place) => setTargetPlaces((prev) => (prev.some((target) => target.id === place.id) ? prev.filter((target) => target.id !== place.id) : [...prev, place]))}

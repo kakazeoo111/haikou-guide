@@ -220,8 +220,12 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     }
   };
 
-  const handleDeleteComment = async (postId, commentId) => {
-    if (!window.confirm("确定删除这条评论吗？")) return;
+  const handleDeleteComment = async (postId, commentId, confirm) => {
+    const accepted = await (confirm ? confirm({
+      title: "删除评论",
+      message: "确定删除这条论坛评论吗？如果它下面有回复，也会一起删除。",
+    }) : Promise.resolve(window.confirm("确定删除这条评论吗？")));
+    if (!accepted) return;
     try {
       const res = await authFetch(`${authApiBase}/api/forum/comment/delete`, {
         method: "POST",
@@ -243,8 +247,12 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     }
   };
 
-  const handleDeletePost = async (postId) => {
-    if (!window.confirm("确定删除这条论坛帖子吗？帖子下的评论和回复也会一起删除。")) return;
+  const handleDeletePost = async (postId, confirm) => {
+    const accepted = await (confirm ? confirm({
+      title: "删除帖子",
+      message: "确定删除这条论坛帖子吗？帖子下的评论和回复也会一起删除。",
+    }) : Promise.resolve(window.confirm("确定删除这条论坛帖子吗？帖子下的评论和回复也会一起删除。")));
+    if (!accepted) return;
     try {
       const res = await authFetch(`${authApiBase}/api/forum/post/delete`, {
         method: "POST",
