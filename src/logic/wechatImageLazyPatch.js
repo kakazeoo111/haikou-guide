@@ -1,7 +1,7 @@
 const WECHAT_UA_PATTERN = /MicroMessenger/i;
 const LAZY_IMAGE_SELECTOR = 'img[loading="lazy"]';
 const WX_LAZY_PLACEHOLDER = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
-const VIEWPORT_MARGIN = 1600;
+const VIEWPORT_MARGIN = 260;
 
 function isWechatWebView() {
   return WECHAT_UA_PATTERN.test(navigator.userAgent || "");
@@ -22,27 +22,6 @@ function canDeferImage(element) {
   return true;
 }
 
-function boostNearViewportImage(image) {
-  if (!(image instanceof HTMLImageElement)) return;
-  if (!isNearViewport(image)) return;
-  const source = String(image.getAttribute("src") || "").trim();
-  if (!source || source.startsWith("data:") || source.startsWith("blob:")) return;
-  image.loading = "eager";
-  image.setAttribute("loading", "eager");
-  image.setAttribute("fetchpriority", "high");
-  image.setAttribute("decoding", "async");
-}
-
-function preloadImage(source) {
-  const normalized = String(source || "").trim();
-  if (!normalized || normalized.startsWith("data:") || normalized.startsWith("blob:")) return;
-  const image = new Image();
-  image.decoding = "async";
-  image.loading = "eager";
-  image.fetchPriority = "high";
-  image.src = normalized;
-}
-
 function applyDeferredSource(image, observer) {
   const source = String(image.getAttribute("src") || "").trim();
   if (!source) return;
@@ -55,11 +34,6 @@ function applyDeferredSource(image, observer) {
 function restoreDeferredSource(image, observer) {
   const source = String(image.dataset.wxLazySrc || "").trim();
   if (!source) return;
-  image.loading = "eager";
-  image.setAttribute("loading", "eager");
-  image.setAttribute("fetchpriority", "high");
-  image.setAttribute("decoding", "async");
-  preloadImage(source);
   image.setAttribute("src", source);
   delete image.dataset.wxLazySrc;
   observer.unobserve(image);
@@ -68,7 +42,6 @@ function restoreDeferredSource(image, observer) {
 function patchLazyImagesIn(root, observer) {
   const lazyImages = root instanceof HTMLImageElement ? [root] : Array.from(root.querySelectorAll?.(LAZY_IMAGE_SELECTOR) || []);
   lazyImages.forEach((image) => {
-    boostNearViewportImage(image);
     if (!canDeferImage(image)) return;
     applyDeferredSource(image, observer);
   });
@@ -91,10 +64,6 @@ export function setupWechatAggressiveLazyLoading() {
 
   const mutationObserver = new MutationObserver((records) => {
     records.forEach((record) => {
-      if (record.type === "attributes") {
-        patchLazyImagesIn(record.target, observer);
-        return;
-      }
       record.addedNodes.forEach((node) => {
         if (!(node instanceof Element)) return;
         patchLazyImagesIn(node, observer);
@@ -102,7 +71,7 @@ export function setupWechatAggressiveLazyLoading() {
     });
   });
 
-  mutationObserver.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["loading", "src"] });
+  mutationObserver.observe(document.body, { childList: true, subtree: true });
 
   return () => {
     mutationObserver.disconnect();

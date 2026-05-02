@@ -33,13 +33,12 @@ function scheduleWarmupTask(task) {
     warmupScheduled = false;
     task();
   };
-  const userAgent = navigator.userAgent || "";
-  const isMobileWebView = /Android|iP(?:hone|ad|od)|MicroMessenger/i.test(userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-  if (!isMobileWebView && typeof window.requestIdleCallback === "function") {
+  const isIOS = /iP(?:hone|ad|od)/i.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (!isIOS && typeof window.requestIdleCallback === "function") {
     window.requestIdleCallback(runTask, { timeout: WARMUP_IDLE_TIMEOUT_MS });
     return;
   }
-  window.setTimeout(runTask, isMobileWebView ? 60 : 180);
+  window.setTimeout(runTask, isIOS ? 60 : 180);
 }
 
 function runNextWarmup() {
