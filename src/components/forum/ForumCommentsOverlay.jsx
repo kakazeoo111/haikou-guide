@@ -22,6 +22,7 @@ import {
   parseCommentImageEntries,
   sortAndFilterComments,
 } from "../../logic/commentsOverlayUtils";
+import { parseForumImageEntries } from "../../logic/forumImageUtils";
 import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
 import LikeHeartIcon from "../LikeHeartIcon";
@@ -30,6 +31,36 @@ import { buildCommentImageLoadingProps } from "../../logic/imageProps";
 
 const COMMENT_INPUT_ID = "forum-comment-input-overlay";
 const COMMENT_IMAGE_INPUT_ID = "forum-comment-images-input-overlay";
+const ORIGINAL_POST_IMAGE_LIMIT = 3;
+
+const originalPostCardStyle = {
+  margin: "0 0 16px",
+  padding: "12px",
+  borderRadius: "16px",
+  border: "1px solid #e7f0eb",
+  background: "linear-gradient(180deg, #ffffff 0%, #f8fcfa 100%)",
+  boxShadow: "0 6px 18px rgba(80, 124, 100, 0.08)",
+};
+
+const originalPostLabelStyle = {
+  display: "inline-flex",
+  alignItems: "center",
+  marginBottom: "10px",
+  padding: "3px 9px",
+  borderRadius: "999px",
+  background: "#edf8f1",
+  color: "#4f946d",
+  fontSize: "12px",
+  fontWeight: 800,
+};
+
+const originalPostImageGridStyle = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: "6px",
+  marginTop: "10px",
+  maxWidth: "220px",
+};
 
 function ForumCommentsOverlay({
   visible,
@@ -67,6 +98,9 @@ function ForumCommentsOverlay({
   const children = sortedComments.filter((item) => item.parent_id);
   const commentById = useMemo(() => new Map(sortedComments.map((item) => [String(item.id), item])), [sortedComments]);
   const parentIdSet = useMemo(() => new Set(parents.map((item) => String(item.id))), [parents]);
+  const postImageEntries = useMemo(() => parseForumImageEntries(post?.image_url), [post?.image_url]);
+  const postImages = useMemo(() => postImageEntries.map((item) => item.url), [postImageEntries]);
+  const visiblePostImageEntries = postImageEntries.slice(0, ORIGINAL_POST_IMAGE_LIMIT);
   const repliesByParentId = useMemo(() => {
     const grouped = {};
     children.forEach((child) => {
@@ -110,6 +144,7 @@ function ForumCommentsOverlay({
     parentMotionIconStyle,
     replyMotionIconStyle,
   } = buildBadgePresentation(currentUser, activeBadgeTitle, activeBadgeMeta);
+  const postBadge = getSelfBadge(post, currentUser, activeBadgeTitle, badgeIcon);
 
   if (!visible || !post) return null;
 
@@ -149,6 +184,89 @@ function ForumCommentsOverlay({
         </div>
       </div>
       <div style={scrollContentStyle}>
+        <div style={originalPostCardStyle}>
+          <div style={originalPostLabelStyle}>原帖</div>
+          <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+            <div onClick={() => userPointsCard.openByPhone(post.user_phone)} style={{ ...parentAvatarWrapStyle, cursor: "pointer" }}>
+              <img
+                src={getAvatarSrc(post.avatar_url, post.user_phone, post.username)}
+                onError={(event) => handleAvatarLoadError(event, post.user_phone, post.username)}
+                style={{ width: "100%", height: "100%", borderRadius: "50%", objectFit: "cover", border: "1px solid #eee", backgroundColor: "#f5f5f5" }}
+                alt="forum-post-avatar"
+              />
+              {postBadge && (
+                <div style={parentBadgeBubbleStyle}>
+                  <span style={parentMotionIconStyle}>{motionBadgeVariant.glyph}</span>
+                </div>
+              )}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                <div style={{ fontSize: "13px", fontWeight: "bold", color: "#456a56" }}>{post.username || "用户"}</div>
+                {postBadge && (
+                  <div style={selfBadgeStyle}>
+                    <span
+                      style={{
+                        fontSize: "10px",
+                        color: badgeTheme.textColor,
+                        fontWeight: "bold",
+                        maxWidth: "86px",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {postBadge.title}
+                    </span>
+                  </div>
+                )}
+                <span style={{ marginLeft: "auto", fontSize: "11px", color: "#9db0a7" }}>{formatCommentTime(post.created_at)}</span>
+              </div>
+              <div style={{ marginTop: "7px", color: "#233a2f", fontSize: "14px", lineHeight: 1.6, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {post.content || "图片动态"}
+              </div>
+              {visiblePostImageEntries.length > 0 && (
+                <div style={originalPostImageGridStyle}>
+                  {visiblePostImageEntries.map((entry, idx) => {
+                    const remainingCount = postImageEntries.length - ORIGINAL_POST_IMAGE_LIMIT;
+                    const showMoreMask = idx === ORIGINAL_POST_IMAGE_LIMIT - 1 && remainingCount > 0;
+                    return (
+                      <div key={`${post.id}-original-${idx}`} style={{ position: "relative" }}>
+                        <img
+                          src={entry.thumbnail || entry.url}
+                          {...buildCommentImageLoadingProps({ itemIndex: 0, imageIndex: idx, eagerWindow: 1 })}
+                          style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "8px", border: "1px solid #e8eee9", cursor: "zoom-in", display: "block" }}
+                          onClick={() => onZoomImage(postImages, idx)}
+                          alt="forum-post-img"
+                        />
+                        {showMoreMask && (
+                          <div
+                            onClick={() => onZoomImage(postImages, idx)}
+                            style={{
+                              position: "absolute",
+                              inset: 0,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              borderRadius: "8px",
+                              background: "rgba(0,0,0,0.38)",
+                              color: "#fff",
+                              fontSize: "15px",
+                              fontWeight: 800,
+                              cursor: "zoom-in",
+                            }}
+                          >
+                            +{remainingCount}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
         {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
         {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>暂无相关评论...</div>}
 
