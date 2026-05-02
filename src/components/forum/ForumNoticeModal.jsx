@@ -49,7 +49,7 @@ function ForumNoticeModal({ visible, dontShowAgain, onToggleDontShowAgain, onClo
         </div>
 
         <div style={{ marginTop: "8px", color: "#355a49", fontSize: "13px", lineHeight: 1.65 }}>
-          欢迎大家来到7 天论坛，可以发布短时动态、即刻分享和互动打call，希望能帮助到大家。
+          欢迎大家来到7 天论坛，这里可以发布短时动态、即刻分享和互动打call，希望大家一同打造一个良好的社区氛围，彼此尊重，充满自由与爱。
         </div>
 
         <label style={{ marginTop: "12px", display: "inline-flex", alignItems: "center", gap: "7px", fontSize: "13px", color: "#4a6a5c", cursor: "pointer" }}>
