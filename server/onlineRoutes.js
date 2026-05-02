@@ -34,12 +34,14 @@ function getOnlineCount() {
   return onlineUserMap.size;
 }
 
-export function registerOnlineRoutes(app) {
+export function registerOnlineRoutes(app, { optionalAuth } = {}) {
   ensureOnlineCleanTimer();
 
-  app.get("/api/online/count", (req, res) => {
+  const attachOptionalAuth = typeof optionalAuth === "function" ? optionalAuth : (req, res, next) => next();
+
+  app.get("/api/online/count", attachOptionalAuth, (req, res) => {
     try {
-      markOnline(req.query.phone);
+      markOnline(req.authUser?.phone);
       res.json({ ok: true, onlineCount: getOnlineCount() });
     } catch (error) {
       console.error("在线人数获取失败:", error.message);

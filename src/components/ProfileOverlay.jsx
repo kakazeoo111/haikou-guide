@@ -7,6 +7,7 @@ import { getAvatarWithFallback } from "../logic/avatarFallback";
 import { buildImageLoadingProps } from "../logic/imageProps";
 import { formatCommentTime, parseRecommendationAlbum, parseRecommendationAlbumEntries } from "../logic/placeUtils";
 import { DEFAULT_PLACE_COVER } from "../constants/imageFallbacks";
+import { authFetch } from "../logic/apiClient";
 
 const MY_RECOMMEND_THUMB_SIZE_PX = 78;
 const MENU_ICON_CONTAINER_SIZE_PX = 38;
@@ -131,7 +132,7 @@ function ProfileOverlay({
     }
     setMyRecommendationsLoading(true);
     try {
-      const res = await fetch(`${authApiBase}/api/recommendations?phone=${currentUser.phone}`);
+      const res = await authFetch(`${authApiBase}/api/recommendations?phone=${currentUser.phone}`);
       const data = await res.json();
       if (!data.ok) {
         console.error("获取我的推荐失败:", data);

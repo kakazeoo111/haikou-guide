@@ -1,5 +1,6 @@
 import { attachBadgeProfileFields } from "./badgeProfileCache.js";
 import { buildUploadedImagePayload, getUploadedImageAndThumbFiles } from "./uploadImagePayload.js";
+import { validateUploadedImages } from "./uploadPolicy.js";
 
 function normalizeUploadedImages(files) {
   const { images, thumbnails } = getUploadedImageAndThumbFiles(files);
@@ -71,11 +72,11 @@ const COMMENT_LIST_SQL = `
   ORDER BY c.created_at DESC, c.id DESC
 `;
 
-export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice }) {
+export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }) {
   await ensurePlaceCommentTables(pool);
 
-  app.get("/api/places/stats", async (req, res) => {
-    const { phone } = req.query;
+  app.get("/api/places/stats", optionalAuth, async (req, res) => {
+    const phone = req.authUser?.phone || "";
     try {
       const statsPromise = pool.execute("SELECT place_id, COUNT(*) as count FROM place_likes GROUP BY place_id");
       const myLikesPromise = phone
@@ -95,8 +96,9 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     }
   });
 
-  app.post("/api/places/like", async (req, res) => {
-    const { phone, placeId } = req.body;
+  app.post("/api/places/like", requireAuth, async (req, res) => {
+    const { placeId } = req.body;
+    const phone = req.authUser.phone;
     try {
       const [rows] = await pool.execute(
         "SELECT id FROM place_likes WHERE phone COLLATE utf8mb4_general_ci = ? AND place_id = ?",
@@ -121,8 +123,8 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     }
   });
 
-  app.get("/api/comments/:placeId", async (req, res) => {
-    const { phone } = req.query;
+  app.get("/api/comments/:placeId", optionalAuth, async (req, res) => {
+    const phone = req.authUser?.phone || "";
     const placeId = req.params.placeId;
     try {
       const [rows] = await pool.execute(COMMENT_LIST_SQL, [phone || "", placeId]);
@@ -134,9 +136,10 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     }
   });
 
-  app.post("/api/comments/like", async (req, res) => {
+  app.post("/api/comments/like", requireAuth, async (req, res) => {
     try {
-      const { phone, commentId } = req.body;
+      const { commentId } = req.body;
+      const phone = req.authUser.phone;
       const [rows] = await pool.execute(
         "SELECT id FROM comment_likes WHERE phone COLLATE utf8mb4_general_ci = ? AND comment_id = ?",
         [phone, commentId]
@@ -155,9 +158,11 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     }
   });
 
-  app.post("/api/comments/add", upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
+  app.post("/api/comments/add", requireAuth, upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
     try {
-      const { phone, placeId, content, parentId } = req.body;
+      if (!(await validateUploadedImages(req, res))) return;
+      const { placeId, content, parentId } = req.body;
+      const phone = req.authUser.phone;
       const imageUrls = normalizeUploadedImages(req.files);
       await pool.execute(
         "INSERT INTO comments (place_id, user_phone, content, image_url, parent_id) VALUES (?, ?, ?, ?, ?)",
@@ -174,9 +179,10 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice 
     }
   });
 
-  app.post("/api/comments/delete", async (req, res) => {
+  app.post("/api/comments/delete", requireAuth, async (req, res) => {
     try {
-      const { phone, commentId } = req.body;
+      const { commentId } = req.body;
+      const phone = req.authUser.phone;
       await pool.execute("DELETE FROM comments WHERE id = ? AND user_phone COLLATE utf8mb4_general_ci = ?", [commentId, phone]);
       res.json({ ok: true });
     } catch (error) {

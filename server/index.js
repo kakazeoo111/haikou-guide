@@ -20,6 +20,8 @@ import { registerMiscRoutes } from "./miscRoutes.js";
 import { registerUserSummaryRoutes } from "./userSummaryRoutes.js";
 import { applyProxySettings, setApiNoStoreHeaders, STATIC_UPLOAD_OPTIONS } from "./cacheHeaders.js";
 import { createUploadMiddleware } from "./uploadPolicy.js";
+import { createOptionalAuthMiddleware, createRequireAdminMiddleware, createRequireAuthMiddleware } from "./authToken.js";
+import { createRateLimiter } from "./rateLimit.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,11 +32,51 @@ const port = process.env.SMS_SERVER_PORT || 3001;
 const ADMIN_PHONE = "13707584213";
 const otpStore = new Map();
 const startupWarnings = [];
+const requireAuth = createRequireAuthMiddleware();
+const optionalAuth = createOptionalAuthMiddleware();
+const requireAdmin = createRequireAdminMiddleware(ADMIN_PHONE);
+
+function parseAllowedOrigins() {
+  return String(process.env.CORS_ORIGINS || "")
+    .split(",")
+    .map((origin) => origin.trim().replace(/\/+$/, ""))
+    .filter(Boolean);
+}
+
+function createCorsOptions() {
+  const allowedOrigins = new Set(parseAllowedOrigins());
+  const allowDevFallback = allowedOrigins.size === 0 && process.env.NODE_ENV !== "production";
+  return {
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      const normalizedOrigin = String(origin || "").replace(/\/+$/, "");
+      if (allowDevFallback || allowedOrigins.has(normalizedOrigin)) return callback(null, true);
+      return callback(new Error("CORS origin is not allowed"));
+    },
+  };
+}
+
+function setSecurityHeaders(req, res, next) {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), payment=()");
+  next();
+}
 
 applyProxySettings(app);
 app.disable("x-powered-by");
-app.use(cors());
-app.use(express.json());
+app.use(setSecurityHeaders);
+app.use(cors(createCorsOptions()));
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "256kb" }));
+app.use(
+  "/api",
+  createRateLimiter({
+    windowMs: 60 * 1000,
+    max: Number(process.env.API_RATE_LIMIT_PER_MINUTE || 300),
+    keyGenerator: (req) => req.ip,
+  }),
+);
 app.use("/api", setApiNoStoreHeaders);
 
 const uploadDir = path.join(__dirname, "uploads");
@@ -127,22 +169,22 @@ app.get("/api/health", (req, res) => {
 
 await runStartupStep("用户资料字段初始化", () => ensureUsersProfileColumns(pool));
 await runStartupStep("称号授权表初始化", () => ensureBadgeGrantTable(pool));
-await runStartupStep("称号路由初始化", () => registerBadgeRoutes(app, { pool, ADMIN_PHONE }));
-await runStartupStep("认证路由初始化", () => registerAuthRoutes(app, { pool, otpStore, smsClient }));
-await runStartupStep("推荐路由初始化", () => registerRecommendationRoutes(app, { pool, upload, addNotice }));
-await runStartupStep("评论路由初始化", () => registerPlaceCommentRoutes(app, { pool, upload, addNotice }));
-await runStartupStep("通知路由初始化", () => registerNotificationRoutes(app, { pool }));
-await runStartupStep("杂项路由初始化", () => registerMiscRoutes(app, { pool, upload, ADMIN_PHONE }));
+await runStartupStep("称号路由初始化", () => registerBadgeRoutes(app, { pool, ADMIN_PHONE, requireAuth, requireAdmin }));
+await runStartupStep("认证路由初始化", () => registerAuthRoutes(app, { pool, otpStore, smsClient, requireAuth }));
+await runStartupStep("推荐路由初始化", () => registerRecommendationRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }));
+await runStartupStep("评论路由初始化", () => registerPlaceCommentRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }));
+await runStartupStep("通知路由初始化", () => registerNotificationRoutes(app, { pool, requireAuth }));
+await runStartupStep("杂项路由初始化", () => registerMiscRoutes(app, { pool, upload, ADMIN_PHONE, requireAuth, requireAdmin }));
 await runStartupStep("用户摘要路由初始化", () => registerUserSummaryRoutes(app, { pool }));
-await runStartupStep("反馈管理路由初始化", () => registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE }));
-await runStartupStep("论坛路由初始化", () => registerForumRoutes(app, { pool, upload, addNotice }));
-await runStartupStep("在线人数路由初始化", () => registerOnlineRoutes(app));
+await runStartupStep("反馈管理路由初始化", () => registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE, requireAuth, requireAdmin }));
+await runStartupStep("论坛路由初始化", () => registerForumRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }));
+await runStartupStep("在线人数路由初始化", () => registerOnlineRoutes(app, { optionalAuth }));
 
 app.use((error, req, res, next) => {
   if (!error) return next();
   const isUploadError = error.name === "MulterError" || error.message.includes("上传");
   console.error("请求处理失败:", error.message);
-  res.status(isUploadError ? 400 : 500).json({ ok: false, message: error.message || "服务器处理失败" });
+  res.status(isUploadError ? 400 : 500).json({ ok: false, message: isUploadError ? error.message : "服务器处理失败" });
 });
 
 app.listen(port, () => console.log(`🚀 后端已启动：${port}`));

@@ -1,4 +1,5 @@
 import { compressAvatarImage } from "./avatarUploadUtils";
+import { authFetch } from "./apiClient";
 
 const AVATAR_UPLOAD_API_PATH = "/api/user/upload-avatar";
 const AVATAR_FIELD_NAME = "avatar";
@@ -41,7 +42,7 @@ export async function uploadAvatar({
     formData.append(AVATAR_FIELD_NAME, compressedFile);
     formData.append(PHONE_FIELD_NAME, currentUser.phone);
 
-    const response = await fetch(`${authApiBase}${AVATAR_UPLOAD_API_PATH}`, {
+    const response = await authFetch(`${authApiBase}${AVATAR_UPLOAD_API_PATH}`, {
       method: "POST",
       body: formData,
     });

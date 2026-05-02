@@ -1,5 +1,6 @@
 ﻿import { attachBadgeProfileFields } from "./badgeProfileCache.js";
 import { buildUploadedImagePayload, getUploadedImageAndThumbFiles } from "./uploadImagePayload.js";
+import { validateUploadedImages } from "./uploadPolicy.js";
 
 function normalizeForumImages(files) {
   const { images, thumbnails } = getUploadedImageAndThumbFiles(files);
@@ -222,13 +223,13 @@ async function isForumPostActive(pool, postId) {
   return rows.length > 0;
 }
 
-export async function registerForumRoutes(app, { pool, upload, addNotice }) {
+export async function registerForumRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }) {
   await ensureForumTables(pool);
   await ensureForumNotificationTable(pool);
   const sendNotice = createForumNoticeSender(pool, addNotice);
 
-  app.get("/api/forum/posts", async (req, res) => {
-    const viewerPhone = String(req.query.phone || "").trim();
+  app.get("/api/forum/posts", optionalAuth, async (req, res) => {
+    const viewerPhone = String(req.authUser?.phone || "").trim();
     const search = String(req.query.search || "").trim();
     const sortMode = parseForumSortMode(req.query.sort);
     const orderBySql = sortMode === "chill" ? "ORDER BY call_count DESC, p.created_at DESC, p.id DESC" : "ORDER BY p.created_at DESC, p.id DESC";
@@ -254,11 +255,12 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     }
   });
 
-  app.post("/api/forum/post/add", async (req, res) => {
+  app.post("/api/forum/post/add", requireAuth, async (req, res) => {
     const uploadOk = await runUploadImages(upload, req, res);
     if (!uploadOk) return;
-    const { phone, content } = req.body;
-    const normalizedPhone = String(phone || "").trim();
+    if (!(await validateUploadedImages(req, res))) return;
+    const { content } = req.body;
+    const normalizedPhone = String(req.authUser.phone || "").trim();
     const message = String(content || "").trim();
     const imageUrl = normalizeForumImages(req.files);
     if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
@@ -278,9 +280,9 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     }
   });
 
-  app.post("/api/forum/post/call", async (req, res) => {
-    const { phone, postId } = req.body;
-    const normalizedPhone = String(phone || "").trim();
+  app.post("/api/forum/post/call", requireAuth, async (req, res) => {
+    const { postId } = req.body;
+    const normalizedPhone = String(req.authUser.phone || "").trim();
     const normalizedPostId = parsePositiveInt(postId);
     if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
     if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
@@ -315,9 +317,9 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     }
   });
 
-  app.get("/api/forum/comments/:postId", async (req, res) => {
+  app.get("/api/forum/comments/:postId", optionalAuth, async (req, res) => {
     const postId = parsePositiveInt(req.params.postId);
-    const viewerPhone = String(req.query.phone || "").trim();
+    const viewerPhone = String(req.authUser?.phone || "").trim();
     if (!postId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
 
     try {
@@ -337,9 +339,9 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     }
   });
 
-  app.post("/api/forum/comment/like", async (req, res) => {
-    const { phone, commentId } = req.body;
-    const normalizedPhone = String(phone || "").trim();
+  app.post("/api/forum/comment/like", requireAuth, async (req, res) => {
+    const { commentId } = req.body;
+    const normalizedPhone = String(req.authUser.phone || "").trim();
     const normalizedCommentId = parsePositiveInt(commentId);
     if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
     if (!normalizedCommentId) return res.status(400).json({ ok: false, message: "评论ID无效" });
@@ -369,11 +371,12 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     }
   });
 
-  app.post("/api/forum/comment/add", async (req, res) => {
+  app.post("/api/forum/comment/add", requireAuth, async (req, res) => {
     const uploadOk = await runUploadImages(upload, req, res);
     if (!uploadOk) return;
-    const { phone, postId, parentId, content } = req.body;
-    const normalizedPhone = String(phone || "").trim();
+    if (!(await validateUploadedImages(req, res))) return;
+    const { postId, parentId, content } = req.body;
+    const normalizedPhone = String(req.authUser.phone || "").trim();
     const normalizedPostId = parsePositiveInt(postId);
     const normalizedParentId = parentId ? parsePositiveInt(parentId) : null;
     const message = String(content || "").trim();
@@ -410,9 +413,9 @@ export async function registerForumRoutes(app, { pool, upload, addNotice }) {
     }
   });
 
-  app.post("/api/forum/comment/delete", async (req, res) => {
-    const { phone, commentId } = req.body;
-    const normalizedPhone = String(phone || "").trim();
+  app.post("/api/forum/comment/delete", requireAuth, async (req, res) => {
+    const { commentId } = req.body;
+    const normalizedPhone = String(req.authUser.phone || "").trim();
     const normalizedCommentId = parsePositiveInt(commentId);
     if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
     if (!normalizedCommentId) return res.status(400).json({ ok: false, message: "评论ID无效" });

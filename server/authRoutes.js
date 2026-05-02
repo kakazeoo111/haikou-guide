@@ -1,9 +1,14 @@
-import bcrypt from "bcryptjs";
+﻿import bcrypt from "bcryptjs";
 import DypnsapiClient from "@alicloud/dypnsapi20170525";
+import crypto from "crypto";
+import { createAuthToken } from "./authToken.js";
+import { createRateLimiter } from "./rateLimit.js";
 
 const PHONE_PATTERN = /^1\d{10}$/;
-const OTP_EXPIRE_MS = 5 * 60 * 1000;
+const OTP_EXPIRE_MS = Math.max(60 * 1000, Number.parseInt(process.env.SMS_CODE_EXPIRE_MS || "", 10) || 5 * 60 * 1000);
 const ALLOWED_SMS_TYPES = new Set(["register", "reset"]);
+const SMS_SEND_COOLDOWN_MS = Math.max(30 * 1000, Number.parseInt(process.env.SMS_SEND_COOLDOWN_MS || "", 10) || 60 * 1000);
+const OTP_MAX_VERIFY_ATTEMPTS = Math.max(3, Number.parseInt(process.env.OTP_MAX_VERIFY_ATTEMPTS || "", 10) || 5);
 const SMS_CODE_PARAM_NAME = normalizeText(process.env.ALIBABA_CLOUD_SMS_CODE_PARAM_NAME) || "code";
 const SMS_MIN_PARAM_NAME = normalizeText(process.env.ALIBABA_CLOUD_SMS_MIN_PARAM_NAME) || "min";
 const SMS_INCLUDE_MIN_PARAM = normalizeText(process.env.ALIBABA_CLOUD_SMS_INCLUDE_MIN_PARAM || "true").toLowerCase() !== "false";
@@ -18,18 +23,34 @@ function normalizeText(value) {
 }
 
 function createSmsCode() {
-  return Math.floor(100000 + Math.random() * 899999).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 function saveOtpRecord(otpStore, phone, code) {
-  otpStore.set(phone, { code, expiresAt: Date.now() + OTP_EXPIRE_MS });
+  otpStore.set(phone, { code, expiresAt: Date.now() + OTP_EXPIRE_MS, attempts: 0, sentAt: Date.now() });
 }
 
 function getOtpInvalidReason(record, code) {
   if (!record) return "missing";
-  if (normalizeText(code) !== normalizeText(record.code)) return "mismatch";
   if (Date.now() > Number(record.expiresAt || 0)) return "expired";
+  if (normalizeText(code) !== normalizeText(record.code)) return "mismatch";
   return "";
+}
+
+function hasActiveSmsCooldown(record) {
+  return record?.sentAt && Date.now() - Number(record.sentAt) < SMS_SEND_COOLDOWN_MS;
+}
+
+function verifyOtpCode(otpStore, phone, code) {
+  const record = otpStore.get(phone);
+  const reason = getOtpInvalidReason(record, code);
+  if (!reason) return "";
+  if (reason === "expired") otpStore.delete(phone);
+  if (reason === "mismatch" && record) {
+    record.attempts = Number(record.attempts || 0) + 1;
+    if (record.attempts >= OTP_MAX_VERIFY_ATTEMPTS) otpStore.delete(phone);
+  }
+  return reason;
 }
 
 function mapOtpReasonToMessage(reason) {
@@ -52,8 +73,21 @@ function buildSmsTemplateParams(code) {
   return params;
 }
 
-export function registerAuthRoutes(app, { pool, otpStore, smsClient }) {
-  app.post("/api/sms/send", async (req, res) => {
+export function registerAuthRoutes(app, { pool, otpStore, smsClient, requireAuth }) {
+  const smsSendLimiter = createRateLimiter({
+    windowMs: 60 * 1000,
+    max: Number(process.env.SMS_RATE_LIMIT_PER_MINUTE || 3),
+    keyGenerator: (req) => `${req.ip}:${normalizePhone(req.body?.phone)}:${normalizeText(req.body?.type)}`,
+    message: "验证码发送过于频繁，请稍后再试",
+  });
+  const authAttemptLimiter = createRateLimiter({
+    windowMs: 60 * 1000,
+    max: Number(process.env.AUTH_RATE_LIMIT_PER_MINUTE || 10),
+    keyGenerator: (req) => `${req.ip}:${normalizePhone(req.body?.phone)}`,
+    message: "登录或验证尝试过于频繁，请稍后再试",
+  });
+
+  app.post("/api/sms/send", smsSendLimiter, async (req, res) => {
     const phone = normalizePhone(req.body?.phone);
     const type = normalizeText(req.body?.type);
 
@@ -65,6 +99,9 @@ export function registerAuthRoutes(app, { pool, otpStore, smsClient }) {
     }
 
     try {
+      if (hasActiveSmsCooldown(otpStore.get(phone))) {
+        return res.status(429).json({ ok: false, message: "验证码发送过于频繁，请稍后再试" });
+      }
       const [rows] = await pool.execute("SELECT id FROM users WHERE phone = ?", [phone]);
       if (type === "register" && rows.length > 0) {
         return res.status(400).json({ ok: false, message: "该手机号已注册" });
@@ -94,29 +131,19 @@ export function registerAuthRoutes(app, { pool, otpStore, smsClient }) {
     }
   });
 
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authAttemptLimiter, async (req, res) => {
     const username = normalizeText(req.body?.username);
     const phone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || "");
     const code = normalizeText(req.body?.code);
 
-    if (!PHONE_PATTERN.test(phone)) {
-      return res.status(400).json({ ok: false, message: "手机号格式错误" });
-    }
-    if (!username) {
-      return res.status(400).json({ ok: false, message: "用户名不能为空" });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ ok: false, message: "密码至少 6 位" });
-    }
-    if (!code) {
-      return res.status(400).json({ ok: false, message: "请输入验证码" });
-    }
+    if (!PHONE_PATTERN.test(phone)) return res.status(400).json({ ok: false, message: "手机号格式错误" });
+    if (!username) return res.status(400).json({ ok: false, message: "用户名不能为空" });
+    if (password.length < 6) return res.status(400).json({ ok: false, message: "密码至少 6 位" });
+    if (!code) return res.status(400).json({ ok: false, message: "请输入验证码" });
 
-    const otpReason = getOtpInvalidReason(otpStore.get(phone), code);
-    if (otpReason) {
-      return res.status(401).json({ ok: false, message: mapOtpReasonToMessage(otpReason) });
-    }
+    const otpReason = verifyOtpCode(otpStore, phone, code);
+    if (otpReason) return res.status(401).json({ ok: false, message: mapOtpReasonToMessage(otpReason) });
 
     try {
       const [existsRows] = await pool.execute("SELECT id FROM users WHERE phone = ? LIMIT 1", [phone]);
@@ -139,26 +166,21 @@ export function registerAuthRoutes(app, { pool, otpStore, smsClient }) {
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authAttemptLimiter, async (req, res) => {
     const phone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || "");
 
-    if (!PHONE_PATTERN.test(phone)) {
-      return res.status(400).json({ ok: false, message: "手机号格式错误" });
-    }
-    if (!password) {
-      return res.status(400).json({ ok: false, message: "请输入密码" });
-    }
+    if (!PHONE_PATTERN.test(phone)) return res.status(400).json({ ok: false, message: "手机号格式错误" });
+    if (!password) return res.status(400).json({ ok: false, message: "请输入密码" });
 
     try {
       const [rows] = await pool.execute("SELECT * FROM users WHERE phone = ?", [phone]);
-      if (rows.length === 0) {
-        return res.status(401).json({ ok: false, message: "用户未注册" });
-      }
+      if (rows.length === 0) return res.status(401).json({ ok: false, message: "用户未注册" });
       const matched = await bcrypt.compare(password, rows[0].password_hash);
       if (!matched) return res.status(401).json({ ok: false, message: "密码错误" });
       res.json({
         ok: true,
+        token: createAuthToken(rows[0]),
         user: { username: rows[0].username, phone: rows[0].phone, avatar_url: rows[0].avatar_url },
       });
     } catch (error) {
@@ -167,16 +189,14 @@ export function registerAuthRoutes(app, { pool, otpStore, smsClient }) {
     }
   });
 
-  app.get("/api/auth/user/:phone", async (req, res) => {
+  app.get("/api/auth/user/:phone", requireAuth, async (req, res) => {
     const phone = normalizePhone(req.params.phone);
-    if (!PHONE_PATTERN.test(phone)) {
-      return res.status(400).json({ ok: false, message: "手机号格式错误" });
+    if (!PHONE_PATTERN.test(phone)) return res.status(400).json({ ok: false, message: "手机号格式错误" });
+    if (String(req.authUser?.phone || "") !== phone) {
+      return res.status(403).json({ ok: false, message: "无权限查看该用户资料" });
     }
     try {
-      const [rows] = await pool.execute(
-        "SELECT username, phone, avatar_url FROM users WHERE phone = ? LIMIT 1",
-        [phone],
-      );
+      const [rows] = await pool.execute("SELECT username, phone, avatar_url FROM users WHERE phone = ? LIMIT 1", [phone]);
       if (!rows.length) return res.status(404).json({ ok: false, message: "用户不存在" });
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
       res.json({
@@ -193,31 +213,21 @@ export function registerAuthRoutes(app, { pool, otpStore, smsClient }) {
     }
   });
 
-  app.post("/api/auth/reset-password", async (req, res) => {
+  app.post("/api/auth/reset-password", authAttemptLimiter, async (req, res) => {
     const phone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || "");
     const code = normalizeText(req.body?.code);
 
-    if (!PHONE_PATTERN.test(phone)) {
-      return res.status(400).json({ ok: false, message: "手机号格式错误" });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ ok: false, message: "密码至少 6 位" });
-    }
-    if (!code) {
-      return res.status(400).json({ ok: false, message: "请输入验证码" });
-    }
+    if (!PHONE_PATTERN.test(phone)) return res.status(400).json({ ok: false, message: "手机号格式错误" });
+    if (password.length < 6) return res.status(400).json({ ok: false, message: "密码至少 6 位" });
+    if (!code) return res.status(400).json({ ok: false, message: "请输入验证码" });
 
-    const otpReason = getOtpInvalidReason(otpStore.get(phone), code);
-    if (otpReason) {
-      return res.status(401).json({ ok: false, message: mapOtpReasonToMessage(otpReason) });
-    }
+    const otpReason = verifyOtpCode(otpStore, phone, code);
+    if (otpReason) return res.status(401).json({ ok: false, message: mapOtpReasonToMessage(otpReason) });
 
     try {
       const [rows] = await pool.execute("SELECT id FROM users WHERE phone = ?", [phone]);
-      if (rows.length === 0) {
-        return res.status(404).json({ ok: false, message: "用户未注册" });
-      }
+      if (rows.length === 0) return res.status(404).json({ ok: false, message: "用户未注册" });
       const passwordHash = await bcrypt.hash(password, 10);
       await pool.execute("UPDATE users SET password_hash = ? WHERE phone = ?", [passwordHash, phone]);
       otpStore.delete(phone);

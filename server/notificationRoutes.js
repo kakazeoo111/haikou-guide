@@ -26,10 +26,13 @@ async function ensureNotificationTypeColumn(pool) {
 
   const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply", "forum_comment_like"];
 
-  export async function registerNotificationRoutes(app, { pool }) {
+  export async function registerNotificationRoutes(app, { pool, requireAuth }) {
     await ensureNotificationsTable(pool);
 
-    app.get("/api/notifications/:phone", async (req, res) => {
+    app.get("/api/notifications/:phone", requireAuth, async (req, res) => {
+      if (String(req.params.phone || "") !== req.authUser.phone) {
+        return res.status(403).json({ ok: false, message: "无权限查看该通知" });
+      }
       try {
         const sql = `SELECT n.*, COALESCE(u.username, n.sender_phone) AS sender_name, u.avatar_url AS sender_avatar
                      FROM notifications n
@@ -44,9 +47,9 @@ async function ensureNotificationTypeColumn(pool) {
       }
     });
 
-    app.post("/api/notifications/read", async (req, res) => {
+    app.post("/api/notifications/read", requireAuth, async (req, res) => {
       try {
-        await pool.execute("UPDATE notifications SET is_read = 1 WHERE receiver_phone = ?", [req.body.phone]);
+        await pool.execute("UPDATE notifications SET is_read = 1 WHERE receiver_phone = ?", [req.authUser.phone]);
         res.json({ ok: true });
       } catch (error) {
         console.error("标记通知已读失败:", error.message);
@@ -54,14 +57,13 @@ async function ensureNotificationTypeColumn(pool) {
       }
     });
 
-    app.post("/api/notifications/read-forum", async (req, res) => {
+    app.post("/api/notifications/read-forum", requireAuth, async (req, res) => {
       try {
-        const { phone } = req.body;
         await pool.execute(
           `UPDATE notifications SET is_read = 1
            WHERE receiver_phone = ?
              AND (type IN (?, ?, ?, ?) OR place_id LIKE 'forum_%')`,
-          [phone, ...FORUM_NOTICE_TYPES],
+          [req.authUser.phone, ...FORUM_NOTICE_TYPES],
         );
         res.json({ ok: true });
       } catch (error) {
@@ -70,14 +72,13 @@ async function ensureNotificationTypeColumn(pool) {
       }
     });
 
-    app.post("/api/notifications/clear-forum", async (req, res) => {
+    app.post("/api/notifications/clear-forum", requireAuth, async (req, res) => {
       try {
-        const { phone } = req.body;
         await pool.execute(
           `DELETE FROM notifications
            WHERE receiver_phone = ?
              AND (type IN (?, ?, ?, ?) OR place_id LIKE 'forum_%')`,
-          [phone, ...FORUM_NOTICE_TYPES],
+          [req.authUser.phone, ...FORUM_NOTICE_TYPES],
         );
         res.json({ ok: true, message: "论坛互动已清空" });
       } catch (error) {
@@ -86,10 +87,9 @@ async function ensureNotificationTypeColumn(pool) {
       }
     });
 
-    app.post("/api/notifications/clear", async (req, res) => {
+    app.post("/api/notifications/clear", requireAuth, async (req, res) => {
       try {
-        const { phone } = req.body;
-        await pool.execute("DELETE FROM notifications WHERE receiver_phone = ?", [phone]);
+        await pool.execute("DELETE FROM notifications WHERE receiver_phone = ?", [req.authUser.phone]);
         res.json({ ok: true, message: "通知已清空" });
       } catch (error) {
         console.error("清空通知失败:", error.message);

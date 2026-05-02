@@ -13,8 +13,7 @@ function parseManualPayload(payload = {}) {
   };
 }
 
-function validateManualPayload({ adminPhone, targetPhone, badgeName }, expectedAdminPhone) {
-  if (adminPhone !== expectedAdminPhone) return "forbidden";
+function validateManualPayload({ targetPhone, badgeName }) {
   if (!PHONE_REGEX.test(targetPhone)) return "目标手机号格式错误";
   if (!badgeName) return "称号名称不能为空";
   if (badgeName.length > BADGE_NAME_MAX_LENGTH) return "称号名称过长（最多20字）";
@@ -42,7 +41,7 @@ function buildSelectedBadgeResponse(badgeData, badgeName) {
   };
 }
 
-export function registerBadgeRoutes(app, { pool, ADMIN_PHONE }) {
+export function registerBadgeRoutes(app, { pool, ADMIN_PHONE, requireAuth, requireAdmin }) {
   app.get("/api/badges/:phone", async (req, res) => {
     const phone = String(req.params.phone || "").trim();
     if (!PHONE_REGEX.test(phone)) return res.status(400).json({ ok: false, message: "手机号格式错误" });
@@ -55,16 +54,15 @@ export function registerBadgeRoutes(app, { pool, ADMIN_PHONE }) {
     }
   });
 
-  app.post("/api/badges/manual/update", async (req, res) => {
+  app.post("/api/badges/manual/update", requireAdmin, async (req, res) => {
     const parsed = parseManualPayload(req.body);
     const errorMsg = validateManualPayload(parsed, ADMIN_PHONE);
-    if (errorMsg === "forbidden") return res.status(403).json({ ok: false, message: "无权限操作称号授权" });
     if (errorMsg) return res.status(400).json({ ok: false, message: errorMsg });
     try {
       await updateManualBadgeGrant(pool, {
         targetPhone: parsed.targetPhone,
         badgeName: parsed.badgeName,
-        adminPhone: parsed.adminPhone,
+        adminPhone: req.authUser.phone,
         isActive: parsed.isActive,
         note: parsed.note,
       });
@@ -76,8 +74,8 @@ export function registerBadgeRoutes(app, { pool, ADMIN_PHONE }) {
     }
   });
 
-  app.post("/api/badges/select", async (req, res) => {
-    const parsed = parseSelectPayload(req.body);
+  app.post("/api/badges/select", requireAuth, async (req, res) => {
+    const parsed = { ...parseSelectPayload(req.body), phone: req.authUser.phone };
     const errorMsg = validateSelectPayload(parsed);
     if (errorMsg) return res.status(400).json({ ok: false, message: errorMsg });
     try {

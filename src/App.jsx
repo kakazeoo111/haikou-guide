@@ -11,6 +11,7 @@ import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./logic/cli
 import { setupWechatAggressiveLazyLoading } from "./logic/wechatImageLazyPatch";
 import { setupIOSLazyImageRefresh } from "./logic/iosImageRefresh";
 import { AUTH_API_BASE } from "./appConfig";
+import { authFetch } from "./logic/apiClient";
 function hasValidRouteCoordinate(place) { return Number.isFinite(Number(place?.lat)) && Number.isFinite(Number(place?.lng)); }
 function App() {
   const [userLocation, setUserLocation] = useState(null);
@@ -149,7 +150,7 @@ function App() {
         setShowNotice(localStorage.getItem(getNoticeDismissKey(phone)) !== "1");
       }
     });
-    fetch(`${authApiBase}/api/favorites/${phone}`)
+    authFetch(`${authApiBase}/api/favorites/${phone}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.ok) return;
@@ -157,7 +158,7 @@ function App() {
         writeCachedValue(`favorites_${phone}`, data);
       })
       .catch((error) => console.error("获取收藏失败:", error));
-    fetch(`${authApiBase}/api/places/stats?phone=${phone}`)
+    authFetch(`${authApiBase}/api/places/stats?phone=${phone}`)
       .then((res) => res.json())
       .then((data) => {
         if (!data.ok) return;

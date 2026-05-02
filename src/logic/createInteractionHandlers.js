@@ -1,4 +1,5 @@
 import { appendOptimizedImagesWithThumbnails } from "./uploadImageOptimizer";
+import { authFetch } from "./apiClient";
 
 export function createInteractionHandlers(ctx) {
   const {
@@ -32,7 +33,7 @@ export function createInteractionHandlers(ctx) {
   const handleLikePlace = async (e, placeId) => {
     e.stopPropagation();
     const pId = String(placeId);
-    const res = await fetch(`${authApiBase}/api/places/like`, {
+    const res = await authFetch(`${authApiBase}/api/places/like`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, placeId: pId }),
@@ -52,7 +53,7 @@ export function createInteractionHandlers(ctx) {
 
   const handleLikeComment = async (commentId) => {
     if (!viewingCommentsPlace) return;
-    const res = await fetch(`${authApiBase}/api/comments/like`, {
+    const res = await authFetch(`${authApiBase}/api/comments/like`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, commentId }),
@@ -63,7 +64,7 @@ export function createInteractionHandlers(ctx) {
 
   const handleLikeRec = async (e, recId) => {
     e.stopPropagation();
-    const res = await fetch(`${authApiBase}/api/recommendations/like`, {
+    const res = await authFetch(`${authApiBase}/api/recommendations/like`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, recId: Number(recId) }),
@@ -75,7 +76,7 @@ export function createInteractionHandlers(ctx) {
   const handleDeleteRec = async (e, recId) => {
     e.stopPropagation();
     if (!window.confirm("确定删除这条分享吗？")) return;
-    const res = await fetch(`${authApiBase}/api/recommendations/delete`, {
+    const res = await authFetch(`${authApiBase}/api/recommendations/delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, recId }),
@@ -130,7 +131,7 @@ export function createInteractionHandlers(ctx) {
       formData.append("lat", newRec.lat);
       formData.append("lng", newRec.lng);
       await appendOptimizedImagesWithThumbnails(formData, recImages);
-      const res = await fetch(`${authApiBase}/api/recommendations/add`, { method: "POST", body: formData });
+      const res = await authFetch(`${authApiBase}/api/recommendations/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return;
       alert("发布成功！");
@@ -155,7 +156,7 @@ export function createInteractionHandlers(ctx) {
       formData.append("content", newComment);
       if (replyTo) formData.append("parentId", replyTo.id);
       await appendOptimizedImagesWithThumbnails(formData, commentImages);
-      const res = await fetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
+      const res = await authFetch(`${authApiBase}/api/comments/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return;
       setNewComment("");
@@ -171,7 +172,7 @@ export function createInteractionHandlers(ctx) {
   const handleDeleteComment = async (commentId) => {
     if (!viewingCommentsPlace) return;
     if (!window.confirm("确定删除？")) return;
-    await fetch(`${authApiBase}/api/comments/delete`, {
+    await authFetch(`${authApiBase}/api/comments/delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, commentId }),

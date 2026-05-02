@@ -4,6 +4,7 @@ import FeedbackThreadModal from "./FeedbackThreadModal";
 import { buildImageLoadingProps } from "../logic/imageProps";
 import { appendOptimizedImagesWithThumbnails } from "../logic/uploadImageOptimizer";
 import { btnMainStyle, modalContentStyle, modalOverlayStyle } from "../styles/appStyles";
+import { authFetch } from "../logic/apiClient";
 
 async function readJsonSafely(response) {
   const rawText = await response.text();
@@ -72,7 +73,7 @@ function NoticeListModal({
   const fetchFeedbackThread = async (feedbackId) => {
     setThreadLoading(true);
     try {
-      const res = await fetch(`${authApiBase}/api/feedback/thread`, {
+      const res = await authFetch(`${authApiBase}/api/feedback/thread`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone, feedbackId }),
@@ -130,7 +131,7 @@ function NoticeListModal({
       formData.append("feedbackId", threadRootId);
       formData.append("content", message);
       await appendOptimizedImagesWithThumbnails(formData, followupImages);
-      const res = await fetch(`${authApiBase}/api/feedback/followup`, {
+      const res = await authFetch(`${authApiBase}/api/feedback/followup`, {
         method: "POST",
         body: formData,
       });
@@ -154,7 +155,7 @@ function NoticeListModal({
 
   const handleMarkRead = async () => {
     try {
-      const res = await fetch(`${authApiBase}${markReadPath}`, {
+      const res = await authFetch(`${authApiBase}${markReadPath}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone }),
@@ -178,7 +179,7 @@ function NoticeListModal({
   const handleClear = async () => {
     if (!window.confirm(clearConfirmText)) return;
     try {
-      const res = await fetch(`${authApiBase}${clearPath}`, {
+      const res = await authFetch(`${authApiBase}${clearPath}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone }),

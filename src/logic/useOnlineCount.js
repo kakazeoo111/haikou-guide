@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { authFetch } from "./apiClient";
 
 const ONLINE_POLL_INTERVAL_MS = 12 * 1000;
 
@@ -16,7 +17,7 @@ export function useOnlineCount({ enabled, authApiBase, phone }) {
 
     const pullOnlineCount = async () => {
       try {
-        const res = await fetch(buildOnlineCountUrl(authApiBase, phone));
+        const res = await authFetch(buildOnlineCountUrl(authApiBase, phone));
         const data = await res.json();
         if (!data.ok) throw new Error(data.message || "在线人数获取失败");
         if (disposed) return;

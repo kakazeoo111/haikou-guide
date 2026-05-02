@@ -4,6 +4,7 @@ import { normalizeAvatarUrl } from "./avatarFallback";
 import { APP_CACHE_TTL_MS, readCachedValue, writeCachedValue } from "./clientCache";
 import { appendOptimizedImagesWithThumbnails } from "./uploadImageOptimizer";
 import { warmCommentAvatars, warmCommentImages, warmRecommendationImages } from "./imageWarmup";
+import { authFetch, clearAuthSession, saveAuthSession } from "./apiClient";
 const GEOLOCATION_REFRESH_OPTIONS = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
 export function createGeneralHandlers(ctx) {
   const {
@@ -19,7 +20,7 @@ export function createGeneralHandlers(ctx) {
       const cachedData = readCachedValue(cacheKey, APP_CACHE_TTL_MS.recommendations);
       if (cachedData?.ok && Array.isArray(cachedData.data)) setRecommendations(cachedData.data);
     }
-    const res = await fetch(`${authApiBase}/api/recommendations?phone=${phone}`);
+    const res = await authFetch(`${authApiBase}/api/recommendations?phone=${phone}`);
     const data = await res.json();
     if (data.ok) {
       setRecommendations(data.data);
@@ -43,7 +44,7 @@ export function createGeneralHandlers(ctx) {
         const cachedData = readCachedValue(cacheKey, APP_CACHE_TTL_MS.notifications);
         if (cachedData?.ok && Array.isArray(cachedData.data)) setNotifications(cachedData.data);
       }
-      const res = await fetch(`${authApiBase}/api/notifications/${currentUser.phone}`);
+      const res = await authFetch(`${authApiBase}/api/notifications/${currentUser.phone}`);
       const data = await res.json();
       if (data.ok) {
         setNotifications(data.data);
@@ -57,7 +58,7 @@ export function createGeneralHandlers(ctx) {
   };
 
   const fetchComments = async (id) => {
-    const res = await fetch(`${authApiBase}/api/comments/${id}?phone=${currentUser.phone}`);
+    const res = await authFetch(`${authApiBase}/api/comments/${id}?phone=${currentUser.phone}`);
     const data = await res.json();
     if (data.ok) {
       setActiveComments((prev) => ({ ...prev, [id]: data.comments }));
@@ -65,7 +66,7 @@ export function createGeneralHandlers(ctx) {
       warmCommentAvatars(data.comments);
     }
   };
-  const handleLogout = () => { localStorage.removeItem("haikouUser"); window.location.reload(); };
+  const handleLogout = () => { clearAuthSession(); window.location.reload(); };
 
   const handleRefreshLocation = () => {
     if (!navigator.geolocation) {
@@ -125,7 +126,7 @@ export function createGeneralHandlers(ctx) {
   };
 
   const fetchAdminFeedbacks = async () => {
-    const res = await fetch(`${authApiBase}/api/feedback/all`, {
+    const res = await authFetch(`${authApiBase}/api/feedback/all`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone }),
@@ -146,7 +147,7 @@ export function createGeneralHandlers(ctx) {
   };
 
   const handleFeedbackStatusUpdate = async (feedbackId, patch) => {
-    const res = await fetch(`${authApiBase}/api/feedback/status`, {
+    const res = await authFetch(`${authApiBase}/api/feedback/status`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, feedbackId, ...patch }),
@@ -161,7 +162,7 @@ export function createGeneralHandlers(ctx) {
   };
 
   const handleFeedbackDelete = async (feedbackId) => {
-    const res = await fetch(`${authApiBase}/api/feedback/delete`, {
+    const res = await authFetch(`${authApiBase}/api/feedback/delete`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, feedbackId }),
@@ -183,7 +184,7 @@ export function createGeneralHandlers(ctx) {
       formData.append("letter", letter);
       formData.append("markResolved", markResolved ? "true" : "false");
       await appendOptimizedImagesWithThumbnails(formData, images || []);
-      const res = await fetch(`${authApiBase}/api/feedback/reply`, {
+      const res = await authFetch(`${authApiBase}/api/feedback/reply`, {
         method: "POST",
         body: formData,
       });
@@ -208,7 +209,7 @@ export function createGeneralHandlers(ctx) {
       formData.append("phone", currentUser.phone);
       formData.append("content", feedbackContent);
       await appendOptimizedImagesWithThumbnails(formData, feedbackImages || []);
-      const res = await fetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
+      const res = await authFetch(`${authApiBase}/api/feedback/submit`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return;
       alert(data.message);
@@ -222,7 +223,7 @@ export function createGeneralHandlers(ctx) {
   };
 
   const handleUpdateNotice = async () => {
-    const res = await fetch(`${authApiBase}/api/announcement/update`, {
+    const res = await authFetch(`${authApiBase}/api/announcement/update`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone: currentUser.phone, newContent: noticeContent }),
@@ -251,7 +252,8 @@ export function createGeneralHandlers(ctx) {
     if (!data.ok) return setLoginError(data.message || "操作失败，请重试");
     if (authMode === "login") {
       setCurrentUser(data.user);
-      localStorage.setItem("haikouUser", JSON.stringify(data.user));
+      if (!data.token) return setLoginError("登录状态签发失败，请稍后重试");
+      saveAuthSession(data.user, data.token);
       return;
     }
     alert(data.message);
@@ -263,7 +265,7 @@ export function createGeneralHandlers(ctx) {
     const isFavorited = favoriteIds.includes(pId);
     setFavoriteIds((prev) => (isFavorited ? prev.filter((id) => id !== pId) : [...prev, pId]));
     try {
-      const res = await fetch(`${authApiBase}/api/favorites/toggle`, {
+      const res = await authFetch(`${authApiBase}/api/favorites/toggle`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone, placeId: pId }),
@@ -273,7 +275,7 @@ export function createGeneralHandlers(ctx) {
     } catch (error) {
       console.error("收藏操作失败:", error);
       alert("收藏操作失败，请重试");
-      fetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
+      authFetch(`${authApiBase}/api/favorites/${currentUser.phone}`)
         .then((res) => res.json())
         .then((data) => {
           if (data.ok) setFavoriteIds((data.favIds || []).map((id) => String(id)));

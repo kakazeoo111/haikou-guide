@@ -33,6 +33,15 @@ function toPoint(BMapGL, location) {
   return new BMapGL.Point(location.lng, location.lat);
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function clearUserMarker(map, userMarkerRef) {
   if (!userMarkerRef.current) return;
   map.removeOverlay(userMarkerRef.current);
@@ -111,7 +120,7 @@ function drawPlaceMarkers(map, BMapGL, targetPlaces, markersRef) {
     marker.setLabel(placeLabel);
     map.addOverlay(marker);
     markersRef.current.push(marker);
-    const info = new BMapGL.InfoWindow(`<b>${place.name}</b><br/>${place.desc}`);
+    const info = new BMapGL.InfoWindow(`<b>${escapeHtml(place.name)}</b><br/>${escapeHtml(place.desc)}`);
     marker.addEventListener("click", () => map.openInfoWindow(info, point));
   });
 }

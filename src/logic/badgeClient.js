@@ -1,3 +1,5 @@
+import { authFetch } from "./apiClient";
+
 const DEFAULT_BADGE_TITLE = "\u672a\u89e3\u9501\u79f0\u53f7";
 
 async function parseJson(res) {
@@ -12,7 +14,7 @@ export async function fetchBadgeSummary(authApiBase, phone) {
 }
 
 export async function selectActiveBadge(authApiBase, phone, badgeName) {
-  const res = await fetch(`${authApiBase}/api/badges/select`, {
+  const res = await authFetch(`${authApiBase}/api/badges/select`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phone, badgeName }),
@@ -21,7 +23,7 @@ export async function selectActiveBadge(authApiBase, phone, badgeName) {
 }
 
 export async function updateManualBadgeGrant(authApiBase, { adminPhone, targetPhone, badgeName, isActive, note }) {
-  const res = await fetch(`${authApiBase}/api/badges/manual/update`, {
+  const res = await authFetch(`${authApiBase}/api/badges/manual/update`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

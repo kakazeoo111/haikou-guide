@@ -7,6 +7,7 @@ import {
   normalizeForumPosts,
   splitValidForumFiles,
 } from "./forumModalUtils";
+import { authFetch } from "./apiClient";
 
 const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply", "forum_comment_like"];
 
@@ -62,7 +63,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     setLoadingPosts(true);
     try {
       const url = buildForumPostsUrl(authApiBase, currentUser.phone, keyword, nextSortMode);
-      const res = await fetch(url);
+      const res = await authFetch(url);
       const data = await res.json();
       if (!data.ok) return alert(data.message || "论坛内容获取失败");
       setPosts(normalizeForumPosts(data.data));
@@ -78,7 +79,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     if (!currentUser?.phone) return;
     setLoadingCommentPostIds((prev) => [...prev, postId]);
     try {
-      const res = await fetch(`${authApiBase}/api/forum/comments/${postId}?phone=${currentUser.phone}`);
+      const res = await authFetch(`${authApiBase}/api/forum/comments/${postId}?phone=${currentUser.phone}`);
       const data = await res.json();
       if (!data.ok) return alert(data.message || "论坛评论加载失败");
       setCommentsMap((prev) => ({ ...prev, [postId]: Array.isArray(data.data) ? data.data : [] }));
@@ -149,7 +150,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
       formData.append("phone", currentUser.phone);
       formData.append("content", content);
       await appendOptimizedImagesWithThumbnails(formData, postImages);
-      const res = await fetch(`${authApiBase}/api/forum/post/add`, { method: "POST", body: formData });
+      const res = await authFetch(`${authApiBase}/api/forum/post/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "发帖失败");
       setPostContent("");
@@ -176,7 +177,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
       formData.append("content", content);
       formData.append("parentId", replyTarget ? String(replyTarget.id) : "");
       await appendOptimizedImagesWithThumbnails(formData, commentImages);
-      const res = await fetch(`${authApiBase}/api/forum/comment/add`, { method: "POST", body: formData });
+      const res = await authFetch(`${authApiBase}/api/forum/comment/add`, { method: "POST", body: formData });
       const data = await res.json();
       if (!data.ok) return alert(data.message || "评论发布失败");
       setCommentDraftMap((prev) => ({ ...prev, [postId]: "" }));
@@ -194,7 +195,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
 
   const handleLikeComment = async (postId, commentId) => {
     try {
-      const res = await fetch(`${authApiBase}/api/forum/comment/like`, {
+      const res = await authFetch(`${authApiBase}/api/forum/comment/like`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone, commentId }),
@@ -216,7 +217,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
   const handleDeleteComment = async (postId, commentId) => {
     if (!window.confirm("确定删除这条评论吗？")) return;
     try {
-      const res = await fetch(`${authApiBase}/api/forum/comment/delete`, {
+      const res = await authFetch(`${authApiBase}/api/forum/comment/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone, commentId }),
@@ -240,7 +241,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     if (callingPostIds.includes(postId)) return;
     setCallingPostIds((prev) => [...prev, postId]);
     try {
-      const res = await fetch(`${authApiBase}/api/forum/post/call`, {
+      const res = await authFetch(`${authApiBase}/api/forum/post/call`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: currentUser.phone, postId }),

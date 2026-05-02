@@ -1,4 +1,5 @@
 import { buildUploadedImagePayload, getUploadedImageAndThumbFiles } from "./uploadImagePayload.js";
+import { validateUploadedImages } from "./uploadPolicy.js";
 
 function normalizeUploadedImages(files) {
   const { images, thumbnails } = getUploadedImageAndThumbFiles(files);
@@ -56,11 +57,11 @@ const RECOMMENDATION_LIST_SQL = `
   ORDER BY r.created_at DESC
 `;
 
-export async function registerRecommendationRoutes(app, { pool, upload, addNotice }) {
+export async function registerRecommendationRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }) {
   await ensureRecommendationTables(pool);
 
-  app.get("/api/recommendations", async (req, res) => {
-    const { phone } = req.query;
+  app.get("/api/recommendations", optionalAuth, async (req, res) => {
+    const phone = req.authUser?.phone || "";
     try {
       const [rows] = await pool.execute(RECOMMENDATION_LIST_SQL, [phone || ""]);
       const data = rows.map((row) => ({ ...row, is_liked: row.is_liked > 0 }));
@@ -71,8 +72,10 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
     }
   });
 
-  app.post("/api/recommendations/add", upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
-    const { phone, place_name, description, lat, lng } = req.body;
+  app.post("/api/recommendations/add", requireAuth, upload.fields([{ name: "images", maxCount: 9 }, { name: "thumbnails", maxCount: 9 }]), async (req, res) => {
+    if (!(await validateUploadedImages(req, res))) return;
+    const { place_name, description, lat, lng } = req.body;
+    const phone = req.authUser.phone;
     const imageUrls = normalizeUploadedImages(req.files);
     try {
       await pool.execute(
@@ -86,8 +89,9 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
     }
   });
 
-  app.post("/api/recommendations/like", async (req, res) => {
-    const { phone, recId } = req.body;
+  app.post("/api/recommendations/like", requireAuth, async (req, res) => {
+    const { recId } = req.body;
+    const phone = req.authUser.phone;
     try {
       const id = parseInt(recId, 10);
       const [rows] = await pool.execute(
@@ -108,8 +112,9 @@ export async function registerRecommendationRoutes(app, { pool, upload, addNotic
     }
   });
 
-  app.post("/api/recommendations/delete", async (req, res) => {
-    const { phone, recId } = req.body;
+  app.post("/api/recommendations/delete", requireAuth, async (req, res) => {
+    const { recId } = req.body;
+    const phone = req.authUser.phone;
     try {
       const [result] = await pool.execute(
         "DELETE FROM recommendations WHERE id = ? AND user_phone COLLATE utf8mb4_general_ci = ?",
