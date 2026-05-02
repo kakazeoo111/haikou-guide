@@ -26,6 +26,7 @@ import { useUserPointsCard } from "../../logic/useUserPointsCard";
 import UserPointsCardModal from "../UserPointsCardModal";
 import LikeHeartIcon from "../LikeHeartIcon";
 import XhsImageUploadButton from "../common/XhsImageUploadButton";
+import { buildCommentImageLoadingProps } from "../../logic/imageProps";
 
 const COMMENT_INPUT_ID = "forum-comment-input-overlay";
 const COMMENT_IMAGE_INPUT_ID = "forum-comment-images-input-overlay";
@@ -151,7 +152,7 @@ function ForumCommentsOverlay({
         {loading && <div style={{ textAlign: "center", color: "#7a8f85", padding: "12px 0" }}>评论加载中...</div>}
         {!loading && parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>暂无相关评论...</div>}
 
-        {parents.map((parent) => {
+        {parents.map((parent, parentIndex) => {
           const replies = repliesByParentId[parent.id] || [];
           const isExpanded = expandedParentIds.includes(parent.id);
           const parentImageEntries = parseCommentImageEntries(parent.image_url);
@@ -216,8 +217,7 @@ function ForumCommentsOverlay({
                         <img
                           key={idx}
                           src={entry.thumbnail || entry.url}
-                          loading="lazy"
-                          decoding="async"
+	                          {...buildCommentImageLoadingProps({ itemIndex: parentIndex, imageIndex: idx })}
                           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                           onClick={() => onZoomImage(parentImages, idx)}
                           alt="forum-comment-img"
@@ -309,8 +309,7 @@ function ForumCommentsOverlay({
                                     <img
                                       key={idx}
                                       src={entry.thumbnail || entry.url}
-                                      loading="lazy"
-                                      decoding="async"
+	                                      {...buildCommentImageLoadingProps({ itemIndex: parentIndex + 1, imageIndex: idx })}
                                       style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                                       onClick={() => onZoomImage(replyImages, idx)}
                                       alt="forum-reply-img"

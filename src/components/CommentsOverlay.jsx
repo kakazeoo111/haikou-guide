@@ -4,6 +4,7 @@ import { useUserPointsCard } from "../logic/useUserPointsCard";
 import UserPointsCardModal from "./UserPointsCardModal";
 import LikeHeartIcon from "./LikeHeartIcon";
 import XhsImageUploadButton from "./common/XhsImageUploadButton";
+import { buildCommentImageLoadingProps } from "../logic/imageProps";
 function CommentsOverlay({
   place,
   comments,
@@ -104,7 +105,7 @@ function CommentsOverlay({
       </div>
       <div style={scrollContentStyle}>
         {parents.length === 0 && <div style={{ textAlign: "center", marginTop: "100px", color: "#bbb" }}>💬 暂无相关点评...</div>}
-        {parents.map((parent) => {
+        {parents.map((parent, parentIndex) => {
           const replies = repliesByParentId[parent.id] || [];
           const isExpanded = expandedParentIds.includes(parent.id);
           const parentImageEntries = parseCommentImageEntries(parent.image_url);
@@ -158,8 +159,7 @@ function CommentsOverlay({
                         <img
                           key={idx}
                           src={entry.thumbnail || entry.url}
-                          loading="lazy"
-                          decoding="async"
+                          {...buildCommentImageLoadingProps({ itemIndex: parentIndex, imageIndex: idx })}
                           style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                           onClick={() => onZoomImage(parentImages, idx)}
                           alt="comment-img"
@@ -238,8 +238,7 @@ function CommentsOverlay({
                                     <img
                                       key={idx}
                                       src={entry.thumbnail || entry.url}
-                                      loading="lazy"
-                                      decoding="async"
+                                      {...buildCommentImageLoadingProps({ itemIndex: parentIndex + 1, imageIndex: idx })}
                                       style={{ width: "100%", aspectRatio: "1/1", objectFit: "cover", borderRadius: "6px", border: "1px solid #eee", cursor: "zoom-in" }}
                                       onClick={() => onZoomImage(replyImages, idx)}
                                       alt="reply-img"

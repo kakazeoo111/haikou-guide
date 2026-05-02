@@ -8,6 +8,7 @@ import {
   splitValidForumFiles,
 } from "./forumModalUtils";
 import { authFetch } from "./apiClient";
+import { warmCommentAvatars, warmCommentImages, warmForumPostImages } from "./imageWarmup";
 
 const FORUM_NOTICE_TYPES = ["forum_call", "forum_comment", "forum_reply", "forum_comment_like"];
 
@@ -66,7 +67,9 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
       const res = await authFetch(url);
       const data = await res.json();
       if (!data.ok) return alert(data.message || "论坛内容获取失败");
-      setPosts(normalizeForumPosts(data.data));
+      const nextPosts = normalizeForumPosts(data.data);
+      setPosts(nextPosts);
+      warmForumPostImages(nextPosts);
     } catch (error) {
       console.error("论坛帖子加载失败:", error);
       alert("网络错误，论坛内容加载失败");
@@ -82,7 +85,10 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
       const res = await authFetch(`${authApiBase}/api/forum/comments/${postId}?phone=${currentUser.phone}`);
       const data = await res.json();
       if (!data.ok) return alert(data.message || "论坛评论加载失败");
-      setCommentsMap((prev) => ({ ...prev, [postId]: Array.isArray(data.data) ? data.data : [] }));
+      const nextComments = Array.isArray(data.data) ? data.data : [];
+      setCommentsMap((prev) => ({ ...prev, [postId]: nextComments }));
+      warmCommentImages(nextComments);
+      warmCommentAvatars(nextComments);
     } catch (error) {
       console.error("论坛评论加载失败:", error);
       alert("网络错误，评论加载失败");

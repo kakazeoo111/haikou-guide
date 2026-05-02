@@ -3,12 +3,12 @@ import { parseRecommendationAlbumEntries } from "./placeUtils";
 import { parseImageEntries } from "./imageEntryUtils";
 import { toPublicHttpsUrl } from "../appConfig";
 
-const WARMUP_LIMIT_RECOMMENDATIONS = 6;
-const WARMUP_LIMIT_COMMENTS = 10;
-const WARMUP_LIMIT_COMMENT_AVATARS = 16;
-const WARMUP_IMAGES_PER_ITEM = 2;
-const WARMUP_CONCURRENCY = 2;
-const WARMUP_IDLE_TIMEOUT_MS = 1200;
+const WARMUP_LIMIT_RECOMMENDATIONS = 8;
+const WARMUP_LIMIT_COMMENTS = 16;
+const WARMUP_LIMIT_COMMENT_AVATARS = 24;
+const WARMUP_IMAGES_PER_ITEM = 3;
+const WARMUP_CONCURRENCY = 4;
+const WARMUP_IDLE_TIMEOUT_MS = 500;
 const WARMUP_IMAGE_TIMEOUT_MS = 10000;
 const warmedImageSet = new Set();
 const warmupQueue = [];
@@ -33,11 +33,12 @@ function scheduleWarmupTask(task) {
     warmupScheduled = false;
     task();
   };
-  if (typeof window.requestIdleCallback === "function") {
+  const isIOS = /iP(?:hone|ad|od)/i.test(navigator.userAgent || "") || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (!isIOS && typeof window.requestIdleCallback === "function") {
     window.requestIdleCallback(runTask, { timeout: WARMUP_IDLE_TIMEOUT_MS });
     return;
   }
-  window.setTimeout(runTask, 250);
+  window.setTimeout(runTask, isIOS ? 60 : 180);
 }
 
 function runNextWarmup() {
@@ -56,7 +57,7 @@ function runNextWarmup() {
     const timeoutId = window.setTimeout(finish, WARMUP_IMAGE_TIMEOUT_MS);
     image.decoding = "async";
     image.loading = "eager";
-    image.fetchPriority = "low";
+    image.fetchPriority = "high";
     image.onload = finish;
     image.onerror = finish;
     image.src = finalUrl;
@@ -91,6 +92,14 @@ export function warmCommentImages(items) {
   comments.slice(0, WARMUP_LIMIT_COMMENTS).forEach((item) => {
     const commentImages = parseCommentPreviewUrls(item?.image_url);
     commentImages.slice(0, WARMUP_IMAGES_PER_ITEM).forEach(warmImageUrl);
+  });
+}
+
+export function warmForumPostImages(items) {
+  const posts = Array.isArray(items) ? items : [];
+  posts.slice(0, WARMUP_LIMIT_RECOMMENDATIONS).forEach((item) => {
+    const postImages = parseCommentPreviewUrls(item?.image_url);
+    postImages.slice(0, WARMUP_IMAGES_PER_ITEM).forEach(warmImageUrl);
   });
 }
 

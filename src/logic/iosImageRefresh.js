@@ -1,8 +1,8 @@
 const IOS_UA_PATTERN = /iP(?:hone|ad|od)/i;
-const LAZY_IMAGE_SELECTOR = 'img[loading="lazy"]';
-const IOS_REFRESH_MARGIN = 900;
-const IOS_RETRY_DELAY_MS = 700;
-const IOS_RETRY_LIMIT = 2;
+const IMAGE_SELECTOR = "img[src]";
+const IOS_REFRESH_MARGIN = 1800;
+const IOS_RETRY_DELAY_MS = 350;
+const IOS_RETRY_LIMIT = 4;
 
 function isIOSDevice() {
   const userAgent = navigator.userAgent || "";
@@ -41,6 +41,19 @@ function scheduleIOSImageRetry(image, source, attempt = 0) {
   }, IOS_RETRY_DELAY_MS * (attempt + 1));
 }
 
+function preloadIOSImage(image, source) {
+  if (image.dataset.iosPreloadedSource === source) return;
+  image.dataset.iosPreloadedSource = source;
+  const preload = new Image();
+  preload.decoding = "async";
+  preload.loading = "eager";
+  preload.fetchPriority = "high";
+  preload.src = source;
+  if (typeof preload.decode === "function") {
+    preload.decode().catch(() => {});
+  }
+}
+
 function refreshIOSLazyImage(image, observer) {
   const source = getImageSource(image);
   if (isSkippableSource(source)) return;
@@ -52,15 +65,16 @@ function refreshIOSLazyImage(image, observer) {
   image.dataset.iosLazyRefreshSource = source;
   image.loading = "eager";
   image.setAttribute("loading", "eager");
-  if (!image.getAttribute("fetchpriority")) image.setAttribute("fetchpriority", "auto");
+  image.setAttribute("fetchpriority", "high");
   if (!image.getAttribute("decoding")) image.setAttribute("decoding", "async");
+  preloadIOSImage(image, source);
   observer?.unobserve(image);
   scheduleIOSImageRetry(image, source);
 }
 
 function collectLazyImages(root) {
   if (isHtmlImageElement(root)) return [root];
-  return Array.from(root.querySelectorAll?.(LAZY_IMAGE_SELECTOR) || []);
+  return Array.from(root.querySelectorAll?.(IMAGE_SELECTOR) || []);
 }
 
 export function setupIOSLazyImageRefresh() {

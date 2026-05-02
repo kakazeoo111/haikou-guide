@@ -21,10 +21,13 @@ export function setApiNoStoreHeaders(req, res, next) {
 }
 
 export function setStaticUploadCacheHeaders(res) {
-  const cacheValue = `public, max-age=${UPLOAD_CACHE_MAX_AGE_SECONDS}, immutable, stale-while-revalidate=${UPLOAD_STALE_WHILE_REVALIDATE_SECONDS}`;
+  const cacheValue = `public, max-age=${UPLOAD_CACHE_MAX_AGE_SECONDS}, s-maxage=${UPLOAD_CACHE_MAX_AGE_SECONDS}, immutable, stale-while-revalidate=${UPLOAD_STALE_WHILE_REVALIDATE_SECONDS}`;
   res.setHeader("Cache-Control", cacheValue);
   res.setHeader("CDN-Cache-Control", cacheValue);
   res.setHeader("Cloudflare-CDN-Cache-Control", cacheValue);
+  res.setHeader("Surrogate-Control", `max-age=${UPLOAD_CACHE_MAX_AGE_SECONDS}`);
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Timing-Allow-Origin", "*");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("X-Content-Type-Options", "nosniff");
 }
