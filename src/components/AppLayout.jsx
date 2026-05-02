@@ -129,6 +129,7 @@ function AppLayout({
         showOnlyImages={showOnlyImages}
         expandedParentIds={expandedParentIds}
         currentUser={currentUser}
+        adminPhone={ADMIN_PHONE}
         activeBadgeTitle={activeBadgeTitle}
         activeBadgeMeta={activeBadgeMeta}
         replyTo={replyTo}
@@ -256,6 +257,7 @@ function AppLayout({
       {activeTab === "forum" && (
         <ForumModal
           currentUser={currentUser}
+          adminPhone={ADMIN_PHONE}
           authApiBase={authApiBase}
           activeBadgeTitle={activeBadgeTitle}
           activeBadgeMeta={activeBadgeMeta}

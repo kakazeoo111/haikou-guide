@@ -29,6 +29,7 @@ function getPostIdFromNotice(notice) {
 
 function ForumModal({
   currentUser,
+  adminPhone,
   authApiBase,
   activeBadgeTitle,
   activeBadgeMeta,
@@ -46,6 +47,7 @@ function ForumModal({
   const badgeIcon = getBadgeEmoji(badgeSeed, activeBadgeMeta?.icon || "");
   const onlineCount = useOnlineCount({ enabled: Boolean(currentUser?.phone), authApiBase, phone: currentUser?.phone });
   const { showNotice, openNotice, closeNotice, dontShowAgain, updateDontShowAgain } = useForumNotice(currentUser?.phone);
+  const isAdmin = String(currentUser?.phone || "") === String(adminPhone || "");
   const forum = useForumData({ currentUser, authApiBase, notifications });
 
   useForumJumpTo({ posts: forum.posts, loadComments: forum.loadComments, loadingPosts: forum.loadingPosts, onOpenComments: forum.openComments });
@@ -154,6 +156,7 @@ function ForumModal({
         onlineCount={onlineCount}
         callingPostIds={forum.callingPostIds}
         currentUser={currentUser}
+        isAdmin={isAdmin}
         activeBadgeTitle={activeBadgeTitle}
         badgeIcon={badgeIcon}
         badgeTheme={badgeTheme}
@@ -171,6 +174,7 @@ function ForumModal({
         onOpenNotice={openNotice}
         onOpenComments={handleOpenComments}
         onToggleCall={forum.handleToggleCall}
+        onDeletePost={forum.handleDeletePost}
         onZoomImage={onZoomImage}
         formatCommentTime={formatCommentTime}
         forumUnreadDotStyle={FORUM_UNREAD_DOT_STYLE}
@@ -185,6 +189,7 @@ function ForumModal({
         showOnlyImages={Boolean(forum.showOnlyImageCommentMap[activePostId])}
         expandedParentIds={forum.expandedCommentParentIdsMap[activePostId] || []}
         currentUser={currentUser}
+        isAdmin={isAdmin}
         activeBadgeTitle={activeBadgeTitle}
         activeBadgeMeta={activeBadgeMeta}
         replyTarget={forum.replyTargetMap[activePostId] || null}

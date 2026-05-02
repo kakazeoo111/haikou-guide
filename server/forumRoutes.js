@@ -223,7 +223,32 @@ async function isForumPostActive(pool, postId) {
   return rows.length > 0;
 }
 
-export async function registerForumRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }) {
+function isAdminPhone(phone, adminPhone) {
+  return String(phone || "") === String(adminPhone || "");
+}
+
+async function collectForumCommentTreeIds(pool, rootCommentId) {
+  const ids = [Number(rootCommentId)];
+  const queue = [Number(rootCommentId)];
+  const seen = new Set(ids.map(String));
+
+  while (queue.length > 0) {
+    const batch = queue.splice(0, queue.length);
+    const placeholders = batch.map(() => "?").join(", ");
+    const [rows] = await pool.execute(`SELECT id FROM forum_comments WHERE parent_id IN (${placeholders})`, batch);
+    rows.forEach((row) => {
+      const id = Number(row.id);
+      if (!id || seen.has(String(id))) return;
+      seen.add(String(id));
+      ids.push(id);
+      queue.push(id);
+    });
+  }
+
+  return ids;
+}
+
+export async function registerForumRoutes(app, { pool, upload, addNotice, ADMIN_PHONE, requireAuth, optionalAuth }) {
   await ensureForumTables(pool);
   await ensureForumNotificationTable(pool);
   const sendNotice = createForumNoticeSender(pool, addNotice);
@@ -314,6 +339,37 @@ export async function registerForumRoutes(app, { pool, upload, addNotice, requir
     } catch (error) {
       console.error("论坛打call失败:", error.message);
       res.status(500).json({ ok: false, message: `论坛打call失败: ${error.message}` });
+    }
+  });
+
+  app.post("/api/forum/post/delete", requireAuth, async (req, res) => {
+    const { postId } = req.body;
+    const normalizedPhone = String(req.authUser.phone || "").trim();
+    const normalizedPostId = parsePositiveInt(postId);
+    if (!normalizedPhone) return res.status(400).json({ ok: false, message: "手机号不能为空" });
+    if (!normalizedPostId) return res.status(400).json({ ok: false, message: "帖子ID无效" });
+
+    try {
+      const [rows] = await pool.execute("SELECT id, user_phone FROM forum_posts WHERE id = ? LIMIT 1", [normalizedPostId]);
+      const targetPost = rows[0];
+      if (!targetPost) return res.status(404).json({ ok: false, message: "帖子不存在" });
+      const canDelete = isAdminPhone(normalizedPhone, ADMIN_PHONE) || String(targetPost.user_phone || "") === normalizedPhone;
+      if (!canDelete) return res.status(403).json({ ok: false, message: "只能删除自己的帖子" });
+
+      const [commentRows] = await pool.execute("SELECT id FROM forum_comments WHERE post_id = ?", [normalizedPostId]);
+      const commentIds = commentRows.map((item) => Number(item.id)).filter(Boolean);
+      if (commentIds.length > 0) {
+        const placeholders = commentIds.map(() => "?").join(", ");
+        await pool.execute(`DELETE FROM forum_comment_likes WHERE comment_id IN (${placeholders})`, commentIds);
+        await pool.execute(`DELETE FROM forum_comments WHERE id IN (${placeholders})`, commentIds);
+      }
+      await pool.execute("DELETE FROM forum_post_calls WHERE post_id = ?", [normalizedPostId]);
+      await pool.execute("DELETE FROM notifications WHERE place_id = ?", [buildForumNoticePlaceId(normalizedPostId)]);
+      await pool.execute("DELETE FROM forum_posts WHERE id = ?", [normalizedPostId]);
+      res.json({ ok: true, deletedPostId: normalizedPostId, deletedCommentIds: commentIds });
+    } catch (error) {
+      console.error("论坛帖子删除失败:", error.message);
+      res.status(500).json({ ok: false, message: `论坛帖子删除失败: ${error.message}` });
     }
   });
 
@@ -427,18 +483,12 @@ export async function registerForumRoutes(app, { pool, upload, addNotice, requir
       );
       const targetComment = rows[0];
       if (!targetComment) return res.status(404).json({ ok: false, message: "评论不存在" });
-      if (String(targetComment.user_phone || "") !== normalizedPhone) {
+      const canDelete = isAdminPhone(normalizedPhone, ADMIN_PHONE) || String(targetComment.user_phone || "") === normalizedPhone;
+      if (!canDelete) {
         return res.status(403).json({ ok: false, message: "只能删除自己的评论" });
       }
 
-      const idsToDelete = [normalizedCommentId];
-      if (!targetComment.parent_id) {
-        const [childRows] = await pool.execute(
-          "SELECT id FROM forum_comments WHERE parent_id = ?",
-          [normalizedCommentId]
-        );
-        childRows.forEach((item) => idsToDelete.push(Number(item.id)));
-      }
+      const idsToDelete = await collectForumCommentTreeIds(pool, normalizedCommentId);
       const placeholders = idsToDelete.map(() => "?").join(", ");
       await pool.execute(`DELETE FROM forum_comment_likes WHERE comment_id IN (${placeholders})`, idsToDelete);
       await pool.execute(`DELETE FROM forum_comments WHERE id IN (${placeholders})`, idsToDelete);

@@ -71,6 +71,7 @@ function ForumCommentsOverlay({
   showOnlyImages,
   expandedParentIds,
   currentUser,
+  isAdmin,
   activeBadgeTitle,
   activeBadgeMeta,
   replyTarget,
@@ -352,7 +353,7 @@ function ForumCommentsOverlay({
                       <LikeHeartIcon liked={Boolean(parent.is_liked)} size={14} />
                       <span>{Number(parent.like_count || 0)}</span>
                     </span>
-                    {parent.user_phone === currentUser.phone && (
+                    {(isAdmin || parent.user_phone === currentUser.phone) && (
                       <span onClick={() => onDeleteComment(parent.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
                         删除
                       </span>
@@ -444,6 +445,11 @@ function ForumCommentsOverlay({
                                   <LikeHeartIcon liked={Boolean(reply.is_liked)} size={14} />
                                   <span>{Number(reply.like_count || 0)}</span>
                                 </span>
+                                {(isAdmin || reply.user_phone === currentUser.phone) && (
+                                  <span onClick={() => onDeleteComment(reply.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
+                                    删除
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>

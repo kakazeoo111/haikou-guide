@@ -243,6 +243,54 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     }
   };
 
+  const handleDeletePost = async (postId) => {
+    if (!window.confirm("确定删除这条论坛帖子吗？帖子下的评论和回复也会一起删除。")) return;
+    try {
+      const res = await authFetch(`${authApiBase}/api/forum/post/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: currentUser.phone, postId }),
+      });
+      const data = await res.json();
+      if (!data.ok) return alert(data.message || "帖子删除失败");
+      setPosts((prev) => prev.filter((item) => Number(item.id) !== Number(postId)));
+      setCommentsMap((prev) => {
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+      setReplyTargetMap((prev) => {
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+      setCommentDraftMap((prev) => {
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+      setCommentImagesMap((prev) => {
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+      setExpandedCommentParentIdsMap((prev) => {
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+      setShowOnlyImageCommentMap((prev) => {
+        const next = { ...prev };
+        delete next[postId];
+        return next;
+      });
+      setActiveCommentPostId((currentPostId) => (Number(currentPostId) === Number(postId) ? null : currentPostId));
+    } catch (error) {
+      console.error("论坛帖子删除失败:", error);
+      alert("网络错误，帖子删除失败");
+    }
+  };
+
   const handleToggleCall = async (postId) => {
     if (callingPostIds.includes(postId)) return;
     setCallingPostIds((prev) => [...prev, postId]);
@@ -307,6 +355,7 @@ export function useForumData({ currentUser, authApiBase, notifications }) {
     handleSubmitComment,
     handleLikeComment,
     handleDeleteComment,
+    handleDeletePost,
     handleToggleCall,
   };
 }

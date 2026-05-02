@@ -93,6 +93,7 @@ function ForumPostFeed({
   onlineCount,
   callingPostIds,
   currentUser,
+  isAdmin,
   activeBadgeTitle,
   badgeIcon,
   badgeTheme,
@@ -110,6 +111,7 @@ function ForumPostFeed({
   onOpenNotice,
   onOpenComments,
   onToggleCall,
+  onDeletePost,
   onZoomImage,
   formatCommentTime,
   forumUnreadDotStyle,
@@ -168,6 +170,7 @@ function ForumPostFeed({
             <ForumPostCard
               post={post}
               currentUser={currentUser}
+              isAdmin={isAdmin}
               activeBadgeTitle={activeBadgeTitle}
               badgeIcon={badgeIcon}
               badgeTheme={badgeTheme}
@@ -175,6 +178,7 @@ function ForumPostFeed({
               commentsOpen={commentsOpen}
               onOpenComments={onOpenComments}
               onToggleCall={onToggleCall}
+              onDeletePost={onDeletePost}
               onZoomImage={onZoomImage}
               formatCommentTime={formatCommentTime}
             />

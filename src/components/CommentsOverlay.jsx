@@ -12,6 +12,7 @@ function CommentsOverlay({
   showOnlyImages,
   expandedParentIds,
   currentUser,
+  adminPhone,
   activeBadgeTitle,
   activeBadgeMeta,
   replyTo,
@@ -68,6 +69,7 @@ function CommentsOverlay({
   });
 
   const { badgeTheme, badgeIcon, motionBadgeVariant, selfBadgeStyle, parentAvatarWrapStyle, replyAvatarWrapStyle, parentBadgeBubbleStyle, replyBadgeBubbleStyle, parentMotionIconStyle, replyMotionIconStyle } = buildBadgePresentation(currentUser, activeBadgeTitle, activeBadgeMeta);
+  const isAdmin = String(currentUser?.phone || "") === String(adminPhone || "");
   return (
     <div style={fullPageOverlayStyle}>
       <style>{BADGE_ANIMATION_STYLE}</style>
@@ -176,7 +178,7 @@ function CommentsOverlay({
                       <LikeHeartIcon liked={Boolean(parent.is_liked)} size={14} />
                       <span>{Number(parent.like_count || 0)}</span>
                     </span>
-                    {parent.user_phone === currentUser.phone && (
+                    {(isAdmin || parent.user_phone === currentUser.phone) && (
                       <span onClick={() => onDeleteComment(parent.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
                         删除
                       </span>
@@ -255,6 +257,11 @@ function CommentsOverlay({
                                   <LikeHeartIcon liked={Boolean(reply.is_liked)} size={14} />
                                   <span>{Number(reply.like_count || 0)}</span>
                                 </span>
+                                {(isAdmin || reply.user_phone === currentUser.phone) && (
+                                  <span onClick={() => onDeleteComment(reply.id)} style={{ color: "#ff4d4f", cursor: "pointer" }}>
+                                    鍒犻櫎
+                                  </span>
+                                )}
                               </div>
                             </div>
                           </div>

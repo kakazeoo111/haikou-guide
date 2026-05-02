@@ -107,8 +107,10 @@ function ForumPostCard({
   badgeTheme,
   callingPost,
   commentsOpen,
+  isAdmin,
   onOpenComments,
   onToggleCall,
+  onDeletePost,
   onZoomImage,
   formatCommentTime,
 }) {
@@ -123,6 +125,7 @@ function ForumPostCard({
   const postMotionStyle = getMotionIconStyle(parentMotionIconStyle, isExplorerBadge);
   const commentCount = Number(post.comment_count || 0);
   const expandCommentText = commentCount > 0 ? `展开 ${commentCount} 条评论 ▼` : "";
+  const canDeletePost = isAdmin || String(post.user_phone || "") === String(currentUser?.phone || "");
 
   return (
     <>
@@ -184,6 +187,11 @@ function ForumPostCard({
               <span>{Number(post.call_count || 0)}</span>
             </span>
             <span style={callLabelStyle(Boolean(post.is_called))}>{post.is_called ? "已共鸣" : "打call"}</span>
+            {canDeletePost && (
+              <span onClick={() => onDeletePost(postId)} style={{ color: "#ff4d4f", fontSize: "12px", fontWeight: 700, cursor: "pointer", userSelect: "none" }}>
+                删除
+              </span>
+            )}
           </div>
         </div>
       </div>

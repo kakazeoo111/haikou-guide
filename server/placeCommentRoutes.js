@@ -72,7 +72,32 @@ const COMMENT_LIST_SQL = `
   ORDER BY c.created_at DESC, c.id DESC
 `;
 
-export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }) {
+function isAdminPhone(phone, adminPhone) {
+  return String(phone || "") === String(adminPhone || "");
+}
+
+async function collectPlaceCommentTreeIds(pool, rootCommentId) {
+  const ids = [Number(rootCommentId)];
+  const queue = [Number(rootCommentId)];
+  const seen = new Set(ids.map(String));
+
+  while (queue.length > 0) {
+    const batch = queue.splice(0, queue.length);
+    const placeholders = batch.map(() => "?").join(", ");
+    const [rows] = await pool.execute(`SELECT id FROM comments WHERE parent_id IN (${placeholders})`, batch);
+    rows.forEach((row) => {
+      const id = Number(row.id);
+      if (!id || seen.has(String(id))) return;
+      seen.add(String(id));
+      ids.push(id);
+      queue.push(id);
+    });
+  }
+
+  return ids;
+}
+
+export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice, ADMIN_PHONE, requireAuth, optionalAuth }) {
   await ensurePlaceCommentTables(pool);
 
   app.get("/api/places/stats", optionalAuth, async (req, res) => {
@@ -183,8 +208,17 @@ export async function registerPlaceCommentRoutes(app, { pool, upload, addNotice,
     try {
       const { commentId } = req.body;
       const phone = req.authUser.phone;
-      await pool.execute("DELETE FROM comments WHERE id = ? AND user_phone COLLATE utf8mb4_general_ci = ?", [commentId, phone]);
-      res.json({ ok: true });
+      const [rows] = await pool.execute("SELECT id, user_phone FROM comments WHERE id = ? LIMIT 1", [commentId]);
+      const targetComment = rows[0];
+      if (!targetComment) return res.status(404).json({ ok: false, message: "评论不存在" });
+      const canDelete = isAdminPhone(phone, ADMIN_PHONE) || String(targetComment.user_phone || "") === String(phone || "");
+      if (!canDelete) return res.status(403).json({ ok: false, message: "只能删除自己的评论" });
+
+      const idsToDelete = await collectPlaceCommentTreeIds(pool, targetComment.id);
+      const placeholders = idsToDelete.map(() => "?").join(", ");
+      await pool.execute(`DELETE FROM comment_likes WHERE comment_id IN (${placeholders})`, idsToDelete);
+      await pool.execute(`DELETE FROM comments WHERE id IN (${placeholders})`, idsToDelete);
+      res.json({ ok: true, deletedIds: idsToDelete });
     } catch (error) {
       console.error("删除评论失败:", error.message);
       res.status(500).json({ ok: false, message: `删除评论失败: ${error.message}` });

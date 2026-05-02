@@ -172,12 +172,12 @@ await runStartupStep("称号授权表初始化", () => ensureBadgeGrantTable(poo
 await runStartupStep("称号路由初始化", () => registerBadgeRoutes(app, { pool, ADMIN_PHONE, requireAuth, requireAdmin }));
 await runStartupStep("认证路由初始化", () => registerAuthRoutes(app, { pool, otpStore, smsClient, requireAuth }));
 await runStartupStep("推荐路由初始化", () => registerRecommendationRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }));
-await runStartupStep("评论路由初始化", () => registerPlaceCommentRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }));
+await runStartupStep("评论路由初始化", () => registerPlaceCommentRoutes(app, { pool, upload, addNotice, ADMIN_PHONE, requireAuth, optionalAuth }));
 await runStartupStep("通知路由初始化", () => registerNotificationRoutes(app, { pool, requireAuth }));
 await runStartupStep("杂项路由初始化", () => registerMiscRoutes(app, { pool, upload, ADMIN_PHONE, requireAuth, requireAdmin }));
 await runStartupStep("用户摘要路由初始化", () => registerUserSummaryRoutes(app, { pool }));
 await runStartupStep("反馈管理路由初始化", () => registerFeedbackRoutes(app, { pool, upload, ADMIN_PHONE, requireAuth, requireAdmin }));
-await runStartupStep("论坛路由初始化", () => registerForumRoutes(app, { pool, upload, addNotice, requireAuth, optionalAuth }));
+await runStartupStep("论坛路由初始化", () => registerForumRoutes(app, { pool, upload, addNotice, ADMIN_PHONE, requireAuth, optionalAuth }));
 await runStartupStep("在线人数路由初始化", () => registerOnlineRoutes(app, { optionalAuth }));
 
 app.use((error, req, res, next) => {
