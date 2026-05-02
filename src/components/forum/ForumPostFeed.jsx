@@ -12,26 +12,26 @@ import {
 } from "../../logic/forumModalUtils";
 
 const FORUM_DAILY_QUOTES = [
-  { lang: "zh", text: "爱不是把彼此困住，而是一起看更远的风景。", author: "三毛" },
+  { lang: "zh", text: "人生在世不称意，明朝散发弄扁舟。", author: "李白" },
   { lang: "zh", text: "旅途最珍贵的不是终点，是有人陪你偏离一下路线。", author: "余秋雨" },
   { lang: "zh", text: "自由大概就是，今天的风往哪吹，你就往哪走一小段。", author: "林清玄" },
   { lang: "zh", text: "有趣的人生，往往始于一次不那么标准的出发。", author: "韩寒" },
   { lang: "zh", text: "喜欢一座城市，有时只因为傍晚的光刚好落在你身上。", author: "席慕蓉" },
-  { lang: "zh", text: "爱和旅行很像，都是越靠近真实，越让人上瘾。", author: "张小娴" },
+  { lang: "zh", text: "回首向来萧瑟处，归去，也无风雨也无晴。", author: "苏轼" },
   { lang: "zh", text: "愿你在陌生的地方，也能捡到一点熟悉的温柔。", author: "毕淑敏" },
-  { lang: "zh", text: "有些快乐不需要解释，背上包出门就是答案。", author: "大冰" },
-  { lang: "zh", text: "真正的松弛，是允许自己在路上慢一点，再慢一点。", author: "汪曾祺" },
+  { lang: "zh", text: "一箫一剑平生意，负尽狂名十五年。", author: "龚自珍" },
+  { lang: "zh", text: "山一程，水一程，身向榆关那畔行，夜深千帐灯。", author: "纳兰性德" },
   { lang: "zh", text: "我们热爱远方，也热爱回头时那个更轻盈的自己。", author: "余华" },
-  { lang: "en", text: "Freedom is sometimes just a ticket and enough courage for one soft detour.", author: "Anais Nin" },
-  { lang: "en", text: "Love feels lighter when it walks beside you, not ahead of you.", author: "Virginia Woolf" },
+  { lang: "en", text: "There is a pleasure in the pathless woods,I love not Man the less, but Nature more.", author: "Lord Byron" },
+  { lang: "en", text: "I took the one less traveled by,And that has made all the difference.", author: "Robert Frost" },
   { lang: "en", text: "A good trip changes the map outside and the weather inside.", author: "Pico Iyer" },
   { lang: "en", text: "Some cities do not ask you to stay, only to feel more alive.", author: "James Baldwin" },
   { lang: "en", text: "The most beautiful plans usually begin with a small and brave yes.", author: "Mary Oliver" },
   { lang: "en", text: "Travel teaches the heart how to be curious without being afraid.", author: "Alain de Botton" },
   { lang: "en", text: "Romance is not a place, but the way the world opens when you arrive together.", author: "F. Scott Fitzgerald" },
-  { lang: "en", text: "Take the road that leaves a little room for wonder.", author: "Jack Kerouac" },
+  { lang: "en", text: "there isn't a train I wouldn't take,No matter where it's going.", author: "Edna St. Vincent Millay" },
   { lang: "en", text: "A free soul does not rush. It notices.", author: "Henry David Thoreau" },
-  { lang: "en", text: "Sometimes the best destination is the version of you that comes back softer.", author: "Cheryl Strayed" },
+  { lang: "en", text: "Afoot and light-hearted I take to the open road,I myself am good-fortune.", author: "Walt Whitman" },
 ];
 
 const QUOTE_WRAP_STYLE = {
