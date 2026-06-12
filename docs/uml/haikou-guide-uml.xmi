@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI
+  xmi:version="2.1"
+  xmlns:xmi="http://schema.omg.org/spec/XMI/2.1"
+  xmlns:uml="http://schema.omg.org/spec/UML/2.1">
+  <uml:Model xmi:id="model_haikou" name="海口旅行网站UML模型">
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg_usecase" name="1_用例模型">
+      <packagedElement xmi:type="uml:Actor" xmi:id="actor_guest" name="游客"/>
+      <packagedElement xmi:type="uml:Actor" xmi:id="actor_user" name="注册用户"/>
+      <packagedElement xmi:type="uml:Actor" xmi:id="actor_admin" name="管理员"/>
+      <packagedElement xmi:type="uml:Actor" xmi:id="actor_sms" name="阿里云短信服务"/>
+      <packagedElement xmi:type="uml:Actor" xmi:id="actor_map" name="百度地图服务"/>
+
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_browse" name="浏览地点列表"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_search" name="搜索/筛选地点"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_mapview" name="查看地图标记"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_detail" name="查看地点详情"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_route" name="路线导航/规划"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_send_code" name="发送验证码"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_register" name="注册账号">
+        <include xmi:id="inc_register_code" addition="uc_send_code"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_login" name="登录系统"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_reset" name="重置密码">
+        <include xmi:id="inc_reset_code" addition="uc_send_code"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_profile" name="管理个人资料"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_favorite" name="收藏地点"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_like_place" name="点赞地点"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_comment" name="发表评论/回复"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_recommend" name="推荐新地点"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_forum" name="参与论坛互动"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_feedback" name="提交反馈"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_notice" name="查看通知"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_badge" name="切换称号"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_announcement" name="管理公告"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_feedback_admin" name="处理用户反馈"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_badge_admin" name="管理称号授权"/>
+      <packagedElement xmi:type="uml:UseCase" xmi:id="uc_content_admin" name="删除违规内容"/>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="as_guest_browse" memberEnd="as_guest_browse_a as_guest_browse_b">
+        <ownedEnd xmi:id="as_guest_browse_a" type="actor_guest"/>
+        <ownedEnd xmi:id="as_guest_browse_b" type="uc_browse"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="as_guest_search" memberEnd="as_guest_search_a as_guest_search_b">
+        <ownedEnd xmi:id="as_guest_search_a" type="actor_guest"/>
+        <ownedEnd xmi:id="as_guest_search_b" type="uc_search"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="as_guest_mapview" memberEnd="as_guest_mapview_a as_guest_mapview_b">
+        <ownedEnd xmi:id="as_guest_mapview_a" type="actor_guest"/>
+        <ownedEnd xmi:id="as_guest_mapview_b" type="uc_mapview"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="as_guest_detail" memberEnd="as_guest_detail_a as_guest_detail_b">
+        <ownedEnd xmi:id="as_guest_detail_a" type="actor_guest"/>
+        <ownedEnd xmi:id="as_guest_detail_b" type="uc_detail"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="as_guest_route" memberEnd="as_guest_route_a as_guest_route_b">
+        <ownedEnd xmi:id="as_guest_route_a" type="actor_guest"/>
+        <ownedEnd xmi:id="as_guest_route_b" type="uc_route"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="as_guest_auth" memberEnd="as_guest_auth_a as_guest_auth_b">
+        <ownedEnd xmi:id="as_guest_auth_a" type="actor_guest"/>
+        <ownedEnd xmi:id="as_guest_auth_b" type="uc_login"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="as_sms_code" memberEnd="as_sms_code_a as_sms_code_b">
+        <ownedEnd xmi:id="as_sms_code_a" type="actor_sms"/>
+        <ownedEnd xmi:id="as_sms_code_b" type="uc_send_code"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="as_map_route" memberEnd="as_map_route_a as_map_route_b">
+        <ownedEnd xmi:id="as_map_route_a" type="actor_map"/>
+        <ownedEnd xmi:id="as_map_route_b" type="uc_route"/>
+      </packagedElement>
+    </packagedElement>
+
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg_class" name="2_静态结构模型">
+      <packagedElement xmi:type="uml:Class" xmi:id="class_user" name="User">
+        <ownedAttribute xmi:id="attr_user_id" name="id" type="int"/>
+        <ownedAttribute xmi:id="attr_user_username" name="username" type="String"/>
+        <ownedAttribute xmi:id="attr_user_phone" name="phone" type="String"/>
+        <ownedAttribute xmi:id="attr_user_avatar" name="avatarUrl" type="String"/>
+        <ownedOperation xmi:id="op_user_login" name="login"/>
+        <ownedOperation xmi:id="op_user_upload_avatar" name="uploadAvatar"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_place" name="Place">
+        <ownedAttribute xmi:id="attr_place_id" name="id" type="String"/>
+        <ownedAttribute xmi:id="attr_place_type" name="type" type="String"/>
+        <ownedAttribute xmi:id="attr_place_name" name="name" type="String"/>
+        <ownedAttribute xmi:id="attr_place_desc" name="desc" type="String"/>
+        <ownedAttribute xmi:id="attr_place_lat" name="lat" type="Decimal"/>
+        <ownedAttribute xmi:id="attr_place_lng" name="lng" type="Decimal"/>
+        <ownedOperation xmi:id="op_place_filter" name="filter"/>
+        <ownedOperation xmi:id="op_place_navigate" name="navigate"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_recommendation" name="Recommendation">
+        <ownedAttribute xmi:id="attr_rec_id" name="id" type="int"/>
+        <ownedAttribute xmi:id="attr_rec_user" name="userPhone" type="String"/>
+        <ownedAttribute xmi:id="attr_rec_name" name="placeName" type="String"/>
+        <ownedAttribute xmi:id="attr_rec_desc" name="description" type="Text"/>
+        <ownedAttribute xmi:id="attr_rec_image" name="imageUrl" type="JSON"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_favorite" name="Favorite"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_place_like" name="PlaceLike"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_comment" name="Comment">
+        <ownedAttribute xmi:id="attr_comment_id" name="id" type="int"/>
+        <ownedAttribute xmi:id="attr_comment_place" name="placeId" type="String"/>
+        <ownedAttribute xmi:id="attr_comment_user" name="userPhone" type="String"/>
+        <ownedAttribute xmi:id="attr_comment_content" name="content" type="Text"/>
+        <ownedAttribute xmi:id="attr_comment_parent" name="parentId" type="int"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_comment_like" name="CommentLike"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_forum_post" name="ForumPost"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_forum_comment" name="ForumComment"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_forum_post_call" name="ForumPostCall"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_forum_comment_like" name="ForumCommentLike"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_notification" name="Notification"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_feedback" name="Feedback"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_badge_grant" name="BadgeGrant"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_badge_preference" name="BadgePreference"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_announcement" name="Announcement"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_auth_service" name="AuthService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_place_service" name="PlaceService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_comment_service" name="CommentService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_recommendation_service" name="RecommendationService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_forum_service" name="ForumService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_feedback_service" name="FeedbackService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_notification_service" name="NotificationService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_badge_service" name="BadgeService"/>
+      <packagedElement xmi:type="uml:Class" xmi:id="class_upload_service" name="UploadService"/>
+
+      <packagedElement xmi:type="uml:Association" xmi:id="rel_user_rec" name="发布" memberEnd="rel_user_rec_a rel_user_rec_b">
+        <ownedEnd xmi:id="rel_user_rec_a" type="class_user"/>
+        <ownedEnd xmi:id="rel_user_rec_b" type="class_recommendation"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="rel_user_comment" name="发表" memberEnd="rel_user_comment_a rel_user_comment_b">
+        <ownedEnd xmi:id="rel_user_comment_a" type="class_user"/>
+        <ownedEnd xmi:id="rel_user_comment_b" type="class_comment"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="rel_place_comment" name="拥有评论" memberEnd="rel_place_comment_a rel_place_comment_b">
+        <ownedEnd xmi:id="rel_place_comment_a" type="class_place"/>
+        <ownedEnd xmi:id="rel_place_comment_b" type="class_comment"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="rel_forum_post_comment" name="包含评论" memberEnd="rel_forum_post_comment_a rel_forum_post_comment_b">
+        <ownedEnd xmi:id="rel_forum_post_comment_a" type="class_forum_post"/>
+        <ownedEnd xmi:id="rel_forum_post_comment_b" type="class_forum_comment"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Association" xmi:id="rel_feedback_user" name="提交反馈" memberEnd="rel_feedback_user_a rel_feedback_user_b">
+        <ownedEnd xmi:id="rel_feedback_user_a" type="class_user"/>
+        <ownedEnd xmi:id="rel_feedback_user_b" type="class_feedback"/>
+      </packagedElement>
+    </packagedElement>
+
+    <packagedElement xmi:type="uml:Package" xmi:id="pkg_behavior" name="3_行为与交互模型">
+      <packagedElement xmi:type="uml:Interaction" xmi:id="seq_login" name="03_顺序图_用户登录"/>
+      <packagedElement xmi:type="uml:Interaction" xmi:id="seq_comment" name="04_顺序图_发布评论并通知"/>
+      <packagedElement xmi:type="uml:StateMachine" xmi:id="state_feedback" name="05_状态图_反馈处理生命周期"/>
+      <packagedElement xmi:type="uml:Activity" xmi:id="activity_place_interaction" name="06_活动图_地点浏览与互动"/>
+    </packagedElement>
+  </uml:Model>
+</xmi:XMI>
