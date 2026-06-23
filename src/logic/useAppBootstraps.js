@@ -50,7 +50,7 @@ async function syncCachedUserProfile({ authApiBase, savedUser, setCurrentUser })
     const response = await authFetch(`${authApiBase}/api/auth/user/${phone}`, { cache: "no-store" });
     const data = await response.json();
     if (!data?.ok || !data.user) {
-      console.error("鐧诲綍鎬佺敤鎴疯祫鏂欏悓姝ュけ璐?", data?.message || "invalid profile response");
+      console.error("登录态用户资料同步失败:", data?.message || "invalid profile response");
       if (response.status === 401 || response.status === 403) clearAuthSession();
       return;
     }
@@ -64,15 +64,15 @@ async function syncCachedUserProfile({ authApiBase, savedUser, setCurrentUser })
     localStorage.setItem("haikouUser", JSON.stringify(nextUser));
     warmAvatar(nextUser.avatar_url);
   } catch (error) {
-    console.error("鐧诲綍鎬佺敤鎴疯祫鏂欏悓姝ヨ姹傚け璐?", error);
+    console.error("登录态用户资料同步请求失败:", error);
   }
 }
 
 export function useValidateEnv(ADMIN_PHONE, authApiBase) {
   useEffect(() => {
     if (ADMIN_PHONE && authApiBase) return;
-    console.error("缂哄皯鐜鍙橀噺锛歏ITE_ADMIN_PHONE 鎴?VITE_AUTH_API_BASE");
-    alert("鐜閰嶇疆缂哄け锛氳鍦ㄥ墠绔?.env 鏂囦欢涓厤缃?VITE_ADMIN_PHONE 鍜?VITE_AUTH_API_BASE");
+    console.error("缺少环境变量: VITE_ADMIN_PHONE 或 VITE_AUTH_API_BASE");
+    alert("环境配置缺失: 请在前端 .env 文件中配置 VITE_ADMIN_PHONE 和 VITE_AUTH_API_BASE");
   }, [ADMIN_PHONE, authApiBase]);
 }
 
@@ -93,7 +93,7 @@ export function useInitClientState({ authApiBase, setCurrentUser, setActiveTab, 
       const savedTab = localStorage.getItem("haikou_active_tab");
       if (["home", "profile", "forum"].includes(savedTab)) setActiveTab(savedTab);
     } catch (error) {
-      console.error("鐢ㄦ埛缂撳瓨瑙ｆ瀽澶辫触:", error);
+      console.error("用户缓存解析失败:", error);
     }
 
     const onResize = () => setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
@@ -101,7 +101,7 @@ export function useInitClientState({ authApiBase, setCurrentUser, setActiveTab, 
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (error) => console.error("瀹氫綅澶辫触:", error),
+        (error) => console.error("定位失败:", error),
         { enableHighAccuracy: true },
       );
     }
