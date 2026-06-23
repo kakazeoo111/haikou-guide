@@ -2,7 +2,7 @@
 import { JUMP_TO_RECOMMEND_EVENT } from "../constants/jumpEvents";
 import { scrollToRecommendCard } from "./recommendJump";
 import { getUrlOrigin, PUBLIC_UPLOAD_BASE_URL, toPublicHttpsUrl } from "../appConfig";
-import { authFetch, clearAuthSession, getAuthToken } from "./apiClient";
+import { AUTH_SESSION_EXPIRED_EVENT, authFetch, clearAuthSession, getAuthToken } from "./apiClient";
 
 const MOBILE_BREAKPOINT = 768;
 const COUNTDOWN_STEP = 1;
@@ -78,6 +78,8 @@ export function useValidateEnv(ADMIN_PHONE, authApiBase) {
 
 export function useInitClientState({ authApiBase, setCurrentUser, setActiveTab, setIsMobile, setUserLocation }) {
   useEffect(() => {
+    const handleAuthSessionExpired = () => setCurrentUser(null);
+    window.addEventListener(AUTH_SESSION_EXPIRED_EVENT, handleAuthSessionExpired);
     primeCrossOriginResourceHints([authApiBase, PUBLIC_UPLOAD_BASE_URL]);
     try {
       const savedUser = JSON.parse(localStorage.getItem("haikouUser"));
@@ -103,7 +105,10 @@ export function useInitClientState({ authApiBase, setCurrentUser, setActiveTab, 
         { enableHighAccuracy: true },
       );
     }
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener(AUTH_SESSION_EXPIRED_EVENT, handleAuthSessionExpired);
+    };
   }, [authApiBase, setActiveTab, setCurrentUser, setIsMobile, setUserLocation]);
 }
 

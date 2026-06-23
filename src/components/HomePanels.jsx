@@ -19,6 +19,7 @@ import { DEFAULT_PLACE_COVER } from "../constants/imageFallbacks";
 import { getRecommendCardDomId } from "../logic/recommendJump";
 import { buildImageLoadingProps } from "../logic/imageProps";
 import { getAvatarWithFallback } from "../logic/avatarFallback";
+import { getHomePanelsLayoutStyles } from "../logic/homePanelsLayout";
 import LikeHeartIcon from "./LikeHeartIcon";
 
 const UNREAD_BADGE_LIMIT = 99;
@@ -119,17 +120,18 @@ function HomePanels({
     border: `1px solid ${badgeTheme.border}`,
     boxShadow: badgeTheme.shadow,
   };
+  const { wrapStyle, mapPanelStyle, listPanelStyle } = getHomePanelsLayoutStyles(isMobile);
 
   return (
-    <>
-      <div style={{ width: isMobile ? "100%" : "auto", height: isMobile ? "30vh" : "100%", flex: isMobile ? "none" : 1, position: "relative", zIndex: 10 }}>
+    <div style={wrapStyle}>
+      <div style={mapPanelStyle}>
         <BaiduMap targetPlaces={targetPlaces} userLocation={userLocation} isMobile={isMobile} />
         <button onClick={onRefreshLocation} style={floatBtnStyle}>
           🎯
         </button>
       </div>
 
-      <div style={{ width: isMobile ? "100%" : "380px", height: isMobile ? "70vh" : "100vh", overflowY: "auto", background: "white", zIndex: 15, padding: 0, boxSizing: "border-box" }}>
+      <div style={listPanelStyle}>
         <div style={{ padding: "20px 20px 0 20px" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "8px" }}>
             <img
@@ -321,7 +323,7 @@ function HomePanels({
           })}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

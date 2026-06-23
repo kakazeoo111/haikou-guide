@@ -7,7 +7,6 @@ const USER_LABEL_OFFSET_X = 20;
 const USER_LABEL_OFFSET_Y = -10;
 const PLACE_LABEL_OFFSET_X = 18;
 const PLACE_LABEL_OFFSET_Y = -12;
-const FALLBACK_DESKTOP = "电脑端已关闭地图渲染，请使用手机端查看地图。";
 const FALLBACK_SDK = "地图加载失败：未检测到百度地图 SDK，请检查网络后重试。";
 const FALLBACK_INIT = "地图初始化失败，请刷新后重试。";
 const FALLBACK_RENDER = "地图渲染失败.请刷新后重试。";
@@ -125,13 +124,8 @@ function drawPlaceMarkers(map, BMapGL, targetPlaces, markersRef) {
   });
 }
 
-function useMapBootstrap(isMobile, userLocation, mapRef, setMapError, containerId) {
+function useMapBootstrap(userLocation, mapRef, setMapError, containerId) {
   useEffect(() => {
-    if (!isMobile) {
-      mapRef.current = null;
-      setMapError(FALLBACK_DESKTOP);
-      return;
-    }
     if (mapRef.current) return;
 
     const BMapGL = window.BMapGL;
@@ -152,12 +146,12 @@ function useMapBootstrap(isMobile, userLocation, mapRef, setMapError, containerI
       console.error("地图初始化异常:", error);
       setMapError(FALLBACK_INIT);
     }
-  }, [isMobile, mapRef, setMapError, containerId, userLocation]);
+  }, [mapRef, setMapError, containerId, userLocation]);
 }
 
-function useMapOverlays(targetPlaces, userLocation, routePath, isMobile, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError) {
+function useMapOverlays(targetPlaces, userLocation, routePath, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError) {
   useEffect(() => {
-    if (!isMobile || mapError) return;
+    if (mapError) return;
 
     const map = mapRef.current;
     const BMapGL = window.BMapGL;
@@ -175,18 +169,18 @@ function useMapOverlays(targetPlaces, userLocation, routePath, isMobile, mapErro
       console.error("地图渲染异常:", error);
       setMapError(FALLBACK_RENDER);
     }
-  }, [targetPlaces, userLocation, routePath, isMobile, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError]);
+  }, [targetPlaces, userLocation, routePath, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError]);
 }
 
-function BaiduMap({ targetPlaces, userLocation, routePath = [], isMobile, containerId = DEFAULT_MAP_CONTAINER_ID }) {
+function BaiduMap({ targetPlaces, userLocation, routePath = [], containerId = DEFAULT_MAP_CONTAINER_ID }) {
   const mapRef = useRef(null);
   const markersRef = useRef([]);
   const userMarkerRef = useRef(null);
   const routeLineRef = useRef(null);
   const [mapError, setMapError] = useState("");
 
-  useMapBootstrap(isMobile, userLocation, mapRef, setMapError, containerId);
-  useMapOverlays(targetPlaces, userLocation, routePath, isMobile, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError);
+  useMapBootstrap(userLocation, mapRef, setMapError, containerId);
+  useMapOverlays(targetPlaces, userLocation, routePath, mapError, mapRef, markersRef, userMarkerRef, routeLineRef, setMapError);
 
   if (mapError) {
     return (
